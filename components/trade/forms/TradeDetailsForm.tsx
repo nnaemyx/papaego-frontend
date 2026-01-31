@@ -66,7 +66,7 @@ export function TradeDetailsForm() {
   // const exchangeRate = '₦1,620 / $1';
 
   return (
-    <div className="border border-border-custom bg-white p-4 md:p-6 lg:p-10 max-w-350">
+    <div className="border border-(--border-custom) bg-white p-4 md:p-6 lg:p-10 max-w-350">
       {/* Section Header */}
       <div className="mb-10">
         <h2 className="text-3xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
@@ -236,7 +236,7 @@ export function TradeDetailsForm() {
                         <Input
                           {...field}
                           placeholder="0.00"
-                          className="h-12 rounded-lg px-4 placeholder:text-status-success text-[16px] font-bold border-2"
+                          className="h-12 rounded-lg px-4 placeholder:text-(--status-success) text-[16px] font-bold border-2"
                           style={{
                             color: 'var(--status-success)',
                             borderColor: 'var(--status-success)'

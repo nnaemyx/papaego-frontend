@@ -29,14 +29,14 @@ export default function TransactionsPage() {
           Transactions
         </h1>
         <p className="text-sm md:text-base" style={{ color: 'var(--text-secondary)' }}>
-          View and manage all trades you&apos;ve handled, with full details, status updates, and actions in one place
+          View and manage all trades you've handled, with full details, status updates, and actions in one place
         </p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
         {transactionStats.map((stat, index) => (
-          <Card key={index} className="p-6 border border-border-custom bg-white rounded-xl">
+          <Card key={index} className="p-6 border border-(--border-custom) bg-white rounded-xl">
             <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
               {stat.label}
             </p>
@@ -67,7 +67,7 @@ export default function TransactionsPage() {
           {/* Filter Dropdowns */}
           <div className="flex flex-col sm:flex-row gap-4">
             <Select defaultValue="all">
-              <SelectTrigger className="w-full sm:w-40 h-12">
+              <SelectTrigger className="w-full sm:w-[160px] h-12">
                 <div className="text-left">
                   <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Status</div>
                   <SelectValue />
@@ -83,7 +83,7 @@ export default function TransactionsPage() {
             </Select>
 
             <Select defaultValue="all">
-              <SelectTrigger className="w-full sm:w-40 h-12">
+              <SelectTrigger className="w-full sm:w-[160px] h-12">
                 <div className="text-left">
                   <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Trade Type</div>
                   <SelectValue />
@@ -97,7 +97,7 @@ export default function TransactionsPage() {
             </Select>
 
             <Select defaultValue="all">
-              <SelectTrigger className="w-full sm:w-40 h-12">
+              <SelectTrigger className="w-full sm:w-[160px] h-12">
                 <div className="text-left">
                   <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Date Range</div>
                   <SelectValue />

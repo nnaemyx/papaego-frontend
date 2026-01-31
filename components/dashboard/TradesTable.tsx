@@ -30,7 +30,6 @@ const statusStyles: Record<TradeStatus, { bg: string; text: string }> = {
   'Cancelled': { bg: 'bg-red-50', text: 'text-(--status-error)' },
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const verificationConfig: Record<VerificationStatus, { icon: any; color: string; bg: string; border: string }> = {
   'Verified': {
     icon: CheckCircle2,
@@ -81,8 +80,8 @@ export function TradesTable({ trades }: TradesTableProps) {
   };
 
   return (
-    <div className="rounded-xl border border-border-custom bg-white overflow-hidden">
-      <div className="bg-bg-muted border-b border-border-light lg:overflow-x-hidden overflow-x-auto">
+    <div className="rounded-xl border border-(--border-custom) bg-white overflow-hidden">
+      <div className="bg-(--bg-muted) border-b border-(--border-light) lg:overflow-x-hidden overflow-x-auto">
         <div className="grid grid-cols-[40px_100px_120px_120px_200px_140px_140px_120px_100px_80px] items-center h-12.5 px-3 min-w-300">
           <div className="flex items-center justify-center">
             <Checkbox
@@ -103,7 +102,7 @@ export function TradesTable({ trades }: TradesTableProps) {
         </div>
       </div>
 
-      <div className="divide-y divide-border-light lg:overflow-x-hidden overflow-x-auto">
+      <div className="divide-y divide-(--border-light) lg:overflow-x-hidden overflow-x-auto">
         {paginatedTrades.map((trade) => {
           const verificationStyle = verificationConfig[trade.verification];
           const VerificationIcon = verificationStyle.icon;
@@ -172,7 +171,7 @@ export function TradesTable({ trades }: TradesTableProps) {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="border-t border-border-light p-4">
+        <div className="border-t border-(--border-light) p-4">
           <Pagination>
             <PaginationContent>
               <PaginationItem>

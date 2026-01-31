@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -8,13 +9,14 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-public-sans);
+  --font-bricolage: var(--font-bricolage-grotesque);
   --font-mono: var(--font-geist-mono);
-  
+
   /* PapaEgo Brand Colors */
   --color-brand-primary: var(--brand-primary);
   --color-brand-primary-hover: var(--brand-primary-hover);
   --color-brand-sidebar-bg: var(--brand-sidebar-bg);
-  
+
   /* Status Colors */
   --color-status-success: var(--status-success);
   --color-status-success-bg: var(--status-success-bg);
@@ -23,19 +25,19 @@
   --color-status-info: var(--status-info);
   --color-status-warning: var(--status-warning);
   --color-status-warning-bg: var(--status-warning-bg);
-  
+
   /* Text Colors */
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-text-tertiary: var(--text-tertiary);
   --color-text-white: var(--text-white);
   --color-text-muted-custom: var(--text-muted-custom);
-  
+
   /* Background & Border */
   --color-bg-muted: var(--bg-muted);
   --color-border-custom: var(--border-custom);
   --color-border-light: var(--border-light);
-  
+
   /* Action Card Colors */
   --color-action-green-text: var(--action-green-text);
   --color-action-blue-text: var(--action-blue-text);
@@ -83,13 +85,27 @@
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
-  
+
   /* PapaEgo Custom Variables */
   --font-public-sans: 'Public Sans', sans-serif;
+  --font-bricolage-grotesque: 'Bricolage Grotesque', sans-serif;
   --brand-primary: #c9a227;
   --brand-primary-hover: #b08d1f;
   --brand-sidebar-bg: #2f2403;
-  
+
+  /* Landing Page Colors */
+  --primary-gold: #c9a227;
+  --dark-blue: #012333;
+  --dark-bg: #212121;
+  --text-gray: #383838;
+  --text-white: #ffffff;
+  --light-bg: #f7f8f9;
+  --accent-blue: #2e68fd;
+  --accent-red: #fc4343;
+  --accent-green: #08a965;
+  --bright-yellow: #ffd100;
+  --card-bg: #f6f6f6;
+
   --status-success: #27ae60;
   --status-success-bg: #e2fded;
   --status-error: #e05555;
@@ -97,22 +113,21 @@
   --status-info: #1890ff;
   --status-warning: #f0cd00;
   --status-warning-bg: #fff8ce;
-  
+
   --text-primary: #2b2f33;
   --text-secondary: #6b7078;
   --text-tertiary: #9aa0a6;
-  --text-white: #ffffff;
   --text-muted-custom: #4a4f55;
-  
+
   --bg-muted: #f6f6f6;
   --border-custom: #e1e3e6;
   --border-light: #f0f0f0;
-  
+
   --gradient-green: linear-gradient(251.66deg, #c5fd61 24.69%, #e0f6b6 76.46%);
   --gradient-blue: linear-gradient(251.66deg, #6dbdff 24.69%, #cfe9ff 76.46%);
   --gradient-pink: linear-gradient(251.66deg, #fe9eff 24.69%, #fed7ff 76.46%);
   --gradient-yellow: linear-gradient(251.66deg, #ffce5c 24.69%, #ffebbd 76.46%);
-  
+
   --action-green-text: #4a6c0d;
   --action-blue-text: #1248a6;
   --action-pink-text: #9f26a1;
@@ -189,6 +204,11 @@
     padding: 0;
     box-sizing: border-box;
   }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-public-sans);
@@ -198,6 +218,7 @@
 }
 
 @layer components {
+
   /* Typography Utilities */
   .heading-xl {
     font-size: 32px;
@@ -205,36 +226,80 @@
     line-height: 1.2;
     color: var(--text-primary);
   }
-  
+
   .heading-l {
     font-size: 28px;
     font-weight: 700;
     line-height: 1.2;
     color: var(--text-primary);
   }
-  
+
   .heading-m {
     font-size: 24px;
     font-weight: 700;
     line-height: 1.2;
     color: var(--text-primary);
   }
-  
+
   .heading-card {
     font-size: 16px;
     font-weight: 600;
     color: var(--text-muted-custom);
   }
-  
+
   .body-secondary {
     font-size: 14px;
     font-weight: 400;
     color: var(--text-secondary);
   }
-  
+
   .caption {
     font-size: 12px;
     font-weight: 400;
+  }
+
+  /* Landing Page Typography */
+  .landing-hero-title {
+    font-family: var(--font-bricolage-grotesque);
+    font-size: 52px;
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--dark-blue);
+  }
+
+  .landing-section-title {
+    font-family: var(--font-bricolage-grotesque);
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .landing-eyebrow {
+    font-family: var(--font-bricolage-grotesque);
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 5.12px;
+    text-transform: uppercase;
+  }
+
+  .landing-body {
+    font-family: var(--font-bricolage-grotesque);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  .landing-card-title {
+    font-family: var(--font-bricolage-grotesque);
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .landing-button {
+    font-family: var(--font-bricolage-grotesque);
+    font-size: 16px;
+    font-weight: 600;
   }
 }
 
@@ -242,6 +307,7 @@
   &::-webkit-scrollbar {
     display: none;
   }
+
   -ms-overflow-style: none;
   scrollbar-width: none;
 }

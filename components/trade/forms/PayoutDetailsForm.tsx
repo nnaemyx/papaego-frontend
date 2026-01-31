@@ -38,7 +38,6 @@ export function PayoutDetailsForm() {
       recipientName: '',
       recipientDetails: '',
       payoutAmount: '',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ...(payoutDetails as any),
     },
   });
@@ -57,7 +56,7 @@ export function PayoutDetailsForm() {
   };
 
   return (
-    <div className="border border-border-custom rounded-xl bg-white p-4 md:p-6 lg:p-8">
+    <div className="border border-(--border-custom) rounded-xl bg-white p-4 md:p-6 lg:p-8">
       {/* Section Header */}
       <div className="mb-6 lg:mb-8">
         <h2 className="text-xl md:text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>

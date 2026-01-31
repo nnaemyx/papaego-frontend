@@ -43,7 +43,7 @@ export function CustomerInfoForm() {
   };
 
   return (
-    <div className="border border-border-custom  bg-white p-4 md:p-6 lg:p-8">
+    <div className="border border-(--border-custom)  bg-white p-4 md:p-6 lg:p-8">
       {/* Section Header */}
       <div className="mb-6 lg:mb-8">
         <h2 className="text-xl md:text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
