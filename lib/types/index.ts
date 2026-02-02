@@ -86,3 +86,88 @@ export interface StepConfig {
   number: TradeFormStep;
   label: string;
 }
+
+// Extended Transaction Details Types
+export interface CustomerDetails {
+  fullName: string;
+  customerId: string;
+  phoneNumber: string;
+  emailAddress: string;
+  bvnStatus: 'Verified' | 'Pending' | 'Failed';
+  kycLevel: 'Completed' | 'Pending' | 'Not Started';
+  customerMessage: string;
+}
+
+export interface TradeDetailsExtended {
+  tradeType: 'Buy' | 'Sell';
+  fromCurrency: string;
+  toCurrency: string;
+  exchangeRate: string;
+  amountPaidNGN?: string;
+  amountPaidUSD?: string;
+  amountPaidGBP?: string;
+  amountPaidCAD?: string;
+  amountToReceiveUSD?: string;
+  amountToReceiveNGN?: string;
+  amountToReceiveGBP?: string;
+  amountToReceiveCAD?: string;
+  serviceFee: string;
+  totalCharged: string;
+  tradeMessage: string;
+}
+
+export interface PaymentDetails {
+  paymentMethod: string;
+  paymentSource: string;
+  senderBank: string;
+  accountName: string;
+  accountNumber: string;
+  paymentProof?: string;
+  paymentMessage: string;
+}
+
+export interface DeliveryDetails {
+  deliveryMethod: string;
+  currency: string;
+  recipientBank: string;
+  recipientName: string;
+  accountNumber: string;
+  routingNumber?: string;
+  swiftCode?: string;
+  accountType?: string;
+  recipientCountry: string;
+  bankAddress: string;
+  status: 'In Progress' | 'Completed' | 'Pending' | 'Failed';
+  deliveryMessage: string;
+}
+
+export interface TimelineEvent {
+  label: string;
+  dateTime: string;
+  status: 'completed' | 'in-progress' | 'pending';
+}
+
+export interface AgentNote {
+  timestamp: string;
+  author: string;
+  content: string;
+  type?: 'info' | 'warning' | 'error';
+}
+
+export interface TransactionDetailsExtended {
+  transactionId: string;
+  status: TradeStatus;
+  verificationStatus: VerificationStatus;
+  customer: string;
+  handledBy: string;
+  transactionType: string;
+  amountPaid: string;
+  dateTime: string;
+  overviewMessage: string;
+  customerDetails: CustomerDetails;
+  tradeDetails: TradeDetailsExtended;
+  paymentDetails: PaymentDetails;
+  deliveryDetails: DeliveryDetails;
+  timeline: TimelineEvent[];
+  notes: AgentNote[];
+}

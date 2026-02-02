@@ -18,6 +18,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import Link from 'next/link';
 
 interface TradesTableProps {
   trades: Trade[];
@@ -106,7 +107,7 @@ export function TradesTable({ trades }: TradesTableProps) {
         {paginatedTrades.map((trade) => {
           const verificationStyle = verificationConfig[trade.verification];
           const VerificationIcon = verificationStyle.icon;
-          
+
           return (
             <div
               key={trade.id}
@@ -150,10 +151,12 @@ export function TradesTable({ trades }: TradesTableProps) {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-40">
-                  <DropdownMenuItem className="gap-2">
-                    <Eye className="w-4 h-4" style={{ color: 'var(--status-success)' }} />
-                    <span style={{ color: 'var(--status-success)' }}>View</span>
-                  </DropdownMenuItem>
+                  <Link href={`/agent/transactions/${trade.id}`}>
+                    <DropdownMenuItem className="gap-2">
+                      <Eye className="w-4 h-4" style={{ color: 'var(--status-success)' }} />
+                      <span style={{ color: 'var(--status-success)' }}>View</span>
+                    </DropdownMenuItem>
+                  </Link>
                   <DropdownMenuItem className="gap-2">
                     <Upload className="w-4 h-4" />
                     <span>Upload Doc</span>
@@ -180,7 +183,7 @@ export function TradesTable({ trades }: TradesTableProps) {
                   className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                 />
               </PaginationItem>
-              
+
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                 <PaginationItem key={page}>
                   <PaginationLink

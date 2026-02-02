@@ -218,6 +218,12 @@
 }
 
 @layer components {
+  
+  /* Additional Design Tokens for Transaction Page */
+  .info-box-bg {
+    background-color: #dbeafe;
+    border-left: 3px solid #3b82f6;
+  }
 
   /* Typography Utilities */
   .heading-xl {

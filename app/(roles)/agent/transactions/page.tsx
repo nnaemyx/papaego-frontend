@@ -29,7 +29,7 @@ export default function TransactionsPage() {
           Transactions
         </h1>
         <p className="text-sm md:text-base" style={{ color: 'var(--text-secondary)' }}>
-          View and manage all trades you've handled, with full details, status updates, and actions in one place
+          View and manage all trades you&apos;ve handled, with full details, status updates, and actions in one place
         </p>
       </div>
 

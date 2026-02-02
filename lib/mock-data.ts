@@ -56,7 +56,7 @@ export const quickActions: QuickAction[] = [
 
 export const recentTrades: Trade[] = [
   {
-    id: '#PE-24118',
+    id: 'PE-24118',
     date: '25/12/2025',
     time: '11:16AM',
     customer: 'Peter Okafor',
@@ -66,7 +66,7 @@ export const recentTrades: Trade[] = [
     verification: 'Verified',
   },
   {
-    id: '#PE-24117',
+    id: 'PE-24117',
     date: '25/12/2025',
     time: '03:23PM',
     customer: 'Daniel Foster',
@@ -76,7 +76,7 @@ export const recentTrades: Trade[] = [
     verification: 'Verified',
   },
   {
-    id: '#PE-24116',
+    id: 'PE-24116',
     date: '23/12/2025',
     time: '01:48AM',
     customer: 'John Peterson',
@@ -86,7 +86,7 @@ export const recentTrades: Trade[] = [
     verification: 'Pending',
   },
   {
-    id: '#PE-24115',
+    id: 'PE-24115',
     date: '22/12/2025',
     time: '12:37PM',
     customer: 'Samuel Adeyemi',
@@ -96,7 +96,7 @@ export const recentTrades: Trade[] = [
     verification: 'Verified',
   },
   {
-    id: '#PE-24114',
+    id: 'PE-24114',
     date: '19/12/2025',
     time: '10:05AM',
     customer: 'Laura Smith',
@@ -105,8 +105,8 @@ export const recentTrades: Trade[] = [
     status: 'Cancelled',
     verification: 'Failed',
   },
-    {
-    id: '#PE-24114',
+  {
+    id: 'PE-24114',
     date: '19/12/2025',
     time: '10:05AM',
     customer: 'Laura Smith',
@@ -115,8 +115,8 @@ export const recentTrades: Trade[] = [
     status: 'Cancelled',
     verification: 'Failed',
   },
-    {
-    id: '#PE-24114',
+  {
+    id: 'PE-24114',
     date: '19/12/2025',
     time: '10:05AM',
     customer: 'Laura Smith',
@@ -125,8 +125,8 @@ export const recentTrades: Trade[] = [
     status: 'Cancelled',
     verification: 'Failed',
   },
-    {
-    id: '#PE-24114',
+  {
+    id: 'PE-24114',
     date: '19/12/2025',
     time: '10:05AM',
     customer: 'Laura Smith',
@@ -135,8 +135,8 @@ export const recentTrades: Trade[] = [
     status: 'Cancelled',
     verification: 'Failed',
   },
-    {
-    id: '#PE-24114',
+  {
+    id: 'PE-24114',
     date: '19/12/2025',
     time: '10:05AM',
     customer: 'Laura Smith',
@@ -146,3 +146,163 @@ export const recentTrades: Trade[] = [
     verification: 'Failed',
   },
 ];
+
+// Extended Transaction Details
+import { TransactionDetailsExtended } from './types';
+
+export const transactionDetailsMap: Record<string, TransactionDetailsExtended> = {
+  'PE-24118': {
+    transactionId: 'PE-24118',
+    status: 'In Progress',
+    verificationStatus: 'Verified',
+    customer: 'Peter Okafor',
+    handledBy: 'Agent - Francis James',
+    transactionType: 'Buy USD (NGN → USD)',
+    amountPaid: '₦3,250,000',
+    dateTime: '25 December 2025 · 11:16 AM',
+    overviewMessage: 'This transaction is currently being processed. Funds have been verified',
+    customerDetails: {
+      fullName: 'Peter Okafor',
+      customerId: 'PE-00051B',
+      phoneNumber: '+234 812 445 9032',
+      emailAddress: 'peter.okafor@gmail.com',
+      bvnStatus: 'Verified',
+      kycLevel: 'Completed',
+      customerMessage: 'Customer identity and BVN have been successfully verified',
+    },
+    tradeDetails: {
+      tradeType: 'Buy',
+      fromCurrency: 'NGN',
+      toCurrency: 'USD',
+      exchangeRate: '₦1,450 / $1',
+      amountPaidNGN: '₦3,250,000',
+      amountToReceiveUSD: '$2,241.38',
+      serviceFee: '₦5,000',
+      totalCharged: '₦3,255,000',
+      tradeMessage: 'Rate was locked at trade creation',
+    },
+    paymentDetails: {
+      paymentMethod: 'Bank Transfer',
+      paymentSource: 'Customer Bank Account',
+      senderBank: 'GTBank',
+      accountName: 'Peter Okafor',
+      accountNumber: '0209014338',
+      paymentProof: '/payment-proof.png',
+      paymentMessage: 'Payment proof reviewed and confirmed',
+    },
+    deliveryDetails: {
+      deliveryMethod: 'Bank Account',
+      currency: 'USD',
+      recipientBank: 'JPMorgan Chase Bank, N.A.',
+      recipientName: 'Peter Okafor',
+      accountNumber: '8734926715',
+      routingNumber: '021000021',
+      swiftCode: 'CHASUS33',
+      accountType: 'Checking',
+      recipientCountry: 'United States',
+      bankAddress: 'New York, NY, USA',
+      status: 'In Progress',
+      deliveryMessage: 'USD Payout is currently being processed',
+    },
+    timeline: [
+      { label: 'Trade Created:', dateTime: '25/12/2025 · 11:10 AM', status: 'completed' },
+      { label: 'Payment Received:', dateTime: '25/12/2025 · 11:14 AM', status: 'completed' },
+      { label: 'Payment Verified:', dateTime: '25/12/2025 · 11:16 AM', status: 'completed' },
+      { label: 'USD Delivery:', dateTime: '–', status: 'in-progress' },
+    ],
+    notes: [
+      {
+        timestamp: '11:18 AM',
+        author: 'Francis James',
+        content: 'Payment verified',
+        type: 'info',
+      },
+      {
+        timestamp: '11:20 AM',
+        author: 'Francis James',
+        content: 'USD delivery queued',
+      },
+      {
+        timestamp: '11:22 AM',
+        author: 'Compliance Bot',
+        content: 'Trade flagged for high-value monitoring',
+        type: 'warning',
+      },
+      {
+        timestamp: '11:25 AM',
+        author: 'Francis James',
+        content: 'No further issues observed',
+      },
+    ],
+  },
+  'PE-24117': {
+    transactionId: 'PE-24117',
+    status: 'Completed',
+    verificationStatus: 'Verified',
+    customer: 'Daniel Foster',
+    handledBy: 'Agent - Francis James',
+    transactionType: 'Sell USD (USD → NGN)',
+    amountPaid: '$2,400',
+    dateTime: '25 December 2025 · 03:23 PM',
+    overviewMessage: 'This transaction has been completed successfully',
+    customerDetails: {
+      fullName: 'Daniel Foster',
+      customerId: 'PE-00052C',
+      phoneNumber: '+234 803 221 4567',
+      emailAddress: 'daniel.foster@gmail.com',
+      bvnStatus: 'Verified',
+      kycLevel: 'Completed',
+      customerMessage: 'Customer identity and BVN have been successfully verified',
+    },
+    tradeDetails: {
+      tradeType: 'Sell',
+      fromCurrency: 'USD',
+      toCurrency: 'NGN',
+      exchangeRate: '₦1,480 / $1',
+      amountPaidUSD: '$2,400',
+      amountToReceiveNGN: '₦3,552,000',
+      serviceFee: '₦4,000',
+      totalCharged: '$2,400',
+      tradeMessage: 'Rate was locked at trade creation',
+    },
+    paymentDetails: {
+      paymentMethod: 'Bank Transfer',
+      paymentSource: 'Customer Bank Account',
+      senderBank: 'Chase Bank',
+      accountName: 'Daniel Foster',
+      accountNumber: '8734926715',
+      paymentProof: '/payment-proof.png',
+      paymentMessage: 'Payment proof reviewed and confirmed',
+    },
+    deliveryDetails: {
+      deliveryMethod: 'Bank Account',
+      currency: 'NGN',
+      recipientBank: 'Access Bank',
+      recipientName: 'Daniel Foster',
+      accountNumber: '0123456789',
+      recipientCountry: 'Nigeria',
+      bankAddress: 'Lagos, Nigeria',
+      status: 'Completed',
+      deliveryMessage: 'NGN Payout has been completed successfully',
+    },
+    timeline: [
+      { label: 'Trade Created:', dateTime: '25/12/2025 · 03:15 PM', status: 'completed' },
+      { label: 'Payment Received:', dateTime: '25/12/2025 · 03:20 PM', status: 'completed' },
+      { label: 'Payment Verified:', dateTime: '25/12/2025 · 03:22 PM', status: 'completed' },
+      { label: 'NGN Delivery:', dateTime: '25/12/2025 · 03:23 PM', status: 'completed' },
+    ],
+    notes: [
+      {
+        timestamp: '03:22 PM',
+        author: 'Francis James',
+        content: 'Payment verified',
+        type: 'info',
+      },
+      {
+        timestamp: '03:23 PM',
+        author: 'Francis James',
+        content: 'Transaction completed successfully',
+      },
+    ],
+  },
+};
