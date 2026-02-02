@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Loader2 } from 'lucide-react';
 
 const contactSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -44,17 +45,33 @@ export function ContactModal({ open, onOpenChange }: ContactModalProps) {
 
   const onSubmit = async (data: ContactFormData) => {
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log('Contact submission:', data);
-    setIsSuccess(true);
-    setIsSubmitting(false);
-    
-    setTimeout(() => {
-      setIsSuccess(false);
-      reset();
-      onOpenChange(false);
-    }, 2000);
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      console.log('Contact submission successful');
+      setIsSuccess(true);
+
+      setTimeout(() => {
+        setIsSuccess(false);
+        reset();
+        onOpenChange(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Contact submission error:', error);
+      alert('Something went wrong. Please try again later.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -150,7 +167,14 @@ export function ContactModal({ open, onOpenChange }: ContactModalProps) {
                 disabled={isSubmitting}
                 className="flex-1 bg-(--primary-gold) hover:bg-(--primary-gold)/90 text-white landing-button"
               >
-                {isSubmitting ? 'Sending...' : 'Send Message'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  'Send Message'
+                )}
               </Button>
             </div>
           </form>

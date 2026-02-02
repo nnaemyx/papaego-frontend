@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Loader2 } from 'lucide-react';
 
 const waitlistSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -43,17 +44,33 @@ export function WaitlistModal({ open, onOpenChange }: WaitlistModalProps) {
 
   const onSubmit = async (data: WaitlistFormData) => {
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log('Waitlist submission:', data);
-    setIsSuccess(true);
-    setIsSubmitting(false);
-    
-    setTimeout(() => {
-      setIsSuccess(false);
-      reset();
-      onOpenChange(false);
-    }, 2000);
+    try {
+      const response = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit waitlist');
+      }
+
+      console.log('Waitlist submission successful');
+      setIsSuccess(true);
+
+      setTimeout(() => {
+        setIsSuccess(false);
+        reset();
+        onOpenChange(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Waitlist submission error:', error);
+      alert('Something went wrong. Please try again later.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -144,7 +161,14 @@ export function WaitlistModal({ open, onOpenChange }: WaitlistModalProps) {
                 disabled={isSubmitting}
                 className="flex-1 bg-(--primary-gold) hover:bg-(--primary-gold)/90 text-white landing-button"
               >
-                {isSubmitting ? 'Submitting...' : 'Join Waitlist'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Join Waitlist'
+                )}
               </Button>
             </div>
           </form>
