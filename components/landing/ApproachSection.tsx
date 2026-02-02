@@ -32,12 +32,12 @@ export function ApproachSection() {
   return (
     <section 
       ref={ref}
-      className="relative py-20 px-4 sm:px-6 lg:px-8"
+      className="relative py-16 lg:py-20 px-4 sm:px-6 lg:px-8"
       style={{ backgroundColor: 'white' }}
     >
       <div className="max-w-7xl mx-auto">
         <motion.div
-          className="text-center space-y-4 mb-16"
+          className="text-center space-y-4 mb-12 lg:mb-16"
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8 }}
@@ -67,10 +67,10 @@ export function ApproachSection() {
           transition={{ duration: 0.8, delay: 0.2 }}
         >
           <Card 
-            className="p-12 rounded-2xl"
+            className="p-6 lg:p-12 rounded-2xl"
             style={{ backgroundColor: 'var(--card-bg)' }}
           >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
               {approaches.map((approach, index) => (
                 <div key={index} className="relative">
                   <motion.div

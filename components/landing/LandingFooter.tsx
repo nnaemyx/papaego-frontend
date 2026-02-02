@@ -44,12 +44,12 @@ export function LandingFooter({ onJoinWaitlist, onContactUs }: LandingFooterProp
             alt="PapaEgo"
             width={175}
             height={40}
-            className="h-[40px] w-auto"
+            className="h-[32px] lg:h-[40px] w-auto"
           />
           
           {/* Tagline */}
           <p 
-            className="landing-body text-center"
+            className="landing-body text-center text-sm lg:text-base"
             style={{ 
               color: 'var(--text-gray)',
               fontWeight: 700,
@@ -59,7 +59,7 @@ export function LandingFooter({ onJoinWaitlist, onContactUs }: LandingFooterProp
           </p>
           
           {/* Navigation Links */}
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4 lg:gap-8">
             <button
               onClick={onJoinWaitlist}
               className="landing-button transition-colors hover:opacity-80"
@@ -91,7 +91,7 @@ export function LandingFooter({ onJoinWaitlist, onContactUs }: LandingFooterProp
           </div>
           
           {/* Social Icons */}
-          <div className="flex items-center gap-7">
+          <div className="flex items-center gap-5 lg:gap-7">
             {socialLinks.map((social, index) => (
               <motion.a
                 key={index}
@@ -102,8 +102,9 @@ export function LandingFooter({ onJoinWaitlist, onContactUs }: LandingFooterProp
                 whileTap={{ scale: 0.95 }}
               >
                 <social.icon 
-                  width={28}
-                  height={28}
+                  width={24}
+                  height={24}
+                  className="lg:w-[28px] lg:h-[28px]"
                   style={{ color: 'var(--primary-gold)' }}
                 />
               </motion.a>
@@ -113,23 +114,23 @@ export function LandingFooter({ onJoinWaitlist, onContactUs }: LandingFooterProp
           {/* Bottom Row */}
           <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t" style={{ borderColor: 'var(--border-custom)' }}>
             <p 
-              className="landing-body text-sm"
+              className="landing-body text-xs sm:text-sm text-center sm:text-left"
               style={{ color: 'var(--text-gray)' }}
             >
               © 2026 PapaEgo. All rights reserved.
             </p>
             
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4 sm:gap-6">
               <a
                 href="#"
-                className="landing-body text-sm transition-colors hover:opacity-80"
+                className="landing-body text-xs sm:text-sm transition-colors hover:opacity-80"
                 style={{ color: 'var(--primary-gold)' }}
               >
                 Terms & Conditions
               </a>
               <a
                 href="#"
-                className="landing-body text-sm transition-colors hover:opacity-80"
+                className="landing-body text-xs sm:text-sm transition-colors hover:opacity-80"
                 style={{ color: 'var(--primary-gold)' }}
               >
                 Privacy Policy

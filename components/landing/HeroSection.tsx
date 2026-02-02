@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
+import { RotatingGlobe } from '@/components/animations/RotatingGlobe';
 
 interface HeroSectionProps {
   onJoinWaitlist: () => void;
@@ -14,10 +15,21 @@ export function HeroSection({ onJoinWaitlist, onContactUs }: HeroSectionProps) {
       className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden"
       style={{ backgroundColor: 'var(--light-bg)' }}
     >
+      {/* Rotating background globe network from Figma - Hidden on mobile */}
+      <div className="absolute inset-0 hidden lg:flex items-center justify-end pointer-events-none">
+        <div className="relative w-full h-full flex items-center justify-end max-w-[800px] lg:max-w-[900px] -mr-20 lg:-mr-32">
+          <RotatingGlobe
+            src="/images/hero-removebg-preview.png"
+            alt="Global payment network visualization"
+            className="w-full max-w-[700px] lg:max-w-[800px]"
+          />
+        </div>
+      </div>
+
       <div className="relative z-10 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <motion.div
-            className="space-y-8"
+            className="space-y-6 lg:space-y-8"
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
@@ -59,14 +71,14 @@ export function HeroSection({ onJoinWaitlist, onContactUs }: HeroSectionProps) {
             </div>
 
             <motion.div
-              className="flex flex-wrap gap-4"
+              className="flex flex-col sm:flex-row flex-wrap gap-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.7 }}
             >
               <Button
                 onClick={onJoinWaitlist}
-                className="landing-button px-8 h-[52px] rounded-lg transition-transform hover:scale-105"
+                className="landing-button px-8 h-[52px] rounded-lg transition-transform hover:scale-105 w-full sm:w-auto"
                 style={{
                   backgroundColor: 'var(--primary-gold)',
                   color: 'white',
@@ -80,7 +92,7 @@ export function HeroSection({ onJoinWaitlist, onContactUs }: HeroSectionProps) {
               <Button
                 onClick={onContactUs}
                 variant="outline"
-                className="landing-button px-8 h-[52px] rounded-lg transition-transform hover:scale-105"
+                className="landing-button px-8 h-[52px] rounded-lg transition-transform hover:scale-105 w-full sm:w-auto"
                 style={{
                   borderColor: 'var(--primary-gold)',
                   color: 'var(--primary-gold)',
@@ -93,25 +105,8 @@ export function HeroSection({ onJoinWaitlist, onContactUs }: HeroSectionProps) {
             </motion.div>
           </motion.div>
 
-          <motion.div
-            className="relative h-[500px] lg:h-[600px] flex items-center justify-center"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-          >
-            {/* Rotating globe with network connections */}
-            <motion.img
-              src="/images/hero-bg.png"
-              alt="Globe with network connections"
-              className="w-full max-w-[600px] h-auto object-contain"
-              animate={{ rotate: 360 }}
-              transition={{
-                duration: 60,
-                repeat: Infinity,
-                ease: "linear"
-              }}
-            />
-          </motion.div>
+          {/* Right side is empty, background shows the globe */}
+          <div className="hidden lg:block" />
         </div>
       </div>
     </section>

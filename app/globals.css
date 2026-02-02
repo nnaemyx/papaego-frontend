@@ -301,6 +301,40 @@
     font-size: 16px;
     font-weight: 600;
   }
+
+  /* Responsive Typography */
+  @media (max-width: 767px) {
+    .landing-hero-title {
+      font-size: 32px;
+    }
+
+    .landing-section-title {
+      font-size: 28px;
+    }
+
+    .landing-eyebrow {
+      font-size: 14px;
+      letter-spacing: 3px;
+    }
+
+    .landing-body {
+      font-size: 14px;
+    }
+
+    .landing-card-title {
+      font-size: 18px;
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .landing-hero-title {
+      font-size: 42px;
+    }
+
+    .landing-section-title {
+      font-size: 32px;
+    }
+  }
 }
 
 @utility scrollbar-hidden {

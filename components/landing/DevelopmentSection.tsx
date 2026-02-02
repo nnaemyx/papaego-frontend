@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { useInView } from 'framer-motion';
 import { useRef } from 'react';
+import { RotatingGlobe } from '@/components/animations/RotatingGlobe';
 
 interface DevelopmentSectionProps {
   onJoinWaitlist: () => void;
@@ -19,10 +20,21 @@ export function DevelopmentSection({ onJoinWaitlist }: DevelopmentSectionProps) 
       className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden"
       style={{ backgroundColor: 'var(--light-bg)' }}
     >
+      {/* Rotating background network diagram from Figma - Hidden on mobile */}
+      <div className="absolute inset-0 hidden lg:flex items-center justify-end pointer-events-none">
+        <div className="relative w-full h-full flex items-center justify-end max-w-[700px] lg:max-w-[800px] -mr-10 lg:-mr-20">
+          <RotatingGlobe
+            src="/images/networking-concept-still-life-assortment_1-removebg-preview.png"
+            alt="Payment network connections"
+            className="w-full max-w-[600px] lg:max-w-[700px]"
+          />
+        </div>
+      </div>
+
       <div className="relative z-10 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           <motion.div
-            className="space-y-8"
+            className="space-y-6 lg:space-y-8"
             initial={{ opacity: 0, x: -50 }}
             animate={isInView ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.8 }}
@@ -59,7 +71,7 @@ export function DevelopmentSection({ onJoinWaitlist }: DevelopmentSectionProps) 
 
             <Button
               onClick={onJoinWaitlist}
-              className="landing-button px-8 h-[52px] rounded-lg transition-transform hover:scale-105"
+              className="landing-button px-8 h-[52px] rounded-lg transition-transform hover:scale-105 w-full sm:w-auto"
               style={{
                 backgroundColor: 'var(--primary-gold)',
                 color: 'white',
@@ -71,25 +83,8 @@ export function DevelopmentSection({ onJoinWaitlist }: DevelopmentSectionProps) 
             </Button>
           </motion.div>
 
-          <motion.div
-            className="relative h-[400px] flex items-center justify-center"
-            initial={{ opacity: 0, x: 50 }}
-            animate={isInView ? { opacity: 1, x: 0 } : {}}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            {/* Network connections diagram */}
-            <motion.img
-              src="/images/development-bg.png"
-              alt="Network diagram with interconnected nodes"
-              className="w-full max-w-[450px] h-auto object-contain"
-              animate={isInView ? { scale: [1, 1.05, 1] } : {}}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            />
-          </motion.div>
+          {/* Right side is empty, background shows the network */}
+          <div className="hidden lg:block" />
         </div>
       </div>
     </section>
