@@ -1,8 +1,8 @@
-import axios from "axios";
+import axios, { AxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/store/auth-store";
 
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api",
+    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
     headers: {
         "Content-Type": "application/json",
     },
@@ -25,5 +25,29 @@ api.interceptors.response.use(
         return Promise.reject(error);
     }
 );
+
+// Generic API client wrapper for type safety
+export const apiClient = {
+    get: async <T>(url: string, config?: AxiosRequestConfig): Promise<T> => {
+        const response = await api.get<T>(url, config);
+        return response.data;
+    },
+    post: async <T>(url: string, data?: Record<string, unknown>, config?: AxiosRequestConfig): Promise<T> => {
+        const response = await api.post<T>(url, data, config);
+        return response.data;
+    },
+    patch: async <T>(url: string, data?: Record<string, unknown>, config?: AxiosRequestConfig): Promise<T> => {
+        const response = await api.patch<T>(url, data, config);
+        return response.data;
+    },
+    put: async <T>(url: string, data?: Record<string, unknown>, config?: AxiosRequestConfig): Promise<T> => {
+        const response = await api.put<T>(url, data, config);
+        return response.data;
+    },
+    delete: async <T = void>(url: string, config?: AxiosRequestConfig): Promise<T> => {
+        const response = await api.delete<T>(url, config);
+        return response.data;
+    },
+};
 
 export default api;

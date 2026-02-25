@@ -16,8 +16,8 @@ export async function POST(req: Request) {
         }
 
         const data = await resend.emails.send({
-            from: 'PapaEgo <onboarding@resend.dev>',
-            to: [process.env.NOTIFICATION_EMAIL || 'hello@papaego.com'],
+            from: 'PapaEgo <careers@papaego.com>',
+            to: email,
             subject: 'New Contact Inquiry',
             react: ContactEmail({ name, email, message }),
         });

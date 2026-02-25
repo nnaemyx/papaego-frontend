@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, PlusCircle, Wallet, Users, FolderOpen, Settings, LogOut, ShieldAlert, FileText, X } from 'lucide-react';
+import { Home, PlusCircle, Wallet, Users, FolderOpen, Settings, LogOut, ShieldAlert, FileText, X, TrendingUp, UserCircle } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useState, useEffect } from 'react';
 
@@ -22,9 +22,13 @@ const roleNavigation = {
     { name: 'Profile', href: '/customer/profile', icon: Users },
   ],
   ADMIN: [
-    { name: 'Dashboard', href: '/admin/dashboard', icon: Home },
+    { name: 'Home', href: '/admin/dashboard', icon: Home },
+    { name: 'Transactions', href: '/admin/transactions', icon: TrendingUp },
     { name: 'Agents', href: '/admin/agents', icon: Users },
-    { name: 'System', href: '/admin/settings', icon: Settings },
+    { name: 'Customers', href: '/admin/customers', icon: UserCircle },
+    { name: 'Commissions', href: '/admin/commissions', icon: Wallet },
+    { name: 'Audit Logs', href: '/admin/audit-logs', icon: FileText },
+    { name: 'Settings', href: '/admin/settings', icon: Settings },
   ],
   COMPLIANCE: [
     { name: 'Dashboard', href: '/compliance/dashboard', icon: Home },
@@ -43,8 +47,8 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const router = useRouter();
   const { user, logout } = useAuthStore();
 
-  // TEMPORARY: Hardcoded to AGENT for development/testing without auth
-  const userRole = 'AGENT';
+  // Get user role from auth store
+  const userRole = user?.role || 'AGENT'; // Default to AGENT if not logged in
   const navigation = roleNavigation[userRole];
 
   const handleLogout = () => {
@@ -68,8 +72,8 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
           fixed lg:static inset-y-0 left-0 z-50
           w-[260px] h-screen flex flex-col
           transform transition-transform duration-300 ease-in-out
-          lg:transform-none
-          ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:translate-x-0
         `}
         style={{ backgroundColor: 'var(--brand-sidebar-bg)' }}
       >
