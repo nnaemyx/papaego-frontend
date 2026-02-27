@@ -79,7 +79,7 @@ export default function CustomerDetailPage({
                             className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0"
                             style={{ backgroundColor: "#1890ff" }}
                         >
-                            {customer.name.charAt(0)}
+                            {customer.name?.charAt(0) || "?"}
                         </div>
                         <div>
                             <h1 className="text-2xl font-bold" style={{ color: "#2b2f33" }}>
@@ -96,10 +96,10 @@ export default function CustomerDetailPage({
                                 <Badge
                                     variant="outline"
                                     className={`text-xs ${customer.verificationStatus === "Verified"
-                                            ? "bg-green-100 text-green-700 border-green-300"
-                                            : customer.verificationStatus === "Pending"
-                                                ? "bg-yellow-100 text-yellow-700 border-yellow-300"
-                                                : "bg-red-100 text-red-700 border-red-300"
+                                        ? "bg-green-100 text-green-700 border-green-300"
+                                        : customer.verificationStatus === "Pending"
+                                            ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                                            : "bg-red-100 text-red-700 border-red-300"
                                         }`}
                                 >
                                     {customer.verificationStatus}

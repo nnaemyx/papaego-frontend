@@ -103,10 +103,10 @@ export function WaitlistModal({ open, onOpenChange }: WaitlistModalProps) {
               </svg>
             </div>
             <p className="landing-body font-semibold text-gray-900">
-              You're on the list!
+              You&apos;re on the list!
             </p>
             <p className="landing-body text-gray-600 mt-2">
-              We'll be in touch soon.
+              We&apos;ll be in touch soon.
             </p>
           </div>
         ) : (

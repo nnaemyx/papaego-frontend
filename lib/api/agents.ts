@@ -72,6 +72,11 @@ export const agentsApi = {
     return response.data;
   },
 
+  verifyDocuments: async (id: string) => {
+    const response = await api.patch(`/admin/agents/${id}/verify-documents`);
+    return response.data;
+  },
+
   // Update agent
   updateAgent: async (id: string, data: Partial<Agent>) => {
     const response = await api.patch(`/admin/agents/${id}`, data);

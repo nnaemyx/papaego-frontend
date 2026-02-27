@@ -56,6 +56,7 @@ export interface TradeDetails {
   tradeType?: 'buy' | 'sell';
   fromCurrency?: string;
   toCurrency?: string;
+  exchangeRate?: string;
   amountSent?: string;
   amountToReceive?: string;
 }

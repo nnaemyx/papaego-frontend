@@ -8,7 +8,7 @@ interface CustomerProfileSectionProps {
 }
 
 export function CustomerProfileSection({ customer }: CustomerProfileSectionProps) {
-    const name = customer.name.split(" ");
+    const name = (customer.name || "").split(" ");
     return (
         <div className="space-y-6">
             <div

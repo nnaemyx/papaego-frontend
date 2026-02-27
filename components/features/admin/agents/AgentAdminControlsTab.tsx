@@ -11,11 +11,14 @@ import {
 } from "@/components/ui/select";
 import { Shield, UserX, UserCheck, AlertOctagon, Edit } from "lucide-react";
 import type { Agent } from "@/lib/types/agent";
+import { getStatusColor } from "@/lib/formatters";
+import { API_BASE_URL } from "@/lib/api/client";
 
 interface AgentAdminControlsTabProps {
     agent: Agent;
     onSuspend: () => void;
     onActivate: () => void;
+    onVerify: () => void;
     onDelete: () => void;
 }
 
@@ -23,6 +26,7 @@ export function AgentAdminControlsTab({
     agent,
     onSuspend,
     onActivate,
+    onVerify,
     onDelete,
 }: AgentAdminControlsTabProps) {
     const [newRole, setNewRole] = useState(agent.role);
@@ -35,25 +39,79 @@ export function AgentAdminControlsTab({
                 className="rounded-xl p-5 border"
                 style={{ backgroundColor: "white", borderColor: "#e1e3e6" }}
             >
-                <h3 className="font-semibold text-base mb-2" style={{ color: "#2b2f33" }}>
-                    Account Status Control
-                </h3>
-                <p className="text-sm mb-5" style={{ color: "#6b7078" }}>
-                    Current status:{" "}
-                    <span className="font-medium" style={{ color: "#2b2f33" }}>
-                        {agent.status}
-                    </span>
-                </p>
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 className="font-semibold text-base" style={{ color: "#2b2f33" }}>
+                            Account Status Control
+                        </h3>
+                        <p className="text-sm mt-1" style={{ color: "#6b7078" }}>
+                            Current status: <span className="font-semibold" style={{ color: getStatusColor(agent.status).split(' ')[1] }}>{agent.status}</span>
+                        </p>
+                    </div>
+                </div>
+
+                {/* Document Preview for Admin */}
+                {agent.agentProfile && (
+                    <div className="mb-6 p-4 rounded-lg bg-gray-50 border border-gray-200">
+                        <h4 className="text-sm font-semibold mb-3" style={{ color: "#2b2f33" }}>Review Submitted Documents</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <p className="text-xs text-gray-500 uppercase font-medium">Government ID</p>
+                                {agent.agentProfile.governmentIdUrl ? (
+                                    <a
+                                        href={agent.agentProfile.governmentIdUrl.startsWith('http') ? agent.agentProfile.governmentIdUrl : `${API_BASE_URL}${agent.agentProfile.governmentIdUrl}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm font-medium hover:underline flex items-center gap-1"
+                                        style={{ color: "#c9a227" }}
+                                    >
+                                        View ID Document
+                                    </a>
+                                ) : (
+                                    <p className="text-sm text-gray-400 italic">Not submitted</p>
+                                )}
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-xs text-gray-500 uppercase font-medium">Proof of Address</p>
+                                {agent.agentProfile.proofOfAddressUrl ? (
+                                    <a
+                                        href={agent.agentProfile.proofOfAddressUrl.startsWith('http') ? agent.agentProfile.proofOfAddressUrl : `${API_BASE_URL}${agent.agentProfile.proofOfAddressUrl}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm font-medium hover:underline flex items-center gap-1"
+                                        style={{ color: "#c9a227" }}
+                                    >
+                                        View Proof Document
+                                    </a>
+                                ) : (
+                                    <p className="text-sm text-gray-400 italic">Not submitted</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex flex-wrap gap-3">
                     {agent.status !== "Active" && (
-                        <Button
-                            onClick={onActivate}
-                            className="gap-2"
-                            style={{ backgroundColor: "#27ae60", color: "white" }}
-                        >
-                            <UserCheck className="h-4 w-4" />
-                            Activate Agent
-                        </Button>
+                        <>
+                            <Button
+                                onClick={onVerify}
+                                className="gap-2"
+                                variant="outline"
+                                style={{ borderColor: "#27ae60", color: "#27ae60" }}
+                            >
+                                <Shield className="h-4 w-4" />
+                                Verify Documents
+                            </Button>
+                            <Button
+                                onClick={onActivate}
+                                className="gap-2"
+                                style={{ backgroundColor: "#27ae60", color: "white" }}
+                            >
+                                <UserCheck className="h-4 w-4" />
+                                Activate Agent
+                            </Button>
+                        </>
                     )}
                     {agent.status === "Active" && (
                         <Button
@@ -137,28 +195,8 @@ export function AgentAdminControlsTab({
                     Admin Notes
                 </h3>
                 <div className="space-y-3 mb-4">
-                    {[
-                        { author: "Super Admin", date: "20/12/2025", note: "Agent performance reviewed. Flagged 2 trades resolved." },
-                        { author: "Compliance Team", date: "15/12/2025", note: "KYC documents verified and approved." },
-                    ].map((n, i) => (
-                        <div
-                            key={i}
-                            className="p-3 rounded-lg"
-                            style={{ backgroundColor: "#f6f6f6" }}
-                        >
-                            <div className="flex items-center justify-between mb-1">
-                                <p className="text-xs font-semibold" style={{ color: "#2b2f33" }}>
-                                    {n.author}
-                                </p>
-                                <p className="text-xs" style={{ color: "#9aa0a6" }}>
-                                    {n.date}
-                                </p>
-                            </div>
-                            <p className="text-xs" style={{ color: "#6b7078" }}>
-                                {n.note}
-                            </p>
-                        </div>
-                    ))}
+                    {/* Real notes will be listed here once integrated with backend */}
+                    <p className="text-xs text-center py-4 text-gray-400 italic">No admin notes available for this agent.</p>
                 </div>
                 <textarea
                     className="w-full rounded-lg border p-3 text-sm resize-none focus:outline-none focus:ring-1"

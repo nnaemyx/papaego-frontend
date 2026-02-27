@@ -20,6 +20,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useRouter } from 'next/navigation';
+import { agentApi } from '@/lib/api/agent';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 interface PayoutDetailsFormData {
   payoutMethod: string;
@@ -29,8 +32,17 @@ interface PayoutDetailsFormData {
 }
 
 export function PayoutDetailsForm() {
-  const { payoutDetails, updatePayoutDetails, previousStep, resetForm } = useTradeFormStore();
+  const {
+    customerInformation,
+    tradeDetails,
+    paymentInformation,
+    payoutDetails,
+    updatePayoutDetails,
+    previousStep,
+    resetForm
+  } = useTradeFormStore();
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<PayoutDetailsFormData>({
     defaultValues: {
@@ -42,13 +54,53 @@ export function PayoutDetailsForm() {
     },
   });
 
-  const onSubmit = (data: PayoutDetailsFormData) => {
-    updatePayoutDetails(data);
-    // Submit the trade
-    alert('Trade created successfully!');
-    resetForm();
-    router.push('/agent/dashboard');
+  const onSubmit = async (data: PayoutDetailsFormData) => {
+    setIsSubmitting(true);
+    try {
+      updatePayoutDetails(data);
+
+      // Build trade data from all form steps
+      const amountRaw = tradeDetails.amountSent?.replace(/[^0-9.]/g, '') || '0';
+      const customerFullName = [customerInformation.firstName, customerInformation.lastName]
+        .filter(Boolean)
+        .join(' ') || 'Unknown Customer';
+
+      const tradeData = {
+        customerName: customerFullName,
+        customerEmail: customerInformation.emailAddress || '',
+        customerPhone: customerInformation.phoneNumber || '',
+        customerCountry: customerInformation.country || '',
+        amount: parseFloat(amountRaw),
+        sendCurrency: tradeDetails.fromCurrency || 'GBP',
+        receiveCurrency: tradeDetails.toCurrency || 'NGN',
+        paymentMethod: paymentInformation.paymentMethod,
+        paymentSource: paymentInformation.paymentSource,
+        payoutMethod: data.payoutMethod,
+        recipientName: data.recipientName,
+        recipientDetails: data.recipientDetails,
+        payoutAmount: data.payoutAmount,
+        paymentProofFile: paymentInformation.paymentProofFile || null,
+      };
+
+      if (!tradeData.customerName || tradeData.customerName === 'Unknown Customer') {
+        toast.error('Customer name is required. Please go back to Step 1.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      await agentApi.createTrade(tradeData);
+
+      toast.success('Trade created successfully!');
+      resetForm();
+      router.push('/agent/dashboard');
+    } catch (error) {
+      console.error('Failed to create trade:', error);
+      toast.error('Failed to create trade. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
 
   const handleBack = () => {
     updatePayoutDetails(form.getValues());
@@ -178,13 +230,14 @@ export function PayoutDetailsForm() {
             </Button>
             <Button
               type="submit"
+              disabled={isSubmitting}
               className="h-12 px-8 rounded-lg text-base font-semibold"
               style={{
                 backgroundColor: 'var(--brand-primary)',
                 color: '#ffffff',
               }}
             >
-              Create New Trade
+              {isSubmitting ? 'Creating...' : 'Create New Trade'}
             </Button>
           </div>
         </form>

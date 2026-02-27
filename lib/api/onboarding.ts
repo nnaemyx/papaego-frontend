@@ -26,17 +26,19 @@ export const onboardingApi = {
     return response.data;
   },
 
-  // Upload documents to cloud storage (if needed)
-  // This would be used before calling completeOnboarding
+  // Upload documents to backend storage
   uploadDocument: async (file: File, type: "governmentId" | "proofOfAddress") => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("type", type);
-    
-    // TODO: Replace with actual upload endpoint (e.g., to S3 or Cloudinary)
-    // For now, return a mock URL
-    return {
-      url: `https://storage.papaego.com/${type}/${Date.now()}-${file.name}`,
-    };
+
+    // Uploads file to backend via multer, expecting { url: '/uploads/filename.ext' }
+    const response = await api.post("/agent/onboarding/upload", formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    return response.data; // { url: string }
   },
 };

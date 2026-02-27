@@ -55,6 +55,13 @@ export default function AgentDetailPage({
         },
     });
 
+    const verifyMutation = useMutation({
+        mutationFn: () => agentsApi.verifyDocuments(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["agent", id] });
+        },
+    });
+
     const deleteMutation = useMutation({
         mutationFn: () => agentsApi.deleteAgent(id),
         onSuccess: () => {
@@ -198,6 +205,7 @@ export default function AgentDetailPage({
                         agent={agent}
                         onSuspend={() => suspendMutation.mutate()}
                         onActivate={() => activateMutation.mutate()}
+                        onVerify={() => verifyMutation.mutate()}
                         onDelete={() => setDeleteOpen(true)}
                     />
                 )}

@@ -1,6 +1,6 @@
-'use client';
-
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import { useTradeFormStore } from '@/store/trade-form-store';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,7 +20,8 @@ import {
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { ArrowLeftRight } from 'lucide-react';
+import { ArrowLeftRight, Loader2 } from 'lucide-react';
+import { agentApi } from '@/lib/api/agent';
 
 interface TradeDetailsFormData {
   tradeType: 'buy' | 'sell';
@@ -44,16 +45,47 @@ export function TradeDetailsForm() {
   const form = useForm<TradeDetailsFormData>({
     defaultValues: {
       tradeType: 'buy',
-      fromCurrency: '',
-      toCurrency: '',
+      fromCurrency: 'GBP',
+      toCurrency: 'NGN',
       amountSent: '',
       amountToReceive: '',
       ...tradeDetails,
     },
   });
 
+  const fromCurrency = form.watch('fromCurrency');
+  const toCurrency = form.watch('toCurrency');
+  const amountSent = form.watch('amountSent');
+  const tradeType = form.watch('tradeType');
+
+  // Fetch exchange rate
+  const { data: exchangeData, isLoading: isLoadingRate } = useQuery({
+    queryKey: ['fx-rate', fromCurrency, toCurrency],
+    queryFn: () => agentApi.getExchangeRate(fromCurrency, toCurrency, 'nigeria-id'),
+    enabled: !!fromCurrency && !!toCurrency,
+  });
+
+  const exchangeRate = exchangeData?.rate || 0;
+
+  // Update amount to receive automatically
+  useEffect(() => {
+    const rawAmount = parseFloat(amountSent.replace(/[^0-9.]/g, '')) || 0;
+    if (rawAmount > 0 && exchangeRate > 0) {
+      const calculated = (rawAmount * exchangeRate).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      form.setValue('amountToReceive', calculated);
+    } else {
+      form.setValue('amountToReceive', '0.00');
+    }
+  }, [amountSent, exchangeRate, form]);
+
   const onSubmit = (data: TradeDetailsFormData) => {
-    updateTradeDetails(data);
+    updateTradeDetails({
+      ...data,
+      exchangeRate: exchangeRate.toString()
+    });
     nextStep();
   };
 
@@ -61,9 +93,6 @@ export function TradeDetailsForm() {
     updateTradeDetails(form.getValues());
     previousStep();
   };
-
-  // Calculate exchange rate (mock calculation)
-  // const exchangeRate = '₦1,620 / $1';
 
   return (
     <div className="border border-(--border-custom) bg-white p-4 md:p-6 lg:p-10 max-w-350">
@@ -73,8 +102,7 @@ export function TradeDetailsForm() {
           Trade Details
         </h2>
         <p className="text-base" style={{ color: 'var(--text-secondary)' }}>
-          Identify the customer and confirm who this trade is for. This helps link the
-          transaction to the correct customer profile
+          Specify the transaction details, currencies, and amounts for this trade.
         </p>
       </div>
 
@@ -128,16 +156,16 @@ export function TradeDetailsForm() {
                   <FormItem>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="py-6 rounded-lg border-border-light text-base">
+                        <SelectTrigger className="py-6 rounded-lg border-border-light text-base min-w-[140px]">
                           <div className="text-left">
-                            <SelectValue placeholder="From Currency" />
+                            <SelectValue placeholder="From" />
                           </div>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {currencies.map((currency) => (
                           <SelectItem key={currency.code} value={currency.code}>
-                            {currency.code} — {currency.name}
+                            {currency.code}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -154,9 +182,8 @@ export function TradeDetailsForm() {
               </div>
             </div>
 
-
             {/* To Currency */}
-            <div className="flex-1 max-w-100">
+            <div className="flex flex-row items-center gap-4 max-w-100">
               <FormField
                 control={form.control}
                 name="toCurrency"
@@ -164,16 +191,16 @@ export function TradeDetailsForm() {
                   <FormItem>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="py-6 rounded-lg border-border-light text-base">
+                        <SelectTrigger className="py-6 rounded-lg border-border-light text-base min-w-[140px]">
                           <div className="text-left">
-                            <SelectValue placeholder="To Currency" />
+                            <SelectValue placeholder="To" />
                           </div>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {currencies.map((currency) => (
                           <SelectItem key={currency.code} value={currency.code}>
-                            {currency.code} — {currency.name}
+                            {currency.code}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -185,12 +212,16 @@ export function TradeDetailsForm() {
             </div>
 
             {/* Exchange Rate Display */}
-            <div className="border-2 relative rounded-lg px-4 py-3 h-12 shrink-0" style={{ borderColor: 'var(--brand-primary)', minWidth: '180px' }}>
+            <div className="border-2 relative rounded-lg px-4 py-3 h-12 shrink-0 flex items-center" style={{ borderColor: 'var(--brand-primary)', minWidth: '200px' }}>
               <div className="text-xs absolute bg-white p-1 -top-3" style={{ color: 'var(--brand-primary)' }}>
                 Exchange Rate
               </div>
-              <div className="text-[16px] px-1 font-bold" style={{ color: 'var(--brand-primary)' }}>
-                0.00
+              <div className="text-[16px] px-1 font-bold flex items-center gap-2" style={{ color: 'var(--brand-primary)' }}>
+                {isLoadingRate ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>1 {fromCurrency} = {exchangeRate.toLocaleString()} {toCurrency}</>
+                )}
               </div>
             </div>
           </div>
@@ -208,12 +239,21 @@ export function TradeDetailsForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Amount Sent"
-                        className="h-12 rounded-lg border-border-light text-xl font-normal placeholder:text-gray-400"
-                        style={{ color: 'var(--text-primary)' }}
-                      />
+                      <div className="relative">
+                        <div className="absolute -top-3 p-1 bg-white left-4 text-xs font-normal" style={{ color: 'var(--text-tertiary)' }}>
+                          Amount to Send ({fromCurrency})
+                        </div>
+                        <Input
+                          {...field}
+                          placeholder="0.00"
+                          className="h-12 rounded-lg border-border-light text-xl font-normal placeholder:text-gray-400"
+                          style={{ color: 'var(--text-primary)' }}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/[^0-9.]/g, '');
+                            field.onChange(value);
+                          }}
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -231,12 +271,13 @@ export function TradeDetailsForm() {
                     <FormControl>
                       <div className="relative">
                         <div className="absolute -top-3 p-1 bg-white left-4 text-xs font-normal" style={{ color: 'var(--status-success)' }}>
-                          Amount to Receive
+                          Amount to Receive ({toCurrency})
                         </div>
                         <Input
                           {...field}
+                          disabled
                           placeholder="0.00"
-                          className="h-12 rounded-lg px-4 placeholder:text-(--status-success) text-[16px] font-bold border-2"
+                          className="h-12 rounded-lg px-4 bg-gray-50/50 placeholder:text-(--status-success) text-[16px] font-bold border-2"
                           style={{
                             color: 'var(--status-success)',
                             borderColor: 'var(--status-success)'

@@ -23,7 +23,7 @@ export function Footer({ onOpenWaitlist, onOpenContact }: FooterProps) {
             />
           </div>
           <p className="landing-body font-semibold text-gray-800">
-            Powering Africa's Global Payment
+            Powering Africa&apos;s Global Payment
           </p>
         </div>
 

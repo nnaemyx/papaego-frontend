@@ -11,26 +11,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, Download, UserPlus } from 'lucide-react';
+import { Search, Download } from 'lucide-react';
 import { CustomersTable } from '@/components/features/agent/CustomersTable';
 import { CustomerProfileSheet } from '@/components/features/agent/CustomerProfileSheet';
-import { mockCustomers, mockCustomerStats } from '@/lib/mock-data/customers';
+import { customersApi } from '@/lib/api/customers';
 import type { Customer } from '@/lib/types/customer';
+import { useQuery } from '@tanstack/react-query';
 
 export default function CustomersPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Verified' | 'Pending' | 'Failed'>('All');
 
-  const filteredCustomers = mockCustomers.filter((customer) => {
-    const matchesSearch = 
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.customerId.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'All' || customer.verificationStatus === statusFilter;
-    
-    return matchesSearch && matchesStatus;
+  const { data: customers = [], isLoading: isLoadingCustomers } = useQuery({
+    queryKey: ['agent-customers', { search: searchQuery, status: statusFilter }],
+    queryFn: () => customersApi.getCustomers({ search: searchQuery, status: statusFilter }),
+  });
+
+  const { data: stats, isLoading: isLoadingStats } = useQuery({
+    queryKey: ['agent-customers-stats'],
+    queryFn: customersApi.getCustomerStats,
   });
 
   return (
@@ -52,7 +52,7 @@ export default function CustomersPage() {
             Total Customers
           </p>
           <p className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            {mockCustomerStats.totalCustomers}
+            {isLoadingStats ? '...' : stats?.totalCustomers || 0}
           </p>
         </Card>
         <Card className="p-6 border border-(--border-custom) bg-white rounded-xl">
@@ -60,7 +60,7 @@ export default function CustomersPage() {
             Verified Customers
           </p>
           <p className="text-3xl font-bold" style={{ color: 'var(--status-success)' }}>
-            {mockCustomerStats.verifiedCustomers}
+            {isLoadingStats ? '...' : stats?.verifiedCustomers || 0}
           </p>
         </Card>
         <Card className="p-6 border border-(--border-custom) bg-white rounded-xl">
@@ -68,7 +68,7 @@ export default function CustomersPage() {
             High Value Customers
           </p>
           <p className="text-3xl font-bold" style={{ color: 'var(--brand-primary)' }}>
-            {mockCustomerStats.highValueCustomers}
+            {isLoadingStats ? '...' : stats?.highValueCustomers || 0}
           </p>
         </Card>
         <Card className="p-6 border border-(--border-custom) bg-white rounded-xl">
@@ -76,7 +76,7 @@ export default function CustomersPage() {
             Active Today
           </p>
           <p className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            {mockCustomerStats.activeCustomersToday}
+            {isLoadingStats ? '...' : stats?.activeCustomersToday || 0}
           </p>
         </Card>
       </div>
@@ -100,7 +100,7 @@ export default function CustomersPage() {
 
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as any)}>
               <SelectTrigger className="w-full sm:w-[160px] h-12">
                 <div className="text-left">
                   <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
@@ -131,25 +131,21 @@ export default function CustomersPage() {
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button
-              className="h-12 px-6"
-              style={{
-                backgroundColor: 'var(--brand-primary)',
-                color: '#ffffff',
-              }}
-            >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Add Customer
-            </Button>
           </div>
         </div>
       </div>
 
       {/* Customers Table */}
-      <CustomersTable
-        customers={filteredCustomers}
-        onViewCustomer={setSelectedCustomer}
-      />
+      {isLoadingCustomers ? (
+        <div className="flex justify-center p-8">Loading customers...</div>
+      ) : customers.length === 0 ? (
+        <div className="flex justify-center p-8 text-gray-500">No customers found. Execute a trade to add customers.</div>
+      ) : (
+        <CustomersTable
+          customers={customers}
+          onViewCustomer={setSelectedCustomer}
+        />
+      )}
 
       {/* Customer Profile Sheet */}
       <CustomerProfileSheet

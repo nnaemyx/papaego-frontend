@@ -15,35 +15,41 @@ function StatusIcon({ status }: { status: "pass" | "fail" | "warning" | "pending
 }
 
 export function AgentComplianceTab({ agent }: AgentComplianceTabProps) {
+    const isVerified = agent.status === "Active" || agent.status === "Verified";
+    const isPending = agent.status === "Pending Verification";
+
     const complianceItems = [
-        { label: "Identity Verification (NIN)", status: "pass" as const, note: "Verified on 15 Jan 2025" },
-        { label: "BVN Validation", status: "pass" as const, note: "Matched successfully" },
-        { label: "AML Screening", status: "pass" as const, note: "No watchlist matches found" },
-        { label: "PEP Check", status: "pass" as const, note: "Not politically exposed" },
-        { label: "High-Value Trade Monitoring", status: "warning" as const, note: "2 trades flagged for manual review" },
         {
-            label: "KYC Level",
-            status: agent.status === "Pending Verification" ? ("pending" as const) : ("pass" as const),
-            note: agent.status === "Pending Verification" ? "Awaiting document review" : "Full KYC completed",
+            label: "Identity Verification",
+            status: isVerified ? ("pass" as const) : isPending ? ("pending" as const) : ("fail" as const),
+            note: isVerified ? "Successfully verified" : isPending ? "Awaiting manual review" : "Verification failed or not started"
+        },
+        {
+            label: "Document Sufficiency",
+            status: agent.agentProfile?.governmentIdUrl ? ("pass" as const) : ("pending" as const),
+            note: agent.agentProfile?.governmentIdUrl ? "Documents uploaded" : "Missing core documents"
+        },
+        {
+            label: "AML Screening",
+            status: isVerified ? ("pass" as const) : ("pending" as const),
+            note: isVerified ? "Clear" : "Review pending"
+        },
+        {
+            label: "Branch Compliance",
+            status: agent.branch ? ("pass" as const) : ("warning" as const),
+            note: agent.branch ? `Assigned to ${agent.branch}` : "No branch assigned"
         },
     ];
 
-    const flags = [
+    const flags = agent.statistics?.flaggedTransactions && agent.statistics.flaggedTransactions > 0 ? [
         {
-            id: "#PE-24098",
-            date: "20/12/2025",
-            reason: "Trade value exceeded ₦5M threshold",
+            id: "AUTO-FLAG",
+            date: "Recent",
+            reason: `${agent.statistics.flaggedTransactions} transactions flagged for threshold violation.`,
             severity: "Medium",
-            resolved: true,
-        },
-        {
-            id: "#PE-24072",
-            date: "05/12/2025",
-            reason: "Multiple same-day trades from single customer",
-            severity: "Low",
-            resolved: true,
-        },
-    ];
+            resolved: false,
+        }
+    ] : [];
 
     return (
         <div className="space-y-6">
@@ -58,19 +64,19 @@ export function AgentComplianceTab({ agent }: AgentComplianceTabProps) {
                     </h3>
                     <span
                         className="text-3xl font-bold"
-                        style={{ color: "#27ae60" }}
+                        style={{ color: isVerified ? "#27ae60" : "#f0cd00" }}
                     >
-                        92/100
+                        {isVerified ? "100/100" : isPending ? "60/100" : "0/100"}
                     </span>
                 </div>
                 <div className="w-full h-2 rounded-full" style={{ backgroundColor: "#e1e3e6" }}>
                     <div
                         className="h-full rounded-full"
-                        style={{ width: "92%", backgroundColor: "#27ae60" }}
+                        style={{ width: isVerified ? "100%" : isPending ? "60%" : "0%", backgroundColor: isVerified ? "#27ae60" : "#f0cd00" }}
                     />
                 </div>
                 <p className="text-xs mt-2" style={{ color: "#6b7078" }}>
-                    Agent is compliant with platform standards. Minor flags have been resolved.
+                    {isVerified ? "Agent is fully compliant." : "Agent compliance check in progress."}
                 </p>
             </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,16 @@ export default function AdminCustomersPage() {
     const { data: stats, isLoading: statsLoading } = useQuery({
         queryKey: ["admin-customer-stats"],
         queryFn: adminCustomersApi.getCustomerStats,
+    });
+
+    const queryClient = useQueryClient();
+
+    const approveMutation = useMutation({
+        mutationFn: (id: string) => adminCustomersApi.approveCustomer(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["admin-customers"] });
+            queryClient.invalidateQueries({ queryKey: ["admin-customer-stats"] });
+        },
     });
 
     const handleExport = async () => {
@@ -146,6 +156,7 @@ export default function AdminCustomersPage() {
                     customers={customers}
                     isLoading={customersLoading}
                     onViewDetails={(id) => router.push(`/admin/customers/${id}`)}
+                    onApprove={(id) => approveMutation.mutate(id)}
                 />
             </div>
         </div>

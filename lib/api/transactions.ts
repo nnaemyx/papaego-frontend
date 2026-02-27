@@ -64,5 +64,14 @@ export const transactionsApi = {
             volume: "₦0",
             status: a.status === "Active" ? "Active" : "Inactive",
         }));
+    }, // <-- comma added here for safety, plus the new function below
+
+    deleteTransaction: async (id: string): Promise<void> => {
+        await api.delete(`/admin/transactions/${id}`);
+    },
+
+    getTransaction: async (id: string) => {
+        const response = await api.get(`/admin/transactions/${id}`);
+        return response.data;
     },
 };

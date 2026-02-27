@@ -24,14 +24,16 @@ const mockTx = [
 ];
 
 export function CustomerTransactionsSection({ customer }: CustomerTransactionsSectionProps) {
+    const transactions = customer.recentTrades || [];
+
     return (
         <div className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                    { label: "Total Trades", value: customer.totalTransactions },
-                    { label: "Completed", value: customer.totalTransactions - 1 },
-                    { label: "Pending", value: 0 },
-                    { label: "Cancelled", value: 1 },
+                    { label: "Total Trades", value: customer.totalTransactions || 0 },
+                    { label: "Completed", value: transactions.filter(t => t.status === 'COMPLETED').length },
+                    { label: "Pending", value: transactions.filter(t => ['INITIATED', 'QUOTED', 'SENT_TO_CUSTOMER', 'AWAITING_PAYMENT'].includes(t.status)).length },
+                    { label: "Cancelled", value: transactions.filter(t => t.status === 'CANCELLED').length },
                 ].map((s) => (
                     <div
                         key={s.label}
@@ -60,20 +62,28 @@ export function CustomerTransactionsSection({ customer }: CustomerTransactionsSe
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {mockTx.map((tx) => (
-                            <TableRow key={tx.id}>
-                                <TableCell className="text-xs font-medium" style={{ color: "#c9a227" }}>{tx.id}</TableCell>
-                                <TableCell className="text-xs" style={{ color: "#6b7078" }}>{tx.date}</TableCell>
-                                <TableCell className="text-xs" style={{ color: "#2b2f33" }}>{tx.type}</TableCell>
-                                <TableCell className="text-xs font-medium" style={{ color: "#2b2f33" }}>{tx.amount}</TableCell>
-                                <TableCell className="text-xs" style={{ color: "#6b7078" }}>{tx.agent}</TableCell>
-                                <TableCell>
-                                    <Badge variant="outline" className={`text-xs ${getStatusColor(tx.status)}`}>
-                                        {tx.status}
-                                    </Badge>
+                        {transactions.length > 0 ? (
+                            transactions.map((tx) => (
+                                <TableRow key={tx.id}>
+                                    <TableCell className="text-xs font-medium" style={{ color: "#c9a227" }}>{tx.tradeId}</TableCell>
+                                    <TableCell className="text-xs" style={{ color: "#6b7078" }}>{tx.date}</TableCell>
+                                    <TableCell className="text-xs" style={{ color: "#2b2f33" }}>{tx.transaction}</TableCell>
+                                    <TableCell className="text-xs font-medium" style={{ color: "#2b2f33" }}>{tx.amount}</TableCell>
+                                    <TableCell className="text-xs" style={{ color: "#6b7078" }}>{tx.agent}</TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline" className={`text-xs ${getStatusColor(tx.status)}`}>
+                                            {tx.status}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-500">
+                                    No transaction records found.
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        )}
                     </TableBody>
                 </Table>
             </div>

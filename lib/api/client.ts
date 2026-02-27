@@ -1,8 +1,11 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/store/auth-store";
 
+const API_ENPOINT = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+export const API_BASE_URL = API_ENPOINT.replace("/api", "");
+
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
+    baseURL: API_ENPOINT,
     headers: {
         "Content-Type": "application/json",
     },

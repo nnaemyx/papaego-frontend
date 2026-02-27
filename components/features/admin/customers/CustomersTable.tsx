@@ -25,6 +25,7 @@ interface CustomersTableProps {
     customers: Customer[];
     isLoading?: boolean;
     onViewDetails?: (id: string) => void;
+    onApprove?: (id: string) => void;
 }
 
 function getVerificationColor(status: string) {
@@ -44,6 +45,7 @@ export function CustomersTable({
     customers,
     isLoading,
     onViewDetails,
+    onApprove,
 }: CustomersTableProps) {
     const [selected, setSelected] = useState<string[]>([]);
 
@@ -138,6 +140,14 @@ export function CustomersTable({
                                         <DropdownMenuItem onClick={() => onViewDetails?.(customer.id)}>
                                             View Details
                                         </DropdownMenuItem>
+                                        {customer.verificationStatus === "Pending" && (
+                                            <DropdownMenuItem
+                                                onClick={() => onApprove?.(customer.id)}
+                                                className="text-green-600"
+                                            >
+                                                Approve Account
+                                            </DropdownMenuItem>
+                                        )}
                                         <DropdownMenuItem>Send Message</DropdownMenuItem>
                                         <DropdownMenuItem className="text-red-600">
                                             Restrict Account

@@ -14,8 +14,8 @@ export function CustomerOverviewSection({ customer }: CustomerOverviewSectionPro
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                    { label: "Total Trades", value: customer.totalTransactions.toString() },
-                    { label: "Trade Volume", value: "₦8.4M" },
+                    { label: "Total Trades", value: (customer.totalTransactions || 0).toString() },
+                    { label: "Trade Volume", value: customer.totalVolume || "₦0" },
                     { label: "Last Trade", value: formatDate(customer.lastTrade) },
                     { label: "Member Since", value: formatDate(customer.dateJoined) },
                 ].map((s) => (
@@ -50,10 +50,10 @@ export function CustomerOverviewSection({ customer }: CustomerOverviewSectionPro
                                 <Badge
                                     variant="outline"
                                     className={`text-xs ${customer.verificationStatus === "Verified"
-                                            ? "bg-green-100 text-green-700 border-green-300"
-                                            : customer.verificationStatus === "Pending"
-                                                ? "bg-yellow-100 text-yellow-700 border-yellow-300"
-                                                : "bg-red-100 text-red-700 border-red-300"
+                                        ? "bg-green-100 text-green-700 border-green-300"
+                                        : customer.verificationStatus === "Pending"
+                                            ? "bg-yellow-100 text-yellow-700 border-yellow-300"
+                                            : "bg-red-100 text-red-700 border-red-300"
                                         }`}
                                 >
                                     {customer.verificationStatus}

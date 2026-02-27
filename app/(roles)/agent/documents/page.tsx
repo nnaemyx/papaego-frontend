@@ -10,35 +10,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, Download, Upload } from 'lucide-react';
+import { Search, Download } from 'lucide-react';
 import { DocumentsTable } from '@/components/features/agent/DocumentsTable';
 import { DocumentPreviewModal } from '@/components/features/agent/DocumentPreviewModal';
-import { mockDocuments } from '@/lib/mock-data/documents';
-import type { Document } from '@/lib/types/document';
+import { documentsApi } from '@/lib/api/documents';
+import type { Document, DocumentStatus, DocumentType } from '@/lib/types/document';
+import { useQuery } from '@tanstack/react-query';
 
 export default function DocumentsPage() {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [typeFilter, setTypeFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | DocumentStatus>('All');
+  const [typeFilter, setTypeFilter] = useState<'All' | DocumentType>('All');
 
-  const filteredDocuments = mockDocuments.filter((doc) => {
-    const matchesSearch = 
-      doc.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.customerId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.documentType.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'All' || doc.status === statusFilter;
-    const matchesType = typeFilter === 'All' || doc.documentType === typeFilter;
-    
-    return matchesSearch && matchesStatus && matchesType;
+  const { data: documents = [], isLoading } = useQuery({
+    queryKey: ['agent-documents', { search: searchQuery, status: statusFilter, type: typeFilter }],
+    queryFn: () => documentsApi.getDocuments({ search: searchQuery, status: statusFilter, type: typeFilter }),
   });
 
   const stats = {
-    total: mockDocuments.length,
-    pending: mockDocuments.filter(d => d.status === 'Pending Review').length,
-    approved: mockDocuments.filter(d => d.status === 'Approved').length,
-    rejected: mockDocuments.filter(d => d.status === 'Rejected').length,
+    total: documents.length,
+    pending: documents.filter(d => d.status === 'Pending Review').length,
+    approved: documents.filter(d => d.status === 'Approved').length,
+    rejected: documents.filter(d => d.status === 'Rejected').length,
   };
 
   return (
@@ -60,7 +54,7 @@ export default function DocumentsPage() {
             Total Documents
           </p>
           <p className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            {stats.total}
+            {isLoading ? '...' : stats.total}
           </p>
         </div>
         <div className="p-6 border border-(--border-custom) bg-white rounded-xl">
@@ -68,7 +62,7 @@ export default function DocumentsPage() {
             Pending Review
           </p>
           <p className="text-3xl font-bold" style={{ color: '#f39c12' }}>
-            {stats.pending}
+            {isLoading ? '...' : stats.pending}
           </p>
         </div>
         <div className="p-6 border border-(--border-custom) bg-white rounded-xl">
@@ -76,7 +70,7 @@ export default function DocumentsPage() {
             Approved
           </p>
           <p className="text-3xl font-bold" style={{ color: 'var(--status-success)' }}>
-            {stats.approved}
+            {isLoading ? '...' : stats.approved}
           </p>
         </div>
         <div className="p-6 border border-(--border-custom) bg-white rounded-xl">
@@ -84,7 +78,7 @@ export default function DocumentsPage() {
             Rejected
           </p>
           <p className="text-3xl font-bold" style={{ color: 'var(--status-error)' }}>
-            {stats.rejected}
+            {isLoading ? '...' : stats.rejected}
           </p>
         </div>
       </div>
@@ -108,7 +102,7 @@ export default function DocumentsPage() {
 
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={(val: any) => setStatusFilter(val)}>
               <SelectTrigger className="w-full sm:w-[180px] h-12">
                 <div className="text-left">
                   <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
@@ -126,7 +120,7 @@ export default function DocumentsPage() {
               </SelectContent>
             </Select>
 
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <Select value={typeFilter} onValueChange={(val: any) => setTypeFilter(val)}>
               <SelectTrigger className="w-full sm:w-[200px] h-12">
                 <div className="text-left">
                   <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
@@ -159,25 +153,21 @@ export default function DocumentsPage() {
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button
-              className="h-12 px-6"
-              style={{
-                backgroundColor: 'var(--brand-primary)',
-                color: '#ffffff',
-              }}
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Upload Document
-            </Button>
           </div>
         </div>
       </div>
 
       {/* Documents Table */}
-      <DocumentsTable
-        documents={filteredDocuments}
-        onPreview={setSelectedDocument}
-      />
+      {isLoading ? (
+        <div className="flex justify-center p-8">Loading documents...</div>
+      ) : documents.length === 0 ? (
+        <div className="flex justify-center p-8 text-gray-500">No documents found.</div>
+      ) : (
+        <DocumentsTable
+          documents={documents}
+          onPreview={setSelectedDocument}
+        />
+      )}
 
       {/* Document Preview Modal */}
       <DocumentPreviewModal

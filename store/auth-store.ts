@@ -6,6 +6,7 @@ interface User {
     email: string;
     firstName?: string;
     lastName?: string;
+    phone?: string;
     role: "AGENT" | "CUSTOMER" | "ADMIN" | "COMPLIANCE";
     isActive: boolean;
 }

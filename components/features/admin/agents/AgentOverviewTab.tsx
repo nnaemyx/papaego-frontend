@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, DollarSign, Activity, Users, Clock } from "lucide-react";
+import { TrendingUp, TrendingDown, Activity, Clock } from "lucide-react";
 import type { Agent } from "@/lib/types/agent";
 import { getStatusColor } from "@/lib/formatters";
 
@@ -9,51 +9,59 @@ interface AgentOverviewTabProps {
     agent: Agent;
 }
 
-const statCards = [
+const statCards = (agent: Agent) => [
     {
         label: "Total Trades",
-        value: "248",
-        change: "+12%",
+        value: agent.statistics?.totalTrades || 0,
+        change: "Total",
         isPositive: true,
         icon: Activity,
         iconBg: "#e2fded",
         iconColor: "#27ae60",
     },
     {
-        label: "Total Volume",
-        value: "₦124.5M",
-        change: "+8.3%",
-        isPositive: true,
-        icon: DollarSign,
-        iconBg: "#dbeafe",
-        iconColor: "#1890ff",
-    },
-    {
-        label: "Active Customers",
-        value: "64",
-        change: "+5",
-        isPositive: true,
-        icon: Users,
-        iconBg: "#f3e8ff",
-        iconColor: "#9333ea",
-    },
-    {
-        label: "Avg. Response Time",
-        value: "4.2 hrs",
-        change: "-0.5 hrs",
+        label: "Completed Trades",
+        value: agent.statistics?.completedTrades || 0,
+        change: "Done",
         isPositive: true,
         icon: Clock,
         iconBg: "#fff8ce",
         iconColor: "#a97600",
     },
+    {
+        label: "Flagged Transactions",
+        value: agent.statistics?.flaggedTransactions || 0,
+        change: "Alert",
+        isPositive: false,
+        icon: Activity,
+        iconBg: "#ffe4e4",
+        iconColor: "#e05555",
+    },
+    {
+        label: "Active Trades",
+        value: agent.statistics?.activeTrades || 0,
+        change: "Live",
+        isPositive: true,
+        icon: Activity,
+        iconBg: "#dbeafe",
+        iconColor: "#1890ff",
+    },
 ];
 
 export function AgentOverviewTab({ agent }: AgentOverviewTabProps) {
+    const cards = statCards(agent);
+
+    // Recent activity mocked for overview but could be merged later
+    const recentActivity = [
+        { time: "Today", event: "General profile overview active", type: "info" },
+        { time: "System", event: `Joined on ${new Date(agent.createdAt).toLocaleDateString()}`, type: "success" },
+    ];
+
     return (
         <div className="space-y-6">
             {/* Stats Row */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {statCards.map((stat) => {
+                {cards.map((stat) => {
                     const Icon = stat.icon;
                     return (
                         <div
@@ -141,13 +149,7 @@ export function AgentOverviewTab({ agent }: AgentOverviewTabProps) {
                         Recent Activity
                     </h3>
                     <div className="space-y-3">
-                        {[
-                            { time: "11:16 AM", event: "Completed trade #PE-24118 (Buy USD)", type: "success" },
-                            { time: "10:30 AM", event: "Customer verification for Peter Okafor", type: "info" },
-                            { time: "Yesterday", event: "Flagged trade #PE-24097 for review", type: "warning" },
-                            { time: "2 days ago", event: "New customer Daniel Foster onboarded", type: "success" },
-                            { time: "3 days ago", event: "Commission payout processed ₦45,000", type: "info" },
-                        ].map((item, i) => (
+                        {recentActivity.map((item, i) => (
                             <div key={i} className="flex items-start gap-3">
                                 <div
                                     className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"

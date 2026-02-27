@@ -11,70 +11,31 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { getStatusColor } from "@/lib/formatters";
 import type { Agent } from "@/lib/types/agent";
+import { useQuery } from "@tanstack/react-query";
+import { agentsApi } from "@/lib/api/agents";
 
 interface AgentTransactionsTabProps {
     agent: Agent;
 }
 
-const mockTransactions = [
-    {
-        id: "#PE-24118",
-        date: "25/12/2025",
-        time: "11:16 AM",
-        customer: "Peter Okafor",
-        type: "Buy USD (NGN → USD)",
-        amount: "₦3,250,000",
-        status: "In Progress",
-    },
-    {
-        id: "#PE-24117",
-        date: "25/12/2025",
-        time: "03:23 PM",
-        customer: "Daniel Foster",
-        type: "Sell USD (USD → NGN)",
-        amount: "$2,400",
-        status: "Completed",
-    },
-    {
-        id: "#PE-24116",
-        date: "23/12/2025",
-        time: "01:48 AM",
-        customer: "John Peterson",
-        type: "Sell GBP (GBP → NGN)",
-        amount: "£1,100",
-        status: "Pending",
-    },
-    {
-        id: "#PE-24115",
-        date: "22/12/2025",
-        time: "12:37 PM",
-        customer: "Samuel Adeyemi",
-        type: "Buy CAD (NGN → CAD)",
-        amount: "₦890,000",
-        status: "In Progress",
-    },
-    {
-        id: "#PE-24114",
-        date: "19/12/2025",
-        time: "10:05 AM",
-        customer: "Laura Smith",
-        type: "Buy GBP (NGN → GBP)",
-        amount: "₦1,540,000",
-        status: "Cancelled",
-    },
-];
-
 export function AgentTransactionsTab({ agent }: AgentTransactionsTabProps) {
+    const { data: transactions, isLoading } = useQuery({
+        queryKey: ["agent-transactions", agent.id],
+        queryFn: () => agentsApi.getAgentTransactions(agent.id),
+    });
+
+    const stats = [
+        { label: "Total Trades", value: agent.statistics?.totalTrades || 0 },
+        { label: "Completed", value: agent.statistics?.completedTrades || 0 },
+        { label: "Pending/Active", value: agent.statistics?.activeTrades || 0 },
+        { label: "Flagged", value: agent.statistics?.flaggedTransactions || 0 },
+    ];
+
     return (
         <div className="space-y-4">
             {/* Summary Row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                    { label: "Total Trades", value: "248" },
-                    { label: "Completed", value: "231" },
-                    { label: "In Progress", value: "12" },
-                    { label: "Cancelled", value: "5" },
-                ].map((s) => (
+                {stats.map((s) => (
                     <div
                         key={s.label}
                         className="rounded-xl p-4 border text-center"
@@ -100,48 +61,58 @@ export function AgentTransactionsTab({ agent }: AgentTransactionsTabProps) {
                         Transaction History
                     </h3>
                 </div>
-                <Table>
-                    <TableHeader>
-                        <TableRow style={{ backgroundColor: "#f6f6f6" }}>
-                            <TableHead className="text-xs font-medium">Trade ID</TableHead>
-                            <TableHead className="text-xs font-medium">Date & Time</TableHead>
-                            <TableHead className="text-xs font-medium">Customer</TableHead>
-                            <TableHead className="text-xs font-medium">Type</TableHead>
-                            <TableHead className="text-xs font-medium">Amount</TableHead>
-                            <TableHead className="text-xs font-medium">Status</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {mockTransactions.map((tx) => (
-                            <TableRow key={tx.id}>
-                                <TableCell className="text-xs font-medium" style={{ color: "#c9a227" }}>
-                                    {tx.id}
-                                </TableCell>
-                                <TableCell className="text-xs">
-                                    <div style={{ color: "#2b2f33" }}>{tx.date}</div>
-                                    <div style={{ color: "#9aa0a6" }}>{tx.time}</div>
-                                </TableCell>
-                                <TableCell className="text-xs" style={{ color: "#2b2f33" }}>
-                                    {tx.customer}
-                                </TableCell>
-                                <TableCell className="text-xs" style={{ color: "#6b7078" }}>
-                                    {tx.type}
-                                </TableCell>
-                                <TableCell className="text-xs font-medium" style={{ color: "#2b2f33" }}>
-                                    {tx.amount}
-                                </TableCell>
-                                <TableCell>
-                                    <Badge
-                                        variant="outline"
-                                        className={`text-xs ${getStatusColor(tx.status)}`}
-                                    >
-                                        {tx.status}
-                                    </Badge>
-                                </TableCell>
+                {isLoading ? (
+                    <div className="p-10 text-center text-sm" style={{ color: "#6b7078" }}>
+                        Loading transactions...
+                    </div>
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow style={{ backgroundColor: "#f6f6f6" }}>
+                                <TableHead className="text-xs font-medium">Trade ID</TableHead>
+                                <TableHead className="text-xs font-medium">Date & Time</TableHead>
+                                <TableHead className="text-xs font-medium">Type</TableHead>
+                                <TableHead className="text-xs font-medium">Amount</TableHead>
+                                <TableHead className="text-xs font-medium">Status</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {transactions && transactions.length > 0 ? (
+                                transactions.map((tx: any) => (
+                                    <TableRow key={tx.id}>
+                                        <TableCell className="text-xs font-medium" style={{ color: "#c9a227" }}>
+                                            {tx.tradeId}
+                                        </TableCell>
+                                        <TableCell className="text-xs">
+                                            <div style={{ color: "#2b2f33" }}>{tx.date}</div>
+                                            <div style={{ color: "#9aa0a6" }}>{tx.time}</div>
+                                        </TableCell>
+                                        <TableCell className="text-xs" style={{ color: "#6b7078" }}>
+                                            {tx.transaction}
+                                        </TableCell>
+                                        <TableCell className="text-xs font-medium" style={{ color: "#2b2f33" }}>
+                                            {tx.amount}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge
+                                                variant="outline"
+                                                className={`text-xs ${getStatusColor(tx.status)}`}
+                                            >
+                                                {tx.status}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center py-10" style={{ color: "#6b7078" }}>
+                                        No transactions found for this agent.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                )}
             </div>
         </div>
     );

@@ -14,7 +14,7 @@ export const customersApi = {
 
     const queryString = params.toString();
     const url = `/agent/customers${queryString ? `?${queryString}` : ''}`;
-    
+
     return apiClient.get<Customer[]>(url);
   },
 
@@ -43,7 +43,13 @@ export const customersApi = {
 export const adminCustomersApi = {
   // Get all customers with optional filters
   getCustomers: async (filters?: CustomerFilters) => {
-    const response = await api.get("/admin/customers", { params: filters });
+    const params = new URLSearchParams();
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.status && filters.status !== 'All') params.append('status', filters.status.toLowerCase());
+    if (filters?.customerType && filters.customerType !== 'All') params.append('type', filters.customerType);
+    if (filters?.activityLevel && filters.activityLevel !== 'All') params.append('activity', filters.activityLevel);
+
+    const response = await api.get(`/admin/customers?${params.toString()}`);
     return response.data;
   },
 
@@ -76,6 +82,12 @@ export const adminCustomersApi = {
     const response = await api.get("/admin/customers/export", {
       responseType: 'blob'
     });
+    return response.data;
+  },
+
+  // Approve customer
+  approveCustomer: async (id: string) => {
+    const response = await api.patch(`/admin/customers/${id}/approve`);
     return response.data;
   },
 };

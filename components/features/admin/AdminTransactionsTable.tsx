@@ -12,6 +12,10 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { transactionsApi } from "@/lib/api/transactions";
+import { Eye, Trash2 } from "lucide-react";
 import Image from "next/image";
 import type { Transaction } from "@/lib/types/transaction";
 
@@ -25,7 +29,28 @@ export function AdminTransactionsTable({
   isLoading,
 }: AdminTransactionsTableProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Mutation to delete transaction
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => transactionsApi.deleteTransaction(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    },
+    onError: (error) => {
+      console.error("Failed to delete transaction", error);
+      alert("Failed to delete transaction. Ensure you have permissions.");
+    }
+  });
+
+  const handleDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (confirm("Are you sure you want to permanently delete this transaction? This action cannot be undone.")) {
+      deleteMutation.mutate(id);
+    }
+  };
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) =>
@@ -311,10 +336,27 @@ export function AdminTransactionsTable({
                   {getVerificationBadge(transaction.verification)}
                 </TableCell>
                 <TableCell>
-                  <div className="flex gap-1">
-                    <div className="w-3 h-0.5 rounded-full" style={{ backgroundColor: "#27ae60" }}></div>
-                    <div className="w-3 h-0.5 rounded-full" style={{ backgroundColor: "#27ae60" }}></div>
-                    <div className="w-3 h-0.5 rounded-full" style={{ backgroundColor: "#27ae60" }}></div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/admin/transactions/${transaction.id}`);
+                      }}
+                      title="View Details"
+                    >
+                      <Eye className="w-4 h-4 text-blue-600" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => handleDelete(e, transaction.id)}
+                      disabled={deleteMutation.isPending}
+                      title="Delete Transaction"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>

@@ -13,6 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, CircleDot, CheckCircle, Clock, XCircle } from "lucide-react";
 import Image from "next/image";
+import { useQuery } from "@tanstack/react-query";
+import { transactionsApi } from "@/lib/api/transactions";
+import { format } from "date-fns";
 
 export default function TransactionDetailPage({
   params,
@@ -22,96 +25,99 @@ export default function TransactionDetailPage({
   const router = useRouter();
   const [notes, setNotes] = useState("");
   const [defaultAccordion, setDefaultAccordion] = useState("customer");
-  
+
   // Unwrap params promise (Next.js 16)
   const { id } = use(params);
 
-  // Mock data - replace with API call using id
+  const { data: rawTransaction, isLoading } = useQuery({
+    queryKey: ["admin-transaction", id],
+    queryFn: () => transactionsApi.getTransaction(id),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="p-8 flex justify-center items-center h-full">
+        <p className="text-gray-500 animate-pulse">Loading transaction details...</p>
+      </div>
+    );
+  }
+
+  if (!rawTransaction) {
+    return (
+      <div className="p-8 flex justify-center items-center h-full flex-col">
+        <p className="text-red-500 mb-4 font-bold">Transaction not found</p>
+        <Button onClick={() => router.back()} variant="outline">Go Back</Button>
+      </div>
+    );
+  }
+
   const transaction = {
-    id: id,
-    tradeId: "#PE-24118",
-    transactionType: "Buy USD (NGN → USD)",
-    amount: "₦4,250,000",
-    dateTime: "25 December 2025 - 11:16 AM",
+    id: rawTransaction.id,
+    tradeId: rawTransaction.tradeId || rawTransaction.id.split('-')[0].toUpperCase(),
+    transactionType: `${rawTransaction.sendCurrency} → ${rawTransaction.receiveCurrency}`,
+    amount: `${rawTransaction.sendCurrency} ${Number(rawTransaction.amount).toLocaleString()}`,
+    dateTime: format(new Date(rawTransaction.createdAt), "dd MMM yyyy - hh:mm a"),
     verificationStatus: "Verified",
-    status: "In Progress",
-    
+    status: rawTransaction.status,
+
     customer: {
-      name: "Peter Okafor",
-      customerId: "#PE-000018",
-      mobileNumber: "+234 814 455 9092",
-      email: "peter.okafor@email.com",
-      kycStatus: "Completed",
-      kycLevel: "Advanced",
+      name: rawTransaction.customer?.fullName || "Unknown",
+      customerId: rawTransaction.customer?.customerRef || "N/A",
+      mobileNumber: rawTransaction.customer?.phone || "N/A",
+      email: rawTransaction.customer?.email || "N/A",
+      kycStatus: rawTransaction.customer?.kycStatus || "Pending",
+      kycLevel: rawTransaction.customer?.kycLevel || "Basic",
     },
 
     tradeDetails: {
-      tradeType: "Buy USD",
-      fromCurrency: "NGN",
-      toCurrency: "USD",
-      exchangeRate: "₦1,650 / $1",
-      localAmountPaid: "₦4,250,000",
-      foreignAmountSent: "$2,575.76",
-      serviceFee: "₦6,500",
-      totalCharged: "₦4,256,500",
+      tradeType: rawTransaction.sendCurrency === 'NGN' ? 'Buy USD' : 'Sell USD',
+      fromCurrency: rawTransaction.sendCurrency,
+      toCurrency: rawTransaction.receiveCurrency,
+      exchangeRate: rawTransaction.fxRate ? `1 ${rawTransaction.sendCurrency} = ${rawTransaction.fxRate} ${rawTransaction.receiveCurrency}` : 'N/A',
+      localAmountPaid: `${rawTransaction.sendCurrency} ${Number(rawTransaction.amount).toLocaleString()}`,
+      foreignAmountSent: rawTransaction.fxRate
+        ? `${rawTransaction.receiveCurrency} ${(Number(rawTransaction.amount) / Number(rawTransaction.fxRate)).toFixed(2)}`
+        : 'Pending',
+      payoutAmount: rawTransaction.payoutAmount || "N/A",
+      serviceFee: "₦0.00",
+      totalCharged: `${rawTransaction.sendCurrency} ${Number(rawTransaction.amount).toLocaleString()}`,
     },
 
     paymentMethod: {
-      method: "Bank Transfer",
-      source: "Customer Bank Account",
-      senderBank: "GTBank",
-      accountName: "Peter Okafor",
-      accountNumber: "0200004358",
+      method: rawTransaction.paymentMethod || "Bank Transfer",
+      source: rawTransaction.paymentSource || "N/A",
+      senderBank: "N/A",
+      accountName: rawTransaction.customer?.fullName || "N/A",
+      accountNumber: "N/A",
+      paymentProof: rawTransaction.paymentProofUrl
     },
 
     deliveryDetails: {
-      method: "Bank Account",
-      currency: "USD",
-      recipientBank: "JPMorgan Chase Bank, N.A.",
-      accountName: "Peter Okafor",
-      routingNumber: "021000021",
-      swiftCode: "CHASUS33",
-      accountType: "Checking",
-      recipientCountry: "United States",
-      bankAddress: "New York, NY, USA",
+      method: rawTransaction.payoutMethod || "Bank Account",
+      currency: rawTransaction.receiveCurrency,
+      recipientBank: "N/A",
+      accountName: rawTransaction.recipientName || "N/A",
+      accountNumber: rawTransaction.recipientDetails || "N/A",
+      routingNumber: "N/A",
+      swiftCode: "N/A",
+      accountType: "N/A",
+      recipientCountry: "N/A",
+      bankAddress: "N/A",
       notes: "-",
     },
 
     timeline: [
-      { 
-        event: "Trade Created", 
-        dateTime: "25/12/2025 10:16 AM", 
+      {
+        event: "Trade Created",
+        dateTime: format(new Date(rawTransaction.createdAt), "dd/MM/yyyy hh:mm a"),
         status: "Completed",
-        description: "Trade was initiated by customer"
-      },
-      { 
-        event: "Payment Received", 
-        dateTime: "25/12/2025 10:14 AM", 
-        status: "Completed",
-        description: "NGN payment confirmed in PapaEgo account"
-      },
-      { 
-        event: "Payment Verified", 
-        dateTime: "25/12/2025 17:08 AM", 
-        status: "Completed",
-        description: "Agent verified payment proof from customer"
-      },
-      { 
-        event: "USD Delivery", 
-        dateTime: "-", 
-        status: "Pending",
-        description: "Awaiting USD transfer to recipient account"
-      },
+        description: "Trade was initiated"
+      }
     ],
 
-    agentNotes: [
-      { time: "11:16 AM", note: "Customer sent payment proof — verified ✅", verified: true },
-      { time: "11:20 AM", note: "Emailed James: USD delivery request", verified: false },
-      { time: "01:22 PM", note: "Compliance-Ben: Trade flagged for high value", verified: false },
-      { time: "11:32 AM", note: "Emailed James: No further issues observed", verified: false },
-    ],
+    agentNotes: [] as Array<{ time: string, note: string, verified: boolean }>,
 
-    handledBy: "Agent - Francis James",
+    handledBy: rawTransaction.agent ? `${rawTransaction.agent.firstName || ''} ${rawTransaction.agent.lastName || ''}`.trim() || 'Agent' : "System",
   };
 
   const getTimelineIcon = (status: string) => {
@@ -218,8 +224,8 @@ export default function TransactionDetailPage({
       {/* Accordion Sections */}
       <Accordion type="single" collapsible defaultValue={defaultAccordion} className="space-y-4">
         {/* Customer Information */}
-        <AccordionItem 
-          value="customer" 
+        <AccordionItem
+          value="customer"
           className="bg-white rounded-lg border border-gray-200 px-6"
         >
           <AccordionTrigger className="hover:no-underline">
@@ -287,8 +293,8 @@ export default function TransactionDetailPage({
         </AccordionItem>
 
         {/* Trade Details */}
-        <AccordionItem 
-          value="trade" 
+        <AccordionItem
+          value="trade"
           className="bg-white rounded-lg border border-gray-200 px-6"
         >
           <AccordionTrigger className="hover:no-underline">
@@ -362,8 +368,8 @@ export default function TransactionDetailPage({
         </AccordionItem>
 
         {/* Payment Method & Source */}
-        <AccordionItem 
-          value="payment" 
+        <AccordionItem
+          value="payment"
           className="bg-white rounded-lg border border-gray-200 px-6"
         >
           <AccordionTrigger className="hover:no-underline">
@@ -409,8 +415,8 @@ export default function TransactionDetailPage({
         </AccordionItem>
 
         {/* Delivery Details */}
-        <AccordionItem 
-          value="delivery" 
+        <AccordionItem
+          value="delivery"
           className="bg-white rounded-lg border border-gray-200 px-6"
         >
           <AccordionTrigger className="hover:no-underline">
@@ -486,8 +492,8 @@ export default function TransactionDetailPage({
         </AccordionItem>
 
         {/* Transaction Timeline */}
-        <AccordionItem 
-          value="timeline" 
+        <AccordionItem
+          value="timeline"
           className="bg-white rounded-lg border border-gray-200 px-6"
         >
           <AccordionTrigger className="hover:no-underline">
@@ -525,8 +531,8 @@ export default function TransactionDetailPage({
         </AccordionItem>
 
         {/* Agent Notes */}
-        <AccordionItem 
-          value="notes" 
+        <AccordionItem
+          value="notes"
           className="bg-white rounded-lg border border-gray-200 px-6"
         >
           <AccordionTrigger className="hover:no-underline">
@@ -537,8 +543,8 @@ export default function TransactionDetailPage({
           <AccordionContent>
             <div className="pt-4 space-y-3">
               {transaction.agentNotes.map((note, index) => (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className="flex gap-3 p-3 rounded-lg"
                   style={{ backgroundColor: note.verified ? "#f0f9ff" : "#f9fafb", border: "1px solid #e5e7eb" }}
                 >
@@ -590,8 +596,8 @@ export default function TransactionDetailPage({
         </AccordionItem>
 
         {/* SuperAdmin Controls */}
-        <AccordionItem 
-          value="controls" 
+        <AccordionItem
+          value="controls"
           className="bg-white rounded-lg border border-gray-200 px-6"
         >
           <AccordionTrigger className="hover:no-underline">

@@ -16,11 +16,28 @@ export interface Agent {
   email: string;
   role: string;
   region: string;
-  activeTrades: number;
-  status: AgentStatus;
+  branch?: string;
   phone?: string;
+  status: string;
+  activeTrades: number;
+  totalVolume?: string;
+  performance?: string;
   createdAt: string;
-  isActive: boolean;
+  updatedAt?: string;
+  statistics?: {
+    totalTrades: number;
+    activeTrades: number;
+    completedTrades: number;
+    flaggedTransactions: number;
+  };
+  agentProfile?: {
+    onboardingStatus: string;
+    licenseId: string;
+    governmentIdUrl?: string;
+    proofOfAddressUrl?: string;
+    homeAddress?: string;
+    dateOfBirth?: string;
+  };
 }
 
 // Agent statistics
@@ -29,6 +46,8 @@ export interface AgentStats {
   inactive: number;
   pendingVerification: number;
   flagged: number;
+  totalVolume?: string;
+  averageTradeTime?: string;
 }
 
 // Invite agent form data

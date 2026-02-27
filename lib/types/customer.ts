@@ -12,6 +12,9 @@ export interface Customer {
   dateJoined: string; // ISO date string
   address?: string;
   avatar?: string;
+  recentTrades?: any[];
+  notes?: any[];
+  totalVolume?: string;
 }
 
 export interface CustomerStats {

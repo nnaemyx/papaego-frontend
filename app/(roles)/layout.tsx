@@ -21,17 +21,17 @@ export default function RoleLayout({
     // Prevent hydration mismatch by waiting for client-side mount
     useEffect(() => {
         setMounted(true);
-        
+
         // Close sidebar on mobile by default
         const checkMobile = () => {
             if (window.innerWidth < 1024) {
                 setSidebarOpen(false);
             }
         };
-        
+
         checkMobile();
         window.addEventListener('resize', checkMobile);
-        
+
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
@@ -40,9 +40,9 @@ export default function RoleLayout({
         return <LoadingScreen />;
     }
 
-    // Admin users have their own complete layout in (roles)/admin/layout.tsx
+    // Admin and Agent users have their own complete layout in their respective directories
     // Skip this layout wrapper for them to avoid double sidebars
-    if (user?.role === 'ADMIN') {
+    if (user?.role === 'ADMIN' || user?.role === 'AGENT') {
         return <>{children}</>;
     }
 
