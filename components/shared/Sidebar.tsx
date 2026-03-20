@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 const roleNavigation = {
   AGENT: [
     { name: 'Home', href: '/agent/dashboard', icon: Home },
+    { name: 'Trade Requests', href: '/agent/trade-requests', icon: FileText },
     { name: 'New Trade', href: '/agent/trades/new', icon: PlusCircle },
     { name: 'Transactions', href: '/agent/transactions', icon: Wallet },
     { name: 'Customers', href: '/agent/customers', icon: Users },
@@ -19,6 +20,7 @@ const roleNavigation = {
   CUSTOMER: [
     { name: 'Home', href: '/customer/dashboard', icon: Home },
     { name: 'My Trades', href: '/customer/trades', icon: Wallet },
+    { name: 'Rates', href: '/customer/rates', icon: TrendingUp },
     { name: 'Profile', href: '/customer/profile', icon: Users },
   ],
   ADMIN: [

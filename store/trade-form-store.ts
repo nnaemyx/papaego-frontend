@@ -7,6 +7,7 @@ interface TradeFormStore extends TradeFormData {
   updateTradeDetails: (data: Partial<TradeFormData['tradeDetails']>) => void;
   updatePaymentInformation: (data: Partial<TradeFormData['paymentInformation']>) => void;
   updatePayoutDetails: (data: Partial<TradeFormData['payoutDetails']>) => void;
+  setTradeRequestId: (id: string) => void;
   nextStep: () => void;
   previousStep: () => void;
   resetForm: () => void;
@@ -39,6 +40,7 @@ export const useTradeFormStore = create<TradeFormStore>((set) => ({
     set((state) => ({
       payoutDetails: { ...state.payoutDetails, ...data },
     })),
+  setTradeRequestId: (id) => set({ tradeRequestId: id }),
   nextStep: () =>
     set((state) => ({
       currentStep: Math.min(4, state.currentStep + 1) as TradeFormStep,

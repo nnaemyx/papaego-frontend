@@ -7,8 +7,56 @@ import { TradeDetailsForm } from '@/components/trade/forms/TradeDetailsForm';
 import { PaymentInfoForm } from '@/components/trade/forms/PaymentInfoForm';
 import { PayoutDetailsForm } from '@/components/trade/forms/PayoutDetailsForm';
 
+import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { agentApi } from '@/lib/api/agent';
+
 export default function NewTradePage() {
-  const { currentStep } = useTradeFormStore();
+  const { 
+    currentStep, 
+    updateCustomerInformation, 
+    updateTradeDetails, 
+    setTradeRequestId,
+    resetForm 
+  } = useTradeFormStore();
+  const searchParams = useSearchParams();
+  const requestId = searchParams.get('requestId');
+
+  // Fetch request details if processing a request
+  const { data: requestDetails } = useQuery({
+    queryKey: ['trade-request-detail', requestId],
+    queryFn: () => agentApi.getTradeRequests().then(reqs => reqs.find((r: any) => r.id === requestId)),
+    enabled: !!requestId,
+  });
+
+  useEffect(() => {
+    // Only reset if we're NATURALLY starting a new trade (no requestId)
+    // or if the user just arrived. 
+    // For now, let's keep it simple: if requestId exists, fill.
+    if (requestDetails) {
+      setTradeRequestId(requestDetails.id);
+      updateCustomerInformation({
+        customerId: requestDetails.customerId,
+        firstName: requestDetails.customer.firstName,
+        lastName: requestDetails.customer.lastName,
+        emailAddress: requestDetails.customer.email,
+        phoneNumber: requestDetails.customer.phone,
+      });
+      updateTradeDetails({
+        fromCurrency: requestDetails.sendCurrency,
+        toCurrency: requestDetails.receiveCurrency,
+        amountSent: requestDetails.amount,
+      });
+    }
+  }, [requestDetails, updateCustomerInformation, updateTradeDetails, setTradeRequestId]);
+
+  useEffect(() => {
+    // Reset form on initial mount if no requestId
+    if (!requestId) {
+        resetForm();
+    }
+  }, [requestId, resetForm]);
 
   const renderForm = () => {
     switch (currentStep) {

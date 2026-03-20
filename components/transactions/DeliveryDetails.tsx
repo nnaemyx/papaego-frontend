@@ -16,6 +16,8 @@ interface DeliveryDetailsProps {
   bankAddress: string;
   status: string;
   message?: string;
+  onVerify?: () => void;
+  isVerifying?: boolean;
 }
 
 export function DeliveryDetails({
@@ -31,10 +33,23 @@ export function DeliveryDetails({
   bankAddress,
   status,
   message,
+  onVerify,
+  isVerifying,
 }: DeliveryDetailsProps) {
   return (
     <section className="bg-white rounded-xl p-6 shadow-sm border border-(--border-light)">
-      <h2 className="text-lg font-bold text-(--text-primary) mb-6">Delivery Details</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-bold text-(--text-primary)">Delivery Details</h2>
+        {onVerify && (
+          <button
+            onClick={onVerify}
+            disabled={isVerifying}
+            className="text-xs font-bold text-[#C9A227] hover:underline flex items-center gap-1 disabled:opacity-50"
+          >
+            {isVerifying ? "Verifying..." : "Verify Account"}
+          </button>
+        )}
+      </div>
 
       <div className="space-y-3">
         <DetailRow

@@ -43,7 +43,12 @@ export function TransactionOverview({
         <DetailRow 
           label="Status:" 
           value={
-            <StatusBadge variant="in-progress">
+            <StatusBadge variant={
+              status === 'COMPLETED' ? 'completed' : 
+              status === 'CANCELLED' ? 'error' : 
+              status === 'PAYMENT_CONFIRMED' ? 'verified' : 
+              'in-progress'
+            }>
               {status}
             </StatusBadge>
           } 

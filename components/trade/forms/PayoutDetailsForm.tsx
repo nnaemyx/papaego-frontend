@@ -21,8 +21,11 @@ import {
 } from '@/components/ui/select';
 import { useRouter } from 'next/navigation';
 import { agentApi } from '@/lib/api/agent';
-import { useState } from 'react';
+import { customersApi } from '@/lib/api/customers';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
+import { Landmark, Check } from 'lucide-react';
 
 interface PayoutDetailsFormData {
   payoutMethod: string;
@@ -37,12 +40,20 @@ export function PayoutDetailsForm() {
     tradeDetails,
     paymentInformation,
     payoutDetails,
+    tradeRequestId, 
     updatePayoutDetails,
     previousStep,
     resetForm
   } = useTradeFormStore();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch customer details to get saved bank info
+  const { data: customerData } = useQuery({
+    queryKey: ['agent-customer-details', customerInformation.customerId],
+    queryFn: () => customersApi.getCustomer(customerInformation.customerId || ''),
+    enabled: !!customerInformation.customerId,
+  });
 
   const form = useForm<PayoutDetailsFormData>({
     defaultValues: {
@@ -54,22 +65,33 @@ export function PayoutDetailsForm() {
     },
   });
 
+  // Effect to set default recipient name to customer name if empty
+  useEffect(() => {
+    if (!form.getValues('recipientName') && customerInformation.firstName) {
+        form.setValue('recipientName', `${customerInformation.firstName} ${customerInformation.lastName}`);
+    }
+  }, [customerInformation, form]);
+
+  const applySavedBank = () => {
+    if (customerData?.bankDetails) {
+        const details = customerData.bankDetails;
+        form.setValue('recipientName', details.accountName);
+        form.setValue('recipientDetails', `Bank: ${details.bankName} | Acc: ${details.accountNumber}`);
+        form.setValue('payoutMethod', 'bank-transfer');
+        toast.success('Saved bank details applied!');
+    }
+  };
+
   const onSubmit = async (data: PayoutDetailsFormData) => {
     setIsSubmitting(true);
     try {
       updatePayoutDetails(data);
 
       // Build trade data from all form steps
-      const amountRaw = tradeDetails.amountSent?.replace(/[^0-9.]/g, '') || '0';
-      const customerFullName = [customerInformation.firstName, customerInformation.lastName]
-        .filter(Boolean)
-        .join(' ') || 'Unknown Customer';
-
+      const amountRaw = String(tradeDetails.amountSent || '0').replace(/[^0-9.]/g, '');
+      
       const tradeData = {
-        customerName: customerFullName,
-        customerEmail: customerInformation.emailAddress || '',
-        customerPhone: customerInformation.phoneNumber || '',
-        customerCountry: customerInformation.country || '',
+        customerId: customerInformation.customerId || '',
         amount: parseFloat(amountRaw),
         sendCurrency: tradeDetails.fromCurrency || 'GBP',
         receiveCurrency: tradeDetails.toCurrency || 'NGN',
@@ -79,11 +101,12 @@ export function PayoutDetailsForm() {
         recipientName: data.recipientName,
         recipientDetails: data.recipientDetails,
         payoutAmount: data.payoutAmount,
+        tradeRequestId: tradeRequestId, // NEW: Link to initiator request
         paymentProofFile: paymentInformation.paymentProofFile || null,
       };
 
-      if (!tradeData.customerName || tradeData.customerName === 'Unknown Customer') {
-        toast.error('Customer name is required. Please go back to Step 1.');
+      if (!tradeData.customerId) {
+        toast.error('Customer selection is required. Please go back to Step 1.');
         setIsSubmitting(false);
         return;
       }
@@ -118,6 +141,29 @@ export function PayoutDetailsForm() {
           Specify where the funds should be sent after the trade is processed. Double-check recipient details to avoid delays.
         </p>
       </div>
+
+      {/* Saved Bank Details Helper */}
+      {customerData?.bankDetails && (
+        <div 
+          onClick={applySavedBank}
+          className="mb-8 p-4 rounded-xl border border-dashed border-brand-primary/30 bg-brand-primary/5 cursor-pointer hover:bg-brand-primary/10 transition-colors flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+              <Landmark className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-brand-primary">Use Customer's Saved Bank Details</p>
+              <p className="text-xs text-brand-primary/70">
+                {customerData.bankDetails.bankName} • {customerData.bankDetails.accountNumber}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 text-xs font-bold text-brand-primary uppercase tracking-wider">
+            Apply <Check className="w-3 h-3" />
+          </div>
+        </div>
+      )}
 
       {/* Form */}
       <Form {...form}>

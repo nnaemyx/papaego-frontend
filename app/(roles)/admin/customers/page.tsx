@@ -16,20 +16,23 @@ import {
 import { adminCustomersApi } from "@/lib/api/customers";
 import { CustomerStatsCards } from "@/components/features/admin/customers/CustomerStatsCards";
 import { CustomersTable } from "@/components/features/admin/customers/CustomersTable";
+import { NIGERIAN_SECTORS } from "@/lib/api/customer";
 
 export default function AdminCustomersPage() {
     const router = useRouter();
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
     const [typeFilter, setTypeFilter] = useState("All");
+    const [sectorFilter, setSectorFilter] = useState("All");
 
     const { data: customers = [], isLoading: customersLoading } = useQuery({
-        queryKey: ["admin-customers", search, statusFilter, typeFilter],
+        queryKey: ["admin-customers", search, statusFilter, typeFilter, sectorFilter],
         queryFn: () =>
             adminCustomersApi.getCustomers({
                 search,
                 status: statusFilter as any,
                 customerType: typeFilter as any,
+                sector: sectorFilter,
             }),
     });
 
@@ -135,6 +138,23 @@ export default function AdminCustomersPage() {
                                         <SelectItem value="All">All</SelectItem>
                                         <SelectItem value="Individual">Individual</SelectItem>
                                         <SelectItem value="Business">Business</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="flex flex-col gap-1">
+                                <span className="text-xs font-normal" style={{ color: "#c9a227" }}>
+                                    Sector (Business)
+                                </span>
+                                <Select value={sectorFilter} onValueChange={setSectorFilter} disabled={typeFilter === "Individual"}>
+                                    <SelectTrigger className="w-40">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="All">All Sectors</SelectItem>
+                                        {NIGERIAN_SECTORS.map(s => (
+                                            <SelectItem key={s} value={s}>{s}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                             </div>

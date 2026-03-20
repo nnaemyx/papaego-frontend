@@ -48,7 +48,10 @@ export function MobileNav({
 
         <div className="flex flex-col gap-6 py-8">
           <Button
-            onClick={handleJoinWaitlist}
+            onClick={() => {
+              onOpenChange(false);
+              window.location.href = '/customer-auth/signup';
+            }}
             className="landing-button px-6 h-[52px] rounded-lg transition-transform hover:scale-105 w-full"
             style={{
               backgroundColor: 'var(--primary-gold)',
@@ -57,11 +60,11 @@ export function MobileNav({
               fontWeight: 600,
             }}
           >
-            Join the Waitlist
+            Sign Up
           </Button>
 
           <Button
-            onClick={handleContactUs}
+            onClick={handleJoinWaitlist}
             variant="outline"
             className="landing-button px-6 h-[52px] rounded-lg transition-transform hover:scale-105 w-full"
             style={{
@@ -71,7 +74,7 @@ export function MobileNav({
               fontWeight: 600,
             }}
           >
-            Contact Us
+            Join Waitlist
           </Button>
         </div>
 

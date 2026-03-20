@@ -45,8 +45,9 @@ export const adminCustomersApi = {
   getCustomers: async (filters?: CustomerFilters) => {
     const params = new URLSearchParams();
     if (filters?.search) params.append('search', filters.search);
-    if (filters?.status && filters.status !== 'All') params.append('status', filters.status.toLowerCase());
+    if (filters?.status && filters.status !== 'All') params.append('status', filters.status);
     if (filters?.customerType && filters.customerType !== 'All') params.append('type', filters.customerType);
+    if (filters?.sector && filters.sector !== 'All') params.append('sector', filters.sector);
     if (filters?.activityLevel && filters.activityLevel !== 'All') params.append('activity', filters.activityLevel);
 
     const response = await api.get(`/admin/customers?${params.toString()}`);

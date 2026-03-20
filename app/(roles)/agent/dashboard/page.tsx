@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { QuickActionCard } from '@/components/dashboard/QuickActionCard';
 import { TradesTable } from '@/components/dashboard/TradesTable';
+import { PooledRequests } from '@/components/dashboard/PooledRequests';
 import { quickActions } from '@/lib/mock-data';
 import { agentApi } from '@/lib/api/agent';
 import { useAuthStore } from '@/store/auth-store';
@@ -78,6 +79,9 @@ export default function AgentDashboard() {
           ))
         )}
       </div>
+
+      {/* Available Requests in Pool */}
+      <PooledRequests />
 
       {/* Quick Actions */}
       <div className="mb-8 lg:mb-10">

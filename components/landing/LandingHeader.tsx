@@ -50,7 +50,7 @@ export function LandingHeader({ onJoinWaitlist, onContactUs }: LandingHeaderProp
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-6 lg:gap-8">
               <Button
-                onClick={onJoinWaitlist}
+                onClick={() => window.location.href = '/customer-auth/signup'}
                 className="landing-button px-6 h-[44px] rounded-lg transition-transform hover:scale-105"
                 style={{
                   backgroundColor: 'var(--primary-gold)',
@@ -59,11 +59,11 @@ export function LandingHeader({ onJoinWaitlist, onContactUs }: LandingHeaderProp
                   fontWeight: 600,
                 }}
               >
-                Join the Waitlist
+                Sign Up
               </Button>
 
               <Button
-                onClick={onContactUs}
+                onClick={onJoinWaitlist}
                 variant="outline"
                 className="landing-button px-6 h-[44px] rounded-lg transition-transform hover:scale-105"
                 style={{
@@ -73,7 +73,7 @@ export function LandingHeader({ onJoinWaitlist, onContactUs }: LandingHeaderProp
                   fontWeight: 600,
                 }}
               >
-                Contact Us
+                Join Waitlist
               </Button>
             </div>
 

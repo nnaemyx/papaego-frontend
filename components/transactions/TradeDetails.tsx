@@ -26,7 +26,13 @@ export function TradeDetails({
   toCurrency,
   exchangeRate,
   amountPaidNGN,
+  amountPaidUSD,
+  amountPaidGBP,
+  amountPaidCAD,
   amountToReceiveUSD,
+  amountToReceiveNGN,
+  amountToReceiveGBP,
+  amountToReceiveCAD,
   serviceFee,
   totalCharged,
   message,
@@ -53,12 +59,12 @@ export function TradeDetails({
           value={<span className="font-semibold">{exchangeRate}</span>}
         />
         <DetailRow
-          label="Amount Paid (NGN):"
-          value={<span className="font-bold">{amountPaidNGN}</span>}
+          label={`Amount Paid (${fromCurrency}):`}
+          value={<span className="font-bold">{totalCharged}</span>}
         />
         <DetailRow
-          label="Amount to Receive (USD):"
-          value={<span className="font-bold">{amountToReceiveUSD}</span>}
+          label={`Amount to Receive (${toCurrency}):`}
+          value={<span className="font-bold text-green-600">{amountToReceiveUSD || amountToReceiveNGN || amountToReceiveGBP || amountToReceiveCAD}</span>}
         />
         <DetailRow
           label="Service Fee:"

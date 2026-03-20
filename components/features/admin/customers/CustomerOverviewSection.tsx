@@ -86,11 +86,8 @@ export function CustomerOverviewSection({ customer }: CustomerOverviewSectionPro
                     </h3>
                     {[
                         { label: "Activity Level", value: customer.activityLevel || "Medium" },
-                        { label: "Most Traded Pair", value: "NGN → USD" },
-                        { label: "Preferred Method", value: "Bank Transfer" },
-                        { label: "Total Spent", value: "₦8,400,000" },
-                        { label: "Referrals", value: "3" },
-                        { label: "Support Tickets", value: "1 Open" },
+                        { label: "Most Traded Pair", value: customer.mostTradedPair || "None" },
+                        { label: "Total Volume", value: customer.totalVolume || "₦0" },
                     ].map((item) => (
                         <div
                             key={item.label}

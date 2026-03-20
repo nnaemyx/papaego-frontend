@@ -81,6 +81,7 @@ export interface TradeFormData {
   tradeDetails: Partial<TradeDetails>;
   paymentInformation: Partial<PaymentInformation>;
   payoutDetails: Partial<PayoutDetails>;
+  tradeRequestId?: string; // NEW: Link to initiator request
 }
 
 export interface StepConfig {

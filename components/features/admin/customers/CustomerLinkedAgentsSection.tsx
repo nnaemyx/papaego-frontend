@@ -6,11 +6,7 @@ interface CustomerLinkedAgentsSectionProps {
     customer: Customer;
 }
 
-const mockAgents = [
-    { name: "Francis James", agentId: "#PE-A0021", role: "Senior Agent", region: "Nigeria", tradesHandled: 12 },
-    { name: "Ibrahim Adamu", agentId: "#PE-A0034", role: "Agent", region: "Nigeria", tradesHandled: 3 },
-];
-
+// Removes mockAgents
 export function CustomerLinkedAgentsSection({ customer }: CustomerLinkedAgentsSectionProps) {
     return (
         <div className="space-y-4">
@@ -25,7 +21,7 @@ export function CustomerLinkedAgentsSection({ customer }: CustomerLinkedAgentsSe
                     These agents have handled transactions for {customer.name}.
                 </p>
                 <div className="space-y-3">
-                    {mockAgents.map((agent) => (
+                    {(customer.linkedAgents || []).map((agent) => (
                         <div
                             key={agent.agentId}
                             className="flex items-center justify-between p-4 rounded-xl"

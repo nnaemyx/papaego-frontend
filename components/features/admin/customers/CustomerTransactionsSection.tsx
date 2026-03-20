@@ -16,12 +16,7 @@ interface CustomerTransactionsSectionProps {
     customer: Customer;
 }
 
-const mockTx = [
-    { id: "#PE-24118", date: "25/12/2025", type: "Buy USD", amount: "₦3,250,000", agent: "Francis J.", status: "Completed" },
-    { id: "#PE-24091", date: "10/12/2025", type: "Sell GBP", amount: "£1,100", agent: "Francis J.", status: "Completed" },
-    { id: "#PE-24063", date: "28/11/2025", type: "Buy EUR", amount: "₦950,000", agent: "Ibrahim A.", status: "Cancelled" },
-    { id: "#PE-24040", date: "15/11/2025", type: "Sell USD", amount: "$800", agent: "Francis J.", status: "Completed" },
-];
+// Removed mock transactions
 
 export function CustomerTransactionsSection({ customer }: CustomerTransactionsSectionProps) {
     const transactions = customer.recentTrades || [];

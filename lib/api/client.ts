@@ -35,7 +35,7 @@ export const apiClient = {
         const response = await api.get<T>(url, config);
         return response.data;
     },
-    post: async <T>(url: string, data?: Record<string, unknown>, config?: AxiosRequestConfig): Promise<T> => {
+    post: async <T>(url: string, data?: Record<string, unknown> | FormData | any, config?: AxiosRequestConfig): Promise<T> => {
         const response = await api.post<T>(url, data, config);
         return response.data;
     },
@@ -43,7 +43,7 @@ export const apiClient = {
         const response = await api.patch<T>(url, data, config);
         return response.data;
     },
-    put: async <T>(url: string, data?: Record<string, unknown>, config?: AxiosRequestConfig): Promise<T> => {
+    put: async <T>(url: string, data?: Record<string, unknown> | FormData | any, config?: AxiosRequestConfig): Promise<T> => {
         const response = await api.put<T>(url, data, config);
         return response.data;
     },

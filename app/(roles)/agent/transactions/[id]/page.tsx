@@ -2,7 +2,10 @@
 
 import React, { use } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, Loader2 } from 'lucide-react';
+import { ChevronLeft, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { TransactionOverview } from '@/components/transactions/TransactionOverview';
 import { CustomerInfo } from '@/components/transactions/CustomerInfo';
 import { TradeDetails } from '@/components/transactions/TradeDetails';
@@ -10,9 +13,12 @@ import { PaymentMethod } from '@/components/transactions/PaymentMethod';
 import { DeliveryDetails } from '@/components/transactions/DeliveryDetails';
 import { Timeline } from '@/components/transactions/Timeline';
 import { AgentNotes } from '@/components/transactions/AgentNotes';
-import { useQuery } from '@tanstack/react-query';
 import { agentApi } from '@/lib/api/agent';
+import { bankApi } from '@/lib/api/bank';
+import { TransactionChat } from '@/components/transactions/TransactionChat';
 import { format } from 'date-fns';
+import { useState } from 'react';
+import { AlertCircle, ShieldAlert, Upload } from 'lucide-react';
 
 interface TransactionDetailsPageProps {
   params: Promise<{
@@ -23,10 +29,67 @@ interface TransactionDetailsPageProps {
 export default function TransactionDetailsPage({ params }: TransactionDetailsPageProps) {
   const { id: transactionId } = use(params);
 
-  const { data: rawTransaction, isLoading, error } = useQuery({
+  const queryClient = useQueryClient();
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const { data: rawTransaction, isLoading, error } = (useQuery as any)({
     queryKey: ['agent-transaction', transactionId],
     queryFn: () => agentApi.getTrade(transactionId),
   });
+
+  const confirmMutation = useMutation({
+    mutationFn: (id: string) => agentApi.confirmPayout(id),
+    onSuccess: () => {
+      toast.success('Trade confirmed as completed!');
+      queryClient.invalidateQueries({ queryKey: ['agent-transaction', transactionId] });
+      queryClient.invalidateQueries({ queryKey: ['agent-dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['agent-trades'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'Failed to confirm payout');
+    }
+  });
+
+  const handleVerifyBank = async () => {
+    if (!rawTransaction?.recipientName || !rawTransaction?.recipientDetails) {
+      toast.error("Recipient details missing");
+      return;
+    }
+    setIsVerifying(true);
+    try {
+      const result = await bankApi.verifyAccount("Selected Bank", rawTransaction.recipientDetails);
+      toast.success(`Account Verified: ${result.accountName}`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Verification failed");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const cancelMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) => agentApi.cancelTrade(id, reason),
+    onSuccess: () => {
+      toast.success('Trade has been cancelled.');
+      queryClient.invalidateQueries({ queryKey: ['agent-transaction', transactionId] });
+      queryClient.invalidateQueries({ queryKey: ['agent-dashboard-stats'] });
+    },
+    onError: (err: any) => {
+      toast.error('Failed to cancel trade');
+    }
+  });
+
+  const handleConfirm = () => {
+    if (window.confirm('Are you sure you want to mark this trade as COMPLETED? This will notify the customer.')) {
+      confirmMutation.mutate(transactionId);
+    }
+  };
+
+  const handleCancel = () => {
+    const reason = window.prompt('Enter reason for cancellation (optional):');
+    if (reason !== null) {
+      cancelMutation.mutate({ id: transactionId, reason });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -65,12 +128,12 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
 
     customerDetails: {
       fullName: rawTransaction.customerDetails?.fullName || "N/A",
-      customerId: `C-${rawTransaction.customerId?.split('-')[0].toUpperCase()}`,
+      customerId: `C-${rawTransaction.customerDetails?.id?.split('-')[0].toUpperCase() || 'N/A'}`,
       phoneNumber: rawTransaction.customerDetails?.phone || "N/A",
       emailAddress: rawTransaction.customerDetails?.email || "N/A",
       bvnStatus: rawTransaction.customerDetails?.verified ? "Verified" : "Pending",
-      kycLevel: "Level 1",
-      customerMessage: "Identity verified successfully."
+      kycLevel: rawTransaction.customerDetails?.verified ? "Level 2" : "Level 1",
+      customerMessage: rawTransaction.customerDetails?.verified ? "Identity verified successfully." : "KYC verification in progress."
     },
 
     tradeDetails: {
@@ -78,27 +141,27 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
       fromCurrency: rawTransaction.sendCurrency,
       toCurrency: rawTransaction.receiveCurrency,
       exchangeRate: rawTransaction.fxRate ? `1 ${rawTransaction.sendCurrency} = ${rawTransaction.fxRate} ${rawTransaction.receiveCurrency}` : "N/A",
-      amountPaidNGN: rawTransaction.sendCurrency === 'NGN' ? `${rawTransaction.amount}` : "N/A",
-      amountPaidUSD: rawTransaction.sendCurrency === 'USD' ? `${rawTransaction.amount}` : "N/A",
-      amountPaidGBP: rawTransaction.sendCurrency === 'GBP' ? `${rawTransaction.amount}` : "N/A",
-      amountPaidCAD: rawTransaction.sendCurrency === 'CAD' ? `${rawTransaction.amount}` : "N/A",
-      amountToReceiveUSD: rawTransaction.receiveCurrency === 'USD' ? `${rawTransaction.payoutAmount || 'N/A'}` : "N/A",
-      amountToReceiveNGN: rawTransaction.receiveCurrency === 'NGN' ? `${rawTransaction.payoutAmount || 'N/A'}` : "N/A",
-      amountToReceiveGBP: rawTransaction.receiveCurrency === 'GBP' ? `${rawTransaction.payoutAmount || 'N/A'}` : "N/A",
-      amountToReceiveCAD: rawTransaction.receiveCurrency === 'CAD' ? `${rawTransaction.payoutAmount || 'N/A'}` : "N/A",
+      amountPaidNGN: rawTransaction.sendCurrency === 'NGN' ? `₦${Number(rawTransaction.amount).toLocaleString()}` : "N/A",
+      amountPaidUSD: rawTransaction.sendCurrency === 'USD' ? `$${Number(rawTransaction.amount).toLocaleString()}` : "N/A",
+      amountPaidGBP: rawTransaction.sendCurrency === 'GBP' ? `£${Number(rawTransaction.amount).toLocaleString()}` : "N/A",
+      amountPaidCAD: rawTransaction.sendCurrency === 'CAD' ? `C$${Number(rawTransaction.amount).toLocaleString()}` : "N/A",
+      amountToReceiveUSD: rawTransaction.receiveCurrency === 'USD' ? `$${Number(rawTransaction.payoutAmount || 0).toLocaleString()}` : "N/A",
+      amountToReceiveNGN: rawTransaction.receiveCurrency === 'NGN' ? `₦${Number(rawTransaction.payoutAmount || 0).toLocaleString()}` : "N/A",
+      amountToReceiveGBP: rawTransaction.receiveCurrency === 'GBP' ? `£${Number(rawTransaction.payoutAmount || 0).toLocaleString()}` : "N/A",
+      amountToReceiveCAD: rawTransaction.receiveCurrency === 'CAD' ? `C$${Number(rawTransaction.payoutAmount || 0).toLocaleString()}` : "N/A",
       serviceFee: "₦0.00",
-      totalCharged: `${rawTransaction.sendCurrency} ${rawTransaction.amount}`,
+      totalCharged: `${rawTransaction.sendCurrency} ${Number(rawTransaction.amount).toLocaleString()}`,
       tradeMessage: "Exchange rate was locked at initiation."
     },
 
     paymentDetails: {
       paymentMethod: rawTransaction.paymentMethod || "Bank Transfer",
       paymentSource: rawTransaction.paymentSource || "N/A",
-      senderBank: "N/A",
+      senderBank: "N/A", // We might want to add this to the model if needed
       accountName: rawTransaction.customerDetails?.fullName || "N/A",
       accountNumber: "N/A",
       paymentProof: rawTransaction.paymentProofUrl || null,
-      paymentMessage: "Payment verified by finance team."
+      paymentMessage: rawTransaction.paymentProofUrl ? "Payment proof uploaded by customer." : "Waiting for payment proof."
     },
 
     deliveryDetails: {
@@ -148,6 +211,48 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
       {/* Page Content */}
       <main className="p-8">
         <div className="max-w-[1400px] mx-auto space-y-5">
+          {/* Action Area */}
+          <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-(--border-light) shadow-sm">
+            <div>
+              <h3 className="font-bold text-lg">Transaction Actions</h3>
+              <p className="text-sm text-gray-500">Update the status of this trade as you process it.</p>
+            </div>
+            <div className="flex gap-3">
+              {rawTransaction.status === 'PAYMENT_CONFIRMED' && (
+                <Button
+                  onClick={handleConfirm}
+                  disabled={confirmMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700 text-white flex gap-2"
+                >
+                  {confirmMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                  Confirm Payout (Complete)
+                </Button>
+              )}
+
+              {rawTransaction.status !== 'COMPLETED' && rawTransaction.status !== 'CANCELLED' && (
+                <Button
+                  onClick={handleCancel}
+                  disabled={cancelMutation.isPending}
+                  variant="outline"
+                  className="text-red-600 border-red-200 hover:bg-red-50 flex gap-2"
+                >
+                  {cancelMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                  Cancel / Reject Trade
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {rawTransaction.isCommissionFrozen && (
+            <div className="bg-red-50 border border-red-200 p-4 rounded-xl flex items-start gap-3">
+              <ShieldAlert className="w-5 h-5 text-red-600 mt-0.5" />
+              <div>
+                <h4 className="font-bold text-red-800">Administrator Hold (Escrow)</h4>
+                <p className="text-sm text-red-700">The commission for this trade has been frozen by an administrator. Please contact support before proceeding with the payout.</p>
+              </div>
+            </div>
+          )}
+
           <TransactionOverview
             transactionId={details.transactionId}
             status={details.status}
@@ -171,7 +276,7 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
               message={details.customerDetails.customerMessage}
             />
             <TradeDetails
-              tradeType={details.tradeDetails.tradeType}
+              tradeType={rawTransaction.tradeType || "BUY"}
               fromCurrency={details.tradeDetails.fromCurrency}
               toCurrency={details.tradeDetails.toCurrency}
               exchangeRate={details.tradeDetails.exchangeRate}
@@ -212,12 +317,17 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
               bankAddress={details.deliveryDetails.bankAddress}
               status={details.deliveryDetails.status}
               message={details.deliveryDetails.deliveryMessage}
+              onVerify={handleVerifyBank}
+              isVerifying={isVerifying}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-5">
-            <Timeline events={details.timeline} />
-            <AgentNotes notes={details.notes} />
+            <TransactionChat tradeId={transactionId} />
+            <div className="space-y-5">
+              <Timeline events={details.timeline} />
+              <AgentNotes notes={details.notes} />
+            </div>
           </div>
         </div>
       </main>

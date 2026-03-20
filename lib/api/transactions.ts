@@ -74,4 +74,14 @@ export const transactionsApi = {
         const response = await api.get(`/admin/transactions/${id}`);
         return response.data;
     },
+
+    freezeTrade: async (id: string) => {
+        const response = await api.patch(`/admin/transactions/${id}/freeze`, {});
+        return response.data;
+    },
+
+    unfreezeTrade: async (id: string) => {
+        const response = await api.patch(`/admin/transactions/${id}/unfreeze`, {});
+        return response.data;
+    },
 };

@@ -104,18 +104,20 @@ export function CustomerKycSection({ customer }: CustomerKycSectionProps) {
                 className="rounded-xl p-5 border"
                 style={{ backgroundColor: "white", borderColor: "#e1e3e6" }}
             >
-                <h3 className="font-semibold text-base mb-4" style={{ color: "#2b2f33" }}>
-                    Submitted Documents
-                </h3>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-semibold text-base" style={{ color: "#2b2f33" }}>
+                        Submitted Documents
+                    </h3>
+                </div>
                 <div className="space-y-3">
                     {[
-                        { doc: "National ID Card", date: formatDate(customer.dateJoined), status: customer.verificationStatus },
-                        { doc: "Utility Bill", date: formatDate(customer.dateJoined), status: customer.verificationStatus },
-                        { doc: "Selfie Photo", date: formatDate(customer.dateJoined), status: customer.verificationStatus },
+                        { doc: "Government ID", date: formatDate(customer.dateJoined), status: customer.governmentIdUrl ? customer.verificationStatus : "Missing", url: customer.governmentIdUrl },
+                        { doc: "Proof of Address", date: formatDate(customer.dateJoined), status: customer.proofOfAddressUrl ? customer.verificationStatus : "Missing", url: customer.proofOfAddressUrl },
+                        { doc: "Selfie Photo", date: formatDate(customer.dateJoined), status: customer.verificationStatus, url: null },
                     ].map((item) => (
                         <div
                             key={item.doc}
-                            className="flex items-center justify-between p-3 rounded-lg"
+                            className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg gap-3"
                             style={{ backgroundColor: "#f6f6f6" }}
                         >
                             <div>
@@ -123,22 +125,35 @@ export function CustomerKycSection({ customer }: CustomerKycSectionProps) {
                                     {item.doc}
                                 </p>
                                 <p className="text-xs mt-0.5" style={{ color: "#9aa0a6" }}>
-                                    Uploaded: {item.date}
+                                    {item.url ? `Uploaded: ${item.date}` : "Not uploaded yet"}
                                 </p>
                             </div>
-                            <span
-                                className="text-xs font-medium"
-                                style={{
-                                    color:
-                                        item.status === "Verified"
-                                            ? "#27ae60"
-                                            : item.status === "Pending"
-                                                ? "#a97600"
-                                                : "#e05555",
-                                }}
-                            >
-                                {item.status}
-                            </span>
+                            <div className="flex items-center gap-4">
+                                {item.url && (
+                                    <a
+                                        href={item.url.startsWith("http") ? item.url : `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}${item.url}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-xs font-semibold hover:underline"
+                                        style={{ color: "#1890ff" }}
+                                    >
+                                        View Document
+                                    </a>
+                                )}
+                                <span
+                                    className="text-xs font-medium"
+                                    style={{
+                                        color:
+                                            item.status === "Verified"
+                                                ? "#27ae60"
+                                                : item.status === "Pending"
+                                                    ? "#a97600"
+                                                    : "#e05555",
+                                    }}
+                                >
+                                    {item.status}
+                                </span>
+                            </div>
                         </div>
                     ))}
                 </div>

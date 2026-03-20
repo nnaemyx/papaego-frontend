@@ -13,9 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, CircleDot, CheckCircle, Clock, XCircle } from "lucide-react";
 import Image from "next/image";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { transactionsApi } from "@/lib/api/transactions";
 import { format } from "date-fns";
+import { TransactionChat } from "@/components/transactions/TransactionChat";
+import { toast } from "sonner";
+import { ShieldAlert, ShieldCheck } from "lucide-react";
 
 export default function TransactionDetailPage({
   params,
@@ -23,6 +26,7 @@ export default function TransactionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [notes, setNotes] = useState("");
   const [defaultAccordion, setDefaultAccordion] = useState("customer");
 
@@ -32,6 +36,24 @@ export default function TransactionDetailPage({
   const { data: rawTransaction, isLoading } = useQuery({
     queryKey: ["admin-transaction", id],
     queryFn: () => transactionsApi.getTransaction(id),
+  });
+
+  const freezeMutation = useMutation({
+    mutationFn: () => transactionsApi.freezeTrade(id),
+    onSuccess: () => {
+        toast.success("Commission FROZEN successfully");
+        queryClient.invalidateQueries({ queryKey: ["admin-transaction", id] });
+    },
+    onError: () => toast.error("Failed to freeze commission")
+  });
+
+  const unfreezeMutation = useMutation({
+    mutationFn: () => transactionsApi.unfreezeTrade(id),
+    onSuccess: () => {
+        toast.success("Commission UN-FROZEN successfully");
+        queryClient.invalidateQueries({ queryKey: ["admin-transaction", id] });
+    },
+    onError: () => toast.error("Failed to unfreeze commission")
   });
 
   if (isLoading) {
@@ -617,6 +639,36 @@ export default function TransactionDetailPage({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {rawTransaction.isCommissionFrozen ? (
+                   <Button
+                    onClick={() => unfreezeMutation.mutate()}
+                    disabled={unfreezeMutation.isPending}
+                    variant="outline"
+                    className="w-full"
+                    style={{
+                        borderColor: "#27ae60",
+                        color: "#27ae60",
+                    }}
+                    >
+                    <ShieldCheck className="w-4 h-4 mr-2" />
+                    Unfreeze Commission
+                    </Button>
+                ) : (
+                    <Button
+                    onClick={() => freezeMutation.mutate()}
+                    disabled={freezeMutation.isPending}
+                    variant="outline"
+                    className="w-full"
+                    style={{
+                        borderColor: "#e05555",
+                        color: "#e05555",
+                    }}
+                    >
+                    <ShieldAlert className="w-4 h-4 mr-2" />
+                    Freeze Commission (Escrow)
+                    </Button>
+                )}
+                
                 <Button
                   variant="outline"
                   className="w-full"
@@ -647,17 +699,24 @@ export default function TransactionDetailPage({
                 >
                   Mark as Complete
                 </Button>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  style={{
-                    borderColor: "#e05555",
-                    color: "#e05555",
-                  }}
-                >
-                  Cancel Transaction
-                </Button>
               </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Chat Section */}
+        <AccordionItem
+          value="chat"
+          className="bg-white rounded-lg border border-gray-200 px-6"
+        >
+          <AccordionTrigger className="hover:no-underline">
+            <h3 className="text-lg font-bold" style={{ color: "#2b2f33" }}>
+              Transaction Chat
+            </h3>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="pt-4 h-[450px]">
+                <TransactionChat tradeId={id} />
             </div>
           </AccordionContent>
         </AccordionItem>
