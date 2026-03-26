@@ -1,53 +1,139 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, TrendingUp, Plus } from "lucide-react";
-import { customerApi, CustomerTrade } from "@/lib/api/customer";
+import { Clock, TrendingUp, Plus, ArrowRight, RefreshCw } from "lucide-react";
+import { customerApi, CustomerTrade, CustomerTradeRequest } from "@/lib/api/customer";
 import { CustomerTradeItem } from "@/components/customer/CustomerTradeItem";
 import { NewTransactionModal } from "@/components/customer/NewTransactionModal";
 import Link from "next/link";
 
-const TABS = ["All", "Pending", "Completed", "Flagged"] as const;
+const TABS = ["All", "Requests", "Pending", "Completed", "Flagged"] as const;
 type Tab = (typeof TABS)[number];
 
 const STATUS_MAP: Record<Tab, string | undefined> = {
   All: undefined,
+  Requests: undefined,
   Pending: "AWAITING_PAYMENT",
   Completed: "COMPLETED",
   Flagged: "FLAGGED",
 };
 
 const TAB_DESCRIPTIONS: Record<Tab, string> = {
-  All: "All of your trade history",
+  All: "All your trades and pending requests",
+  Requests: "Trade requests awaiting admin processing",
   Pending: "Trades waiting for your action",
   Completed: "Successfully completed trades",
   Flagged: "Trades requiring attention",
 };
 
+const REQUEST_STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
+  PENDING:   { label: "Submitted", bg: "#FFF8E1", color: "#F59E0B" },
+  POOL:      { label: "Submitted", bg: "#FFF8E1", color: "#F59E0B" },
+  ASSIGNED:  { label: "Rate Pending", bg: "#EFF6FF", color: "#3B82F6" },
+  PROCESSED: { label: "Processing", bg: "#EDE9FE", color: "#8B5CF6" },
+  REJECTED:  { label: "Rejected",   bg: "#FFE5E5", color: "#E05555" },
+};
+
+function TradeRequestItem({ req }: { req: CustomerTradeRequest }) {
+  const cfg = REQUEST_STATUS_STYLE[req.status] || REQUEST_STATUS_STYLE.PENDING;
+  return (
+    <div
+      className="bg-white rounded-xl border p-4 flex items-center justify-between"
+      style={{ borderColor: "var(--border-custom)", borderLeftWidth: "3px", borderLeftColor: cfg.color }}
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: cfg.bg }}
+        >
+          <RefreshCw className="w-4 h-4" style={{ color: cfg.color }} />
+        </div>
+        <div>
+          <p className="caption font-semibold" style={{ color: "var(--text-tertiary)" }}>
+            Trade Request
+          </p>
+          <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+            {req.amount} {req.sendCurrency}{" "}
+            <ArrowRight className="inline w-3.5 h-3.5 mx-0.5" />{" "}
+            {req.receiveCurrency}
+          </p>
+          <p className="caption" style={{ color: "var(--text-tertiary)" }}>
+            {new Date(req.createdAt).toLocaleDateString("en-NG", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-1.5 ml-3 flex-shrink-0">
+        <span
+          className="px-2.5 py-1 rounded-full caption font-semibold whitespace-nowrap"
+          style={{ backgroundColor: cfg.bg, color: cfg.color }}
+        >
+          {cfg.label}
+        </span>
+        <span className="caption" style={{ color: "var(--text-tertiary)" }}>
+          {req.status === "PENDING" || req.status === "POOL"
+            ? "Awaiting admin review"
+            : req.status === "ASSIGNED"
+            ? "Agent setting rate…"
+            : req.status === "PROCESSED"
+            ? "Trade in progress"
+            : ""}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function CustomerTradesPage() {
   const [activeTab, setActiveTab] = useState<Tab>("All");
   const [trades, setTrades] = useState<CustomerTrade[]>([]);
+  const [tradeRequests, setTradeRequests] = useState<CustomerTradeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewTrade, setShowNewTrade] = useState(false);
 
   useEffect(() => {
-    fetchTrades();
+    fetchAll();
   }, [activeTab]);
 
-  const fetchTrades = async () => {
+  const fetchAll = async () => {
     setLoading(true);
     try {
-      const result = await customerApi.getTrades({
-        status: STATUS_MAP[activeTab],
-        limit: 50,
-      });
-      setTrades(result.trades);
+      const promises: Promise<any>[] = [
+        customerApi.getTrades({ status: STATUS_MAP[activeTab], limit: 50 }),
+      ];
+      // Always fetch requests for "All" and "Requests" tabs
+      if (activeTab === "All" || activeTab === "Requests") {
+        promises.push(customerApi.getTradeRequests());
+      }
+
+      const [tradeResult, requestResult] = await Promise.all(promises);
+      setTrades(tradeResult.trades);
+
+      if (requestResult) {
+        // Filter: only show non-REJECTED requests (or include REJECTED on Requests tab)
+        const filtered = activeTab === "Requests"
+          ? requestResult
+          : requestResult.filter((r: CustomerTradeRequest) => r.status !== "REJECTED");
+        setTradeRequests(filtered);
+      } else {
+        setTradeRequests([]);
+      }
     } catch {
       setTrades([]);
+      setTradeRequests([]);
     } finally {
       setLoading(false);
     }
   };
+
+  // On "Requests" tab, only show trade requests
+  const showOnlyRequests = activeTab === "Requests";
+  const isEmpty = showOnlyRequests
+    ? tradeRequests.length === 0
+    : trades.length === 0 && tradeRequests.length === 0;
 
   return (
     <div className="p-4 md:p-6 lg:pl-7 lg:pr-6 space-y-6">
@@ -82,8 +168,7 @@ export default function CustomerTradesPage() {
             onClick={() => setActiveTab(tab)}
             className="px-5 py-2 rounded-full text-sm font-semibold flex-shrink-0 transition-colors"
             style={{
-              backgroundColor:
-                activeTab === tab ? "var(--brand-primary)" : "#F6F6F6",
+              backgroundColor: activeTab === tab ? "var(--brand-primary)" : "#F6F6F6",
               color: activeTab === tab ? "white" : "var(--text-secondary)",
             }}
           >
@@ -102,7 +187,7 @@ export default function CustomerTradesPage() {
               style={{ backgroundColor: "#E1E3E6" }}
             />
           ))
-        ) : trades.length === 0 ? (
+        ) : isEmpty ? (
           <div
             className="text-center py-16 bg-white rounded-xl border"
             style={{ borderColor: "var(--border-custom)" }}
@@ -114,32 +199,64 @@ export default function CustomerTradesPage() {
               <Clock className="w-8 h-8" style={{ color: "#D1D5DB" }} />
             </div>
             <p className="font-semibold mb-1" style={{ color: "var(--text-tertiary)" }}>
-              No {activeTab.toLowerCase()} trades found
+              {activeTab === "Requests"
+                ? "No trade requests yet"
+                : `No ${activeTab.toLowerCase()} trades found`}
             </p>
             <p className="body-secondary mb-5">
-              {activeTab === "All"
-                ? "Start your first trade from the dashboard"
+              {activeTab === "All" || activeTab === "Requests"
+                ? "Submit a new trade request using the button above"
                 : `You have no ${activeTab.toLowerCase()} trades at the moment`}
             </p>
-            {activeTab === "All" && (
-              <Link
-                href="/customer/dashboard"
+            {(activeTab === "All" || activeTab === "Requests") && (
+              <button
+                onClick={() => setShowNewTrade(true)}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white"
                 style={{ backgroundColor: "var(--brand-primary)" }}
               >
                 <TrendingUp className="w-4 h-4" />
-                Go to Dashboard
-              </Link>
+                Submit a Trade Request
+              </button>
             )}
           </div>
         ) : (
-          trades.map((trade) => <CustomerTradeItem key={trade.id} trade={trade} />)
+          <>
+            {/* Trade Requests (shown on All + Requests tab) */}
+            {tradeRequests.length > 0 && (
+              <div className="space-y-3">
+                {activeTab === "All" && (
+                  <p className="text-xs font-bold uppercase tracking-wider px-1" style={{ color: "#9AA0A6" }}>
+                    Trade Requests
+                  </p>
+                )}
+                {tradeRequests.map((req) => (
+                  <TradeRequestItem key={req.id} req={req} />
+                ))}
+                {activeTab === "All" && trades.length > 0 && (
+                  <p className="text-xs font-bold uppercase tracking-wider px-1 pt-2" style={{ color: "#9AA0A6" }}>
+                    Active Trades
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Actual Trades */}
+            {!showOnlyRequests &&
+              trades.map((trade) => (
+                <CustomerTradeItem key={trade.id} trade={trade} />
+              ))}
+          </>
         )}
       </div>
 
       {/* ── New Trade Modal ── */}
       {showNewTrade && (
-        <NewTransactionModal onClose={() => setShowNewTrade(false)} />
+        <NewTransactionModal
+          onClose={() => {
+            setShowNewTrade(false);
+            fetchAll(); // refresh list after submitting
+          }}
+        />
       )}
     </div>
   );

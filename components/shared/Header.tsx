@@ -147,32 +147,40 @@ export function Header({ onMenuClick }: HeaderProps) {
                     notifications.map((n) => (
                       <div
                         key={n.id}
-                        className={`p-4 border-b border-(--border-custom) last:border-0 hover:bg-gray-50 transition-colors relative group ${!n.isRead ? 'bg-blue-50/30' : ''}`}
+                        onClick={() => {
+                          if (!n.isRead) markAsReadMutation.mutate(n.id);
+                        }}
+                        className={`p-4 border-b border-(--border-custom) last:border-0 hover:bg-gray-50 transition-colors cursor-pointer ${!n.isRead ? 'bg-blue-50/30' : ''}`}
                       >
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 items-start">
                           <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${!n.isRead ? 'bg-blue-500' : 'bg-transparent'}`} />
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-start gap-2">
                               <h4 className={`text-sm font-semibold truncate ${!n.isRead ? 'text-black' : 'text-gray-600'}`}>
                                 {n.title}
                               </h4>
-                              <span className="text-[10px] whitespace-nowrap text-gray-400">
-                                {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
-                              </span>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="text-[10px] whitespace-nowrap text-gray-400">
+                                  {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+                                </span>
+                                {!n.isRead && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      markAsReadMutation.mutate(n.id);
+                                    }}
+                                    className="p-1 hover:bg-white rounded border border-green-200 shadow-sm transition-all"
+                                    title="Mark as read"
+                                  >
+                                    <Check size={11} className="text-green-600" />
+                                  </button>
+                                )}
+                              </div>
                             </div>
                             <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">
                               {n.message}
                             </p>
                           </div>
-                          {!n.isRead && (
-                            <button
-                              onClick={() => markAsReadMutation.mutate(n.id)}
-                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white rounded border border-gray-200 shadow-sm transition-all"
-                              title="Mark as read"
-                            >
-                              <Check size={12} className="text-green-600" />
-                            </button>
-                          )}
                         </div>
                       </div>
                     ))

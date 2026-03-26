@@ -14,15 +14,10 @@ import type { Alert } from "@/components/features/admin/AlertsNotifications";
 import { transactionsApi } from "@/lib/api/transactions";
 import { agentsApi } from "@/lib/api/agents";
 import { commissionsApi } from "@/lib/api/commissions";
+import { adminTradeRequestsApi } from "@/lib/api/admin-trade-requests";
 import { useRouter } from "next/navigation";
 
 const staticAlerts: Alert[] = [
-  {
-    type: "warning",
-    title: "Documents Pending",
-    message: "KYC documents awaiting review\nYou have pending customer documents awaiting approval",
-    time: "Today",
-  },
   {
     type: "success",
     title: "System Update",
@@ -73,6 +68,13 @@ export default function AdminDashboardPage() {
       return Array.isArray(data) ? data.length : 0;
     },
     staleTime: 60_000,
+  });
+
+  const { data: pendingRequests } = useQuery({
+    queryKey: ["admin-trade-requests-pending"],
+    queryFn: () => adminTradeRequestsApi.getTradeRequests("PENDING"),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
   });
 
   const recentTransactions = (recentData?.trades ?? []).map((t) => ({
@@ -198,7 +200,15 @@ export default function AdminDashboardPage() {
           <AgentActivityTable agents={agentActivity} />
         </div>
         <div>
-          <AlertsNotifications alerts={staticAlerts} />
+          <AlertsNotifications alerts={[
+            ...(pendingRequests && pendingRequests.length > 0 ? [{
+              type: "warning" as const,
+              title: `${pendingRequests.length} Pending Trade Request${pendingRequests.length !== 1 ? "s" : ""}`,
+              message: `You have ${pendingRequests.length} customer trade request${pendingRequests.length !== 1 ? "s" : ""} awaiting review and action.`,
+              time: "Now",
+            }] : []),
+            ...staticAlerts,
+          ]} />
         </div>
       </div>
     </div>

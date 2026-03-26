@@ -3,6 +3,7 @@
 import { CheckCircle2, XCircle, Clock } from "lucide-react";
 import type { Customer } from "@/lib/types/customer";
 import { formatDate } from "@/lib/formatters";
+import { API_BASE_URL } from "@/lib/api/client";
 
 interface CustomerKycSectionProps {
     customer: Customer;
@@ -131,9 +132,9 @@ export function CustomerKycSection({ customer }: CustomerKycSectionProps) {
                             <div className="flex items-center gap-4">
                                 {item.url && (
                                     <a
-                                        href={item.url.startsWith("http") ? item.url : `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}${item.url}`}
+                                        href={item.url.startsWith('http') ? item.url : `https://${item.url.replace(/^\/?/, '')}`}
                                         target="_blank"
-                                        rel="noreferrer"
+                                        rel="noopener noreferrer"
                                         className="text-xs font-semibold hover:underline"
                                         style={{ color: "#1890ff" }}
                                     >

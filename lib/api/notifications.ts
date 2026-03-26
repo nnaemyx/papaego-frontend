@@ -20,13 +20,13 @@ export const notificationApi = {
 
     // Mark a single notification as read
     markAsRead: async (id: string) => {
-        const response = await api.patch(`/notifications/${id}/read`);
+        const response = await api.post(`/notifications/${id}/read`);
         return response.data;
     },
 
     // Mark all notifications as read
     markAllAsRead: async () => {
-        const response = await api.post("/notifications/read-all");
+        const response = await api.post("/notifications/mark-all-read");
         return response.data;
     },
 };

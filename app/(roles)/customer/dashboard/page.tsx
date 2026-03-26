@@ -384,7 +384,12 @@ export default function CustomerDashboardPage() {
 
       {/* ── New Transaction Modal ── */}
       {showNewTrade && (
-        <NewTransactionModal onClose={() => setShowNewTrade(false)} />
+        <NewTransactionModal
+          onClose={() => {
+            setShowNewTrade(false);
+            fetchAll(); // refresh stats + pending requests
+          }}
+        />
       )}
     </div>
   );

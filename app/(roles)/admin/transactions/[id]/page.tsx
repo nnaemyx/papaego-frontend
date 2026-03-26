@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Accordion,
@@ -11,10 +11,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, CircleDot, CheckCircle, Clock, XCircle } from "lucide-react";
+import { ChevronLeft, CircleDot, CheckCircle, Clock, XCircle, Building2, Hash, MapPin, Upload, Paperclip, X, Loader2, Link2 } from "lucide-react";
 import Image from "next/image";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { transactionsApi } from "@/lib/api/transactions";
+import { suppliersApi } from "@/lib/api/suppliers";
 import { format } from "date-fns";
 import { TransactionChat } from "@/components/transactions/TransactionChat";
 import { toast } from "sonner";
@@ -29,6 +30,9 @@ export default function TransactionDetailPage({
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState("");
   const [defaultAccordion, setDefaultAccordion] = useState("customer");
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const receiptInputRef = useRef<HTMLInputElement>(null);
 
   // Unwrap params promise (Next.js 16)
   const { id } = use(params);
@@ -37,6 +41,19 @@ export default function TransactionDetailPage({
     queryKey: ["admin-transaction", id],
     queryFn: () => transactionsApi.getTransaction(id),
   });
+
+  const handleReceiptUpload = async (file: File) => {
+    setUploadingReceipt(true);
+    try {
+      await transactionsApi.uploadReceipt(id, file);
+      setReceiptFile(file);
+      toast.success("Receipt uploaded and sent to customer successfully");
+    } catch {
+      toast.error("Failed to upload receipt");
+    } finally {
+      setUploadingReceipt(false);
+    }
+  };
 
   const freezeMutation = useMutation({
     mutationFn: () => transactionsApi.freezeTrade(id),
@@ -548,6 +565,132 @@ export default function TransactionDetailPage({
                   </div>
                 </div>
               ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Customer Supplier Details */}
+        <AccordionItem
+          value="supplier"
+          className="bg-white rounded-lg border border-gray-200 px-6"
+        >
+          <AccordionTrigger className="hover:no-underline">
+            <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: "#2b2f33" }}>
+              <Building2 className="w-5 h-5" style={{ color: "#C9A227" }} />
+              Customer Supplier Details
+            </h3>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="pt-4 space-y-4">
+              <div className="p-4 rounded-lg" style={{ backgroundColor: "#FFFBEB", border: "1px solid #FDE68A" }}>
+                <p className="text-xs font-semibold mb-3" style={{ color: "#B45309" }}>
+                  Submitted by customer for this trade
+                </p>
+                {[
+                  { icon: Building2, label: "Business Name", val: (rawTransaction as any)?.supplierBusinessName || "Not provided" },
+                  { icon: Hash, label: "Bank Name", val: (rawTransaction as any)?.supplierBankName || "Not provided" },
+                  { icon: Hash, label: "Account Number", val: (rawTransaction as any)?.supplierAccountNumber || "Not provided" },
+                  { icon: Building2, label: "Sector", val: (rawTransaction as any)?.supplierSector || "Not provided" },
+                  { icon: MapPin, label: "Address", val: (rawTransaction as any)?.supplierAddress || "Not provided" },
+                ].map(({ icon: Icon, label, val }) => (
+                  <div key={label} className="flex justify-between items-start py-2 border-b last:border-0" style={{ borderColor: "#FDE68A" }}>
+                    <div className="flex items-center gap-2">
+                      <Icon className="w-4 h-4 shrink-0" style={{ color: "#D97706" }} />
+                      <span className="text-sm" style={{ color: "#92400E" }}>{label}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-right" style={{ color: "#78350F" }}>{val}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  style={{ borderColor: "#C9A227", color: "#C9A227" }}
+                  onClick={() => window.open("/admin/suppliers", "_blank")}
+                >
+                  <Link2 className="w-4 h-4 mr-2" />
+                  Save to Supplier Database
+                </Button>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Admin Invoice & Receipt */}
+        <AccordionItem
+          value="invoice"
+          className="bg-white rounded-lg border border-gray-200 px-6"
+        >
+          <AccordionTrigger className="hover:no-underline">
+            <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: "#2b2f33" }}>
+              <Upload className="w-5 h-5" style={{ color: "#27AE60" }} />
+              Admin Invoice &amp; Receipt
+            </h3>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="pt-4 space-y-4">
+              <div className="p-4 rounded-lg" style={{ backgroundColor: "#E3F2FD", border: "1px solid #90CAF9" }}>
+                <p className="text-sm" style={{ color: "#1565C0" }}>
+                  Upload a receipt or invoice here. Once uploaded, it will be sent to
+                  the customer to confirm the trade is complete.
+                </p>
+              </div>
+
+              {receiptFile ? (
+                <div
+                  className="flex items-center justify-between p-4 rounded-lg"
+                  style={{ backgroundColor: "#E2FDED", border: "1px solid #A7F3D0" }}
+                >
+                  <div className="flex items-center gap-3">
+                    <Paperclip className="w-5 h-5" style={{ color: "#27AE60" }} />
+                    <span className="text-sm font-semibold" style={{ color: "#27AE60" }}>
+                      {receiptFile.name} — Sent to customer
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setReceiptFile(null)}
+                    className="p-1 hover:bg-green-100 rounded"
+                  >
+                    <X className="w-4 h-4" style={{ color: "#27AE60" }} />
+                  </button>
+                </div>
+              ) : (
+                <label
+                  className="flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-xl p-8 cursor-pointer hover:border-green-400 transition-colors"
+                  style={{ borderColor: "#E1E3E6", backgroundColor: "#F7F8F9" }}
+                >
+                  <div
+                    className="w-12 h-12 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "#E2FDED" }}
+                  >
+                    {uploadingReceipt ? (
+                      <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#27AE60" }} />
+                    ) : (
+                      <Upload className="w-6 h-6" style={{ color: "#27AE60" }} />
+                    )}
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-bold" style={{ color: "#2b2f33" }}>
+                      {uploadingReceipt ? "Uploading receipt…" : "Upload receipt / invoice for customer"}
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: "#9AA0A6" }}>
+                      JPG, PNG, PDF · Max 10MB
+                    </p>
+                  </div>
+                  <input
+                    ref={receiptInputRef}
+                    type="file"
+                    className="hidden"
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleReceiptUpload(file);
+                    }}
+                  />
+                </label>
+              )}
             </div>
           </AccordionContent>
         </AccordionItem>

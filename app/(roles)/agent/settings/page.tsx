@@ -88,35 +88,38 @@ export default function SettingsPage() {
     mutationFn: () => agentProfileApi.updateProfile({ firstName, lastName, phone, address }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agent-profile'] });
-      alert('Profile updated successfully!');
+      toast.success('Profile updated successfully!');
     },
-    onError: () => alert('Failed to update profile.')
+    onError: () => toast.error('Failed to update profile.'),
   });
 
   const updatePasswordMutation = useMutation({
     mutationFn: () => agentProfileApi.updatePassword({ currentPassword, newPassword }),
     onSuccess: () => {
-      alert('Password updated successfully!');
+      toast.success('Password updated successfully!');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     },
-    onError: (err: any) => alert(err?.response?.data?.error || 'Failed to update password.')
+    onError: (err: any) => toast.error(err?.response?.data?.error || 'Failed to update password.'),
   });
 
   const handleProfileSave = () => {
     if (!firstName || !lastName || !phone) {
-      return alert("First Name, Last Name, and Phone are required.");
+      toast.error('First Name, Last Name, and Phone are required.');
+      return;
     }
     updateProfileMutation.mutate();
   };
 
   const handlePasswordSave = () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      return alert("All password fields are required.");
+      toast.error('All password fields are required.');
+      return;
     }
     if (newPassword !== confirmPassword) {
-      return alert("New passwords do not match.");
+      toast.error('New passwords do not match.');
+      return;
     }
     updatePasswordMutation.mutate();
   };

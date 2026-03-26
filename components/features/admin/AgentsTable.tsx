@@ -78,6 +78,7 @@ export function AgentsTable({
               </TableHead>
               <TableHead className="font-medium text-xs">Agent ID</TableHead>
               <TableHead className="font-medium text-xs">Agent Name</TableHead>
+              <TableHead className="font-medium text-xs">Phone</TableHead>
               <TableHead className="font-medium text-xs">Role</TableHead>
               <TableHead className="font-medium text-xs">Region</TableHead>
               <TableHead className="font-medium text-xs">
@@ -101,6 +102,9 @@ export function AgentsTable({
                 </TableCell>
                 <TableCell className="text-xs font-normal text-green-600">
                   {agent.name}
+                </TableCell>
+                <TableCell className="text-xs font-normal">
+                  {agent.phone || "—"}
                 </TableCell>
                 <TableCell className="text-xs font-normal">
                   {agent.role}

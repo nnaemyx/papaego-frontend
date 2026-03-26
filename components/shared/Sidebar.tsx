@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, PlusCircle, Wallet, Users, FolderOpen, Settings, LogOut, ShieldAlert, FileText, X, TrendingUp, UserCircle } from 'lucide-react';
+import { Home, PlusCircle, Wallet, Users, FolderOpen, Settings, LogOut, ShieldAlert, FileText, X, TrendingUp, UserCircle, Building2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useState, useEffect } from 'react';
 
@@ -11,10 +11,8 @@ const roleNavigation = {
   AGENT: [
     { name: 'Home', href: '/agent/dashboard', icon: Home },
     { name: 'Trade Requests', href: '/agent/trade-requests', icon: FileText },
-    { name: 'New Trade', href: '/agent/trades/new', icon: PlusCircle },
     { name: 'Transactions', href: '/agent/transactions', icon: Wallet },
     { name: 'Customers', href: '/agent/customers', icon: Users },
-    { name: 'Documents', href: '/agent/documents', icon: FolderOpen },
     { name: 'Settings', href: '/agent/settings', icon: Settings },
   ],
   CUSTOMER: [
@@ -25,7 +23,9 @@ const roleNavigation = {
   ],
   ADMIN: [
     { name: 'Home', href: '/admin/dashboard', icon: Home },
+    { name: 'Trade Requests', href: '/admin/trade-requests', icon: FileText },
     { name: 'Transactions', href: '/admin/transactions', icon: TrendingUp },
+    { name: 'Suppliers', href: '/admin/suppliers', icon: Building2 },
     { name: 'Agents', href: '/admin/agents', icon: Users },
     { name: 'Customers', href: '/admin/customers', icon: UserCircle },
     { name: 'Commissions', href: '/admin/commissions', icon: Wallet },
@@ -96,7 +96,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-6 space-y-5">
+        <nav className="flex-1 px-6 space-y-5 overflow-y-auto">
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');

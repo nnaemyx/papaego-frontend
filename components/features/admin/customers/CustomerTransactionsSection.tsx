@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { getStatusColor } from "@/lib/formatters";
 import type { Customer } from "@/lib/types/customer";
+import { useRouter } from "next/navigation";
 
 interface CustomerTransactionsSectionProps {
     customer: Customer;
@@ -19,6 +20,7 @@ interface CustomerTransactionsSectionProps {
 // Removed mock transactions
 
 export function CustomerTransactionsSection({ customer }: CustomerTransactionsSectionProps) {
+    const router = useRouter();
     const transactions = customer.recentTrades || [];
 
     return (
@@ -59,7 +61,11 @@ export function CustomerTransactionsSection({ customer }: CustomerTransactionsSe
                     <TableBody>
                         {transactions.length > 0 ? (
                             transactions.map((tx) => (
-                                <TableRow key={tx.id}>
+                                <TableRow 
+                                    key={tx.id}
+                                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                                    onClick={() => router.push(`/admin/transactions/${tx.id}`)}
+                                >
                                     <TableCell className="text-xs font-medium" style={{ color: "#c9a227" }}>{tx.tradeId}</TableCell>
                                     <TableCell className="text-xs" style={{ color: "#6b7078" }}>{tx.date}</TableCell>
                                     <TableCell className="text-xs" style={{ color: "#2b2f33" }}>{tx.transaction}</TableCell>

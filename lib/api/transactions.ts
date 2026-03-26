@@ -84,4 +84,15 @@ export const transactionsApi = {
         const response = await api.patch(`/admin/transactions/${id}/unfreeze`, {});
         return response.data;
     },
+
+    uploadReceipt: async (id: string, file: File): Promise<any> => {
+        const formData = new FormData();
+        formData.append("receipt", file);
+        const response = await api.patch(
+            `/admin/transactions/${id}/receipt`,
+            formData,
+            { headers: { "Content-Type": "multipart/form-data" } }
+        );
+        return response.data;
+    },
 };

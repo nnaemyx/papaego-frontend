@@ -1,12 +1,15 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { Customer } from '@/lib/types/customer';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Mail, Phone, MapPin, Calendar, TrendingUp, FileText, X } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Mail, Phone, MapPin, Calendar, TrendingUp, FileText, ArrowUpRight } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
+import { customersApi } from '@/lib/api/customers';
 
 interface CustomerProfileSheetProps {
   customer: Customer | null;
@@ -25,42 +28,60 @@ const getStatusBadgeStyles = (status: Customer['verificationStatus']) => {
   }
 };
 
+const TRADE_STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  COMPLETED:         { bg: '#E2FDED', color: '#27AE60' },
+  AWAITING_PAYMENT:  { bg: '#FFF8E1', color: '#F59E0B' },
+  PAYMENT_CONFIRMED: { bg: '#EFF6FF', color: '#3B82F6' },
+  FLAGGED:           { bg: '#FFE5E5', color: '#E05555' },
+  CANCELLED:         { bg: '#FFE5E5', color: '#E05555' },
+  INITIATED:         { bg: '#F6F6F6', color: '#6B7078' },
+};
+
 export function CustomerProfileSheet({ customer, open, onClose }: CustomerProfileSheetProps) {
+  // Fetch full customer details when sheet opens
+  const { data: fullCustomer, isLoading: isLoadingFull } = useQuery({
+    queryKey: ['agent-customer-detail', customer?.id],
+    queryFn: () => customersApi.getCustomer(customer!.id),
+    enabled: open && !!customer?.id,
+    staleTime: 30_000,
+  });
+
   if (!customer) return null;
+
+  // Prefer full data, fall back to list-level data while loading
+  const data = fullCustomer || customer;
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-[540px] overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-[560px] overflow-y-auto">
         <SheetHeader className="mb-6">
-          <div className="flex items-start justify-between">
-            <SheetTitle className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-              Customer Profile
-            </SheetTitle>
-          </div>
+          <SheetTitle className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+            Customer Profile
+          </SheetTitle>
         </SheetHeader>
 
         {/* Customer Info Card */}
         <div className="mb-6 p-6 rounded-xl border border-(--border-custom) bg-gray-50">
           <div className="flex items-start gap-4 mb-4">
-            <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+            <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center shrink-0 overflow-hidden">
               <img
                 src={`https://i.pravatar.cc/64?u=${customer.email}`}
                 alt={customer.name}
                 className="w-full h-full rounded-full object-cover"
               />
             </div>
-            <div className="flex-1">
-              <h3 className="text-xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-                {customer.name}
+            <div className="flex-1 min-w-0">
+              <h3 className="text-xl font-bold mb-1 truncate" style={{ color: 'var(--text-primary)' }}>
+                {data.name}
               </h3>
-              <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
-                {customer.customerId}
+              <p className="text-sm mb-2 font-mono" style={{ color: 'var(--text-secondary)' }}>
+                {data.customerId}
               </p>
               <Badge
                 className="font-medium px-3 py-1"
-                style={getStatusBadgeStyles(customer.verificationStatus)}
+                style={getStatusBadgeStyles(data.verificationStatus)}
               >
-                {customer.verificationStatus}
+                {data.verificationStatus}
               </Badge>
             </div>
           </div>
@@ -68,112 +89,146 @@ export function CustomerProfileSheet({ customer, open, onClose }: CustomerProfil
           <Separator className="my-4" />
 
           {/* Contact Information */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <Mail size={18} style={{ color: 'var(--text-secondary)' }} />
-              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                {customer.email}
-              </span>
+          {isLoadingFull && !fullCustomer ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-5 w-full" />
+              ))}
             </div>
-            <div className="flex items-center gap-3">
-              <Phone size={18} style={{ color: 'var(--text-secondary)' }} />
-              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                {customer.phone}
-              </span>
-            </div>
-            {customer.address && (
-              <div className="flex items-start gap-3">
-                <MapPin size={18} className="mt-0.5" style={{ color: 'var(--text-secondary)' }} />
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Mail size={18} style={{ color: 'var(--text-secondary)' }} />
                 <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  {customer.address}
+                  {data.email}
                 </span>
               </div>
-            )}
-            <div className="flex items-center gap-3">
-              <Calendar size={18} style={{ color: 'var(--text-secondary)' }} />
-              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                Joined {formatDate(customer.dateJoined)}
-              </span>
+              <div className="flex items-center gap-3">
+                <Phone size={18} style={{ color: 'var(--text-secondary)' }} />
+                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  {data.phone || '—'}
+                </span>
+              </div>
+              {data.address && (
+                <div className="flex items-start gap-3">
+                  <MapPin size={18} className="mt-0.5 shrink-0" style={{ color: 'var(--text-secondary)' }} />
+                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    {data.address}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center gap-3">
+                <Calendar size={18} style={{ color: 'var(--text-secondary)' }} />
+                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  Joined {formatDate(data.dateJoined)}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="p-4 rounded-xl border border-(--border-custom) bg-white">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp size={20} style={{ color: 'var(--brand-primary)' }} />
-              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                Total Transactions
+        {isLoadingFull && !fullCustomer ? (
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <Skeleton className="h-24 rounded-xl" />
+            <Skeleton className="h-24 rounded-xl" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="p-4 rounded-xl border border-(--border-custom) bg-white">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp size={20} style={{ color: 'var(--brand-primary)' }} />
+                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                  Total Transactions
+                </p>
+              </div>
+              <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                {data.totalTransactions ?? 0}
               </p>
             </div>
-            <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-              {customer.totalTransactions}
-            </p>
-          </div>
-          <div className="p-4 rounded-xl border border-(--border-custom) bg-white">
-            <div className="flex items-center gap-2 mb-2">
-              <FileText size={20} style={{ color: 'var(--status-success)' }} />
-              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                Activity Level
+            <div className="p-4 rounded-xl border border-(--border-custom) bg-white">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText size={20} style={{ color: 'var(--status-success)' }} />
+                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                  Activity Level
+                </p>
+              </div>
+              <p
+                className="text-2xl font-bold"
+                style={{
+                  color:
+                    data.activityLevel === 'High'
+                      ? 'var(--status-success)'
+                      : data.activityLevel === 'Medium'
+                      ? 'var(--brand-primary)'
+                      : 'var(--text-primary)',
+                }}
+              >
+                {data.activityLevel || 'N/A'}
               </p>
             </div>
-            <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-              {customer.activityLevel || 'N/A'}
-            </p>
           </div>
-        </div>
+        )}
 
         {/* Recent Transactions Section */}
         <div className="mb-6">
           <h4 className="text-lg font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
             Recent Transactions
           </h4>
-          <div className="p-6 rounded-xl border border-(--border-custom) bg-gray-50 text-center">
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              No recent transactions
-            </p>
-          </div>
-        </div>
-
-        {/* Notes Section */}
-        <div className="mb-6">
-          <h4 className="text-lg font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
-            Notes
-          </h4>
-          <div className="p-6 rounded-xl border border-(--border-custom) bg-gray-50">
-            <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-              Add notes about this customer...
-            </p>
-            <Button
-              className="w-full"
-              style={{
-                backgroundColor: 'var(--brand-primary)',
-                color: '#ffffff',
-              }}
-            >
-              Add Note
-            </Button>
-          </div>
+          {isLoadingFull && !fullCustomer ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-14 rounded-xl" />
+              ))}
+            </div>
+          ) : data.recentTrades && data.recentTrades.length > 0 ? (
+            <div className="space-y-2">
+              {data.recentTrades.slice(0, 5).map((trade: any) => {
+                const tradeStatus = TRADE_STATUS_COLORS[trade.status] || { bg: '#F6F6F6', color: '#6B7078' };
+                return (
+                  <div
+                    key={trade.id}
+                    className="flex items-center justify-between p-3 rounded-xl border border-(--border-custom) bg-white"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: tradeStatus.bg }}
+                      >
+                        <ArrowUpRight className="w-4 h-4" style={{ color: tradeStatus.color }} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                          {trade.amount} {trade.sendCurrency} → {trade.receiveCurrency}
+                        </p>
+                        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                          {trade.createdAt ? new Date(trade.createdAt).toLocaleDateString('en-NG', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className="text-xs font-semibold px-2 py-1 rounded-full"
+                      style={{ backgroundColor: tradeStatus.bg, color: tradeStatus.color }}
+                    >
+                      {trade.status?.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-6 rounded-xl border border-(--border-custom) bg-gray-50 text-center">
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                No recent transactions
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}
         <div className="flex gap-3">
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={onClose}
-          >
+          <Button variant="outline" className="flex-1" onClick={onClose}>
             Close
-          </Button>
-          <Button
-            className="flex-1"
-            style={{
-              backgroundColor: 'var(--brand-primary)',
-              color: '#ffffff',
-            }}
-          >
-            View Full History
           </Button>
         </div>
       </SheetContent>

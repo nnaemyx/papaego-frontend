@@ -12,7 +12,6 @@ import {
 import { Shield, UserX, UserCheck, AlertOctagon, Edit } from "lucide-react";
 import type { Agent } from "@/lib/types/agent";
 import { getStatusColor } from "@/lib/formatters";
-import { API_BASE_URL } from "@/lib/api/client";
 
 interface AgentAdminControlsTabProps {
     agent: Agent;
@@ -59,7 +58,7 @@ export function AgentAdminControlsTab({
                                 <p className="text-xs text-gray-500 uppercase font-medium">Government ID</p>
                                 {agent.agentProfile.governmentIdUrl ? (
                                     <a
-                                        href={agent.agentProfile.governmentIdUrl.startsWith('http') ? agent.agentProfile.governmentIdUrl : `${API_BASE_URL}${agent.agentProfile.governmentIdUrl}`}
+                                        href={agent.agentProfile.governmentIdUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-sm font-medium hover:underline flex items-center gap-1"
@@ -75,7 +74,7 @@ export function AgentAdminControlsTab({
                                 <p className="text-xs text-gray-500 uppercase font-medium">Proof of Address</p>
                                 {agent.agentProfile.proofOfAddressUrl ? (
                                     <a
-                                        href={agent.agentProfile.proofOfAddressUrl.startsWith('http') ? agent.agentProfile.proofOfAddressUrl : `${API_BASE_URL}${agent.agentProfile.proofOfAddressUrl}`}
+                                        href={agent.agentProfile.proofOfAddressUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-sm font-medium hover:underline flex items-center gap-1"

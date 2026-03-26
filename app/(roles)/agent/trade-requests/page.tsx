@@ -26,6 +26,7 @@ export default function TradeRequestsPage() {
   const { data: requests, isLoading, error } = useQuery({
     queryKey: ['agent-trade-requests', statusFilter],
     queryFn: () => agentApi.getTradeRequests(statusFilter),
+    refetchInterval: 30_000, // Auto-refresh every 30s to show newly assigned requests
   });
 
   const rejectMutation = useMutation({
@@ -60,7 +61,7 @@ export default function TradeRequestsPage() {
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b pb-px">
-        {['PENDING', 'PROCESSED', 'REJECTED'].map((status) => (
+        {['PENDING', 'ASSIGNED', 'PROCESSED', 'REJECTED'].map((status) => (
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
@@ -152,11 +153,11 @@ export default function TradeRequestsPage() {
                   )}
                 </div>
 
-                {req.status === 'PENDING' && (
+                {(req.status === 'PENDING' || req.status === 'ASSIGNED') && (
                   <div className="mt-6 flex gap-3">
                     <Link href={`/agent/trades/new?requestId=${req.id}`} className="flex-1">
                       <Button className="w-full bg-[#012333] hover:bg-[#02334a] text-white rounded-xl h-11 font-bold">
-                        Process Trade
+                        Set Rate
                       </Button>
                     </Link>
                     <Button 

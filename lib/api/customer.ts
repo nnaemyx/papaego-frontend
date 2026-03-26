@@ -39,6 +39,7 @@ export interface CustomerTradeDetail extends CustomerTrade {
     paymentSource: string | null;
     payoutMethod: string | null;
     recipientDetails: string | null;
+    receiptUrl: string | null;
     timeline: { action: string; createdAt: string }[];
 }
 
@@ -61,7 +62,7 @@ export interface CustomerTradeRequest {
     amount: string;
     sendCurrency: string;
     receiveCurrency: string;
-    status: "PENDING" | "REJECTED" | "PROCESSED";
+    status: "PENDING" | "REJECTED" | "PROCESSED" | "POOL" | "ASSIGNED";
     createdAt: string;
 }
 
@@ -129,7 +130,21 @@ export const customerApi = {
     },
 
     /** Trade Requests Section */
-    createTradeRequest: async (payload: { amount: string; sendCurrency: string; receiveCurrency: string; agentId: string; purpose?: string; tradeType?: string; receiptUrl?: string }) => {
+    createTradeRequest: async (payload: {
+        amount: string;
+        sendCurrency: string;
+        receiveCurrency: string;
+        agentId?: string;
+        purpose?: string;
+        tradeType?: string;
+        receiptUrl?: string;
+        // Supplier details (new)
+        businessName?: string;
+        bankName?: string;
+        accountNumber?: string;
+        sector?: string;
+        address?: string;
+    }) => {
         const response = await api.post("/customer/portal/trade-requests", payload);
         return response.data;
     },
@@ -147,6 +162,11 @@ export const customerApi = {
 
     upsertBankDetails: async (payload: Partial<CustomerBankDetails>) => {
         const response = await api.post("/customer/portal/bank-details", payload);
+        return response.data;
+    },
+
+    getSuppliers: async (): Promise<any[]> => {
+        const response = await api.get("/customer/portal/suppliers");
         return response.data;
     },
 

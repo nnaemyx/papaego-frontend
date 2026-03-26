@@ -1,0 +1,647 @@
+"use client";
+
+import { use, useRef, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+    adminTradeRequestsApi,
+} from "@/lib/api/admin-trade-requests";
+import { agentsApi } from "@/lib/api/agents";
+import { transactionsApi } from "@/lib/api/transactions";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
+    ChevronLeft,
+    User,
+    Building2,
+    Hash,
+    MapPin,
+    UserCheck,
+    CheckCircle,
+    XCircle,
+    Loader2,
+    Upload,
+    Paperclip,
+    ArrowRight,
+    TrendingUp,
+    Clock,
+    Receipt,
+    ExternalLink,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { format } from "date-fns";
+import Link from "next/link";
+
+const STATUS_STYLE: Record<string, { bg: string; text: string; border: string; label: string }> = {
+    PENDING: { bg: "#FFF8E1", text: "#F59E0B", border: "#FDE68A", label: "Pending" },
+    POOL: { bg: "#FFF8E1", text: "#F59E0B", border: "#FDE68A", label: "In Pool" },
+    ASSIGNED: { bg: "#EFF6FF", text: "#3B82F6", border: "#BFDBFE", label: "Agent Assigned" },
+    PROCESSED: { bg: "#E2FDED", text: "#27AE60", border: "#A7F3D0", label: "Processed" },
+    REJECTED: { bg: "#FFE5E5", text: "#E05555", border: "#FECACA", label: "Rejected" },
+};
+
+const TRADE_STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> = {
+    INITIATED: { bg: "#F6F6F6", text: "#6B7078", label: "Trade Initiated" },
+    QUOTED: { bg: "#EDE9FE", text: "#8B5CF6", label: "Rate Set by Agent" },
+    SENT_TO_CUSTOMER: { bg: "#FFF8E1", text: "#F59E0B", label: "Sent to Customer" },
+    CUSTOMER_CONFIRMED: { bg: "#EFF6FF", text: "#3B82F6", label: "Customer Confirmed" },
+    AWAITING_PAYMENT: { bg: "#FFF8E1", text: "#F59E0B", label: "Awaiting Payment" },
+    PAYMENT_CONFIRMED: { bg: "#EFF6FF", text: "#3B82F6", label: "Payment Confirmed" },
+    COMPLETED: { bg: "#E2FDED", text: "#27AE60", label: "Completed" },
+    FLAGGED: { bg: "#FFE5E5", text: "#E05555", label: "Flagged" },
+    CANCELLED: { bg: "#FFE5E5", text: "#E05555", label: "Cancelled" },
+};
+
+export default function AdminTradeRequestDetailPage({
+    params,
+}: {
+    params: Promise<{ id: string }>;
+}) {
+    const { id } = use(params);
+    const router = useRouter();
+    const queryClient = useQueryClient();
+    const receiptInputRef = useRef<HTMLInputElement>(null);
+    const [selectedAgentId, setSelectedAgentId] = useState<string>("");
+    const [uploadingReceipt, setUploadingReceipt] = useState(false);
+    const [receiptFile, setReceiptFile] = useState<File | null>(null);
+
+    const { data: request, isLoading } = useQuery({
+        queryKey: ["admin-trade-request", id],
+        queryFn: () => adminTradeRequestsApi.getTradeRequest(id),
+        refetchInterval: 10_000,
+    });
+
+    const { data: agents = [] } = useQuery({
+        queryKey: ["agents"],
+        queryFn: () => agentsApi.getAgents(),
+        staleTime: 60_000,
+    });
+
+    const assignMutation = useMutation({
+        mutationFn: (agentId: string) =>
+            adminTradeRequestsApi.assignAgent(id, agentId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["admin-trade-request", id] });
+            queryClient.invalidateQueries({ queryKey: ["admin-trade-requests"] });
+            toast.success("Agent assigned — they will be notified to set the rate");
+        },
+        onError: () => toast.error("Failed to assign agent"),
+    });
+
+    const processMutation = useMutation({
+        mutationFn: () => adminTradeRequestsApi.processRequest(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["admin-trade-request", id] });
+            queryClient.invalidateQueries({ queryKey: ["admin-trade-requests"] });
+            toast.success("Trade created and customer notified");
+        },
+        onError: () => toast.error("Failed to process request"),
+    });
+
+    const rejectMutation = useMutation({
+        mutationFn: (reason?: string) =>
+            adminTradeRequestsApi.rejectRequest(id, reason),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["admin-trade-request", id] });
+            queryClient.invalidateQueries({ queryKey: ["admin-trade-requests"] });
+            toast.success("Trade request rejected");
+            router.push("/admin/trade-requests");
+        },
+        onError: () => toast.error("Failed to reject request"),
+    });
+
+    const handleReject = () => {
+        if (confirm("Reject this trade request? The customer will be notified.")) {
+            rejectMutation.mutate(undefined);
+        }
+    };
+
+    const handleAssign = () => {
+        if (!selectedAgentId) {
+            toast.error("Please select an agent");
+            return;
+        }
+        assignMutation.mutate(selectedAgentId);
+    };
+
+    const handleReceiptUpload = async (file: File) => {
+        if (!request?.linkedTrade?.id) {
+            toast.error("No linked trade found");
+            return;
+        }
+        setUploadingReceipt(true);
+        try {
+            await transactionsApi.uploadReceipt(request.linkedTrade.id, file);
+            setReceiptFile(file);
+            queryClient.invalidateQueries({ queryKey: ["admin-trade-request", id] });
+            toast.success("Receipt uploaded and customer notified");
+        } catch {
+            toast.error("Failed to upload receipt");
+        } finally {
+            setUploadingReceipt(false);
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <Loader2 className="w-10 h-10 animate-spin" style={{ color: "#C9A227" }} />
+            </div>
+        );
+    }
+
+    if (!request) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8">
+                <p className="font-bold text-red-500">Trade request not found</p>
+                <Button variant="outline" onClick={() => router.back()}>
+                    Go Back
+                </Button>
+            </div>
+        );
+    }
+
+    const reqStyle = STATUS_STYLE[request.status] || STATUS_STYLE.PENDING;
+    const tradeStyle = request.linkedTrade
+        ? TRADE_STATUS_STYLE[request.linkedTrade.status] || { bg: "#F6F6F6", text: "#6B7078", label: request.linkedTrade.status }
+        : null;
+    const hasSupplier =
+        request.supplierDetails?.businessName || request.supplierDetails?.bankName;
+    const isActionable = ["PENDING", "POOL", "ASSIGNED"].includes(request.status);
+    const agentSetRate =
+        request.linkedTrade?.fxRate && parseFloat(request.linkedTrade.fxRate) > 0;
+
+    return (
+        <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-5xl mx-auto" style={{ backgroundColor: "#F7F8F9", minHeight: "100vh" }}>
+            {/* Back */}
+            <button
+                onClick={() => router.back()}
+                className="flex items-center gap-2 text-sm font-semibold hover:underline"
+                style={{ color: "#2b2f33" }}
+            >
+                <ChevronLeft className="w-4 h-4" />
+                Back to Trade Requests
+            </button>
+
+            {/* Header */}
+            <div className="bg-white rounded-2xl border p-6 flex items-start justify-between gap-4" style={{ borderColor: "#E1E3E6" }}>
+                <div>
+                    <h1 className="text-2xl font-bold mb-1" style={{ color: "#2b2f33" }}>
+                        Trade Request
+                    </h1>
+                    <p className="text-sm font-mono" style={{ color: "#9AA0A6" }}>
+                        #{id.slice(0, 12).toUpperCase()}
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: "#9AA0A6" }}>
+                        Submitted {format(new Date(request.createdAt), "PPP p")}
+                    </p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Badge
+                        variant="outline"
+                        className="text-sm px-3 py-1 font-bold"
+                        style={{
+                            backgroundColor: reqStyle.bg,
+                            color: reqStyle.text,
+                            borderColor: reqStyle.border,
+                        }}
+                    >
+                        {reqStyle.label}
+                    </Badge>
+                    {isActionable && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleReject}
+                            disabled={rejectMutation.isPending}
+                            className="border-red-200 text-red-500 hover:bg-red-50"
+                        >
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Reject
+                        </Button>
+                    )}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column */}
+                <div className="lg:col-span-2 space-y-6">
+
+                    {/* Trade Summary */}
+                    <div className="bg-white rounded-2xl border p-6" style={{ borderColor: "#E1E3E6" }}>
+                        <h2 className="font-bold text-lg mb-4" style={{ color: "#2b2f33" }}>
+                            Trade Summary
+                        </h2>
+                        <div className="flex items-center justify-between p-5 rounded-xl" style={{ backgroundColor: "#F7F8F9" }}>
+                            <div>
+                                <p className="text-xs uppercase tracking-wider font-bold mb-1" style={{ color: "#9AA0A6" }}>Customer Sends</p>
+                                <p className="text-3xl font-black" style={{ color: "#012333" }}>
+                                    {request.amount}
+                                    <span className="text-base font-normal ml-1.5" style={{ color: "#9AA0A6" }}>
+                                        {request.sendCurrency}
+                                    </span>
+                                </p>
+                            </div>
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: "#C9A22720" }}>
+                                <ArrowRight className="w-5 h-5" style={{ color: "#C9A227" }} />
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs uppercase tracking-wider font-bold mb-1" style={{ color: "#9AA0A6" }}>Receives</p>
+                                <p className="text-3xl font-black" style={{ color: "#012333" }}>
+                                    {request.receiveCurrency}
+                                </p>
+                            </div>
+                        </div>
+                        {request.purpose && (
+                            <p className="text-sm mt-4 italic" style={{ color: "#6B7078" }}>
+                                Purpose: "{request.purpose}"
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Customer Info */}
+                    <div className="bg-white rounded-2xl border p-6" style={{ borderColor: "#E1E3E6" }}>
+                        <h2 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: "#2b2f33" }}>
+                            <User className="w-5 h-5" style={{ color: "#C9A227" }} />
+                            Customer
+                        </h2>
+                        <div className="space-y-3">
+                            {[
+                                { label: "Full Name", val: `${request.customer.firstName} ${request.customer.lastName}` },
+                                { label: "Email", val: request.customer.email },
+                                { label: "Phone", val: request.customer.phone || "—" },
+                            ].map(({ label, val }) => (
+                                <div key={label} className="flex justify-between items-center py-2 border-b last:border-0" style={{ borderColor: "#F0F0F0" }}>
+                                    <span className="text-sm" style={{ color: "#9AA0A6" }}>{label}</span>
+                                    <span className="text-sm font-semibold" style={{ color: "#2b2f33" }}>{val}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Supplier Details */}
+                    {hasSupplier && (
+                        <div className="rounded-2xl border p-6" style={{ backgroundColor: "#FFFBEB", borderColor: "#FDE68A" }}>
+                            <h2 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: "#92400E" }}>
+                                <Building2 className="w-5 h-5" style={{ color: "#D97706" }} />
+                                Supplier Details (from customer)
+                            </h2>
+                            <div className="space-y-2.5">
+                                {[
+                                    { icon: Building2, label: "Business", val: request.supplierDetails?.businessName },
+                                    { icon: Hash, label: "Bank", val: request.supplierDetails?.bankName },
+                                    { icon: Hash, label: "Account No.", val: request.supplierDetails?.accountNumber },
+                                    { icon: Building2, label: "Sector", val: request.supplierDetails?.sector },
+                                    { icon: MapPin, label: "Address", val: request.supplierDetails?.address },
+                                ]
+                                    .filter((r) => r.val)
+                                    .map(({ icon: Icon, label, val }) => (
+                                        <div key={label} className="flex items-center gap-3">
+                                            <Icon className="w-4 h-4 shrink-0" style={{ color: "#D97706" }} />
+                                            <span className="text-sm" style={{ color: "#92400E" }}>
+                                                <span className="font-semibold">{label}:</span> {val}
+                                            </span>
+                                        </div>
+                                    ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Linked Trade Status (once processed) */}
+                    {request.linkedTrade && tradeStyle && (
+                        <div className="bg-white rounded-2xl border p-6" style={{ borderColor: "#E1E3E6" }}>
+                            <h2 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: "#2b2f33" }}>
+                                <TrendingUp className="w-5 h-5" style={{ color: "#27AE60" }} />
+                                Linked Trade
+                            </h2>
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <p className="text-xs" style={{ color: "#9AA0A6" }}>Trade ID</p>
+                                    <p className="font-mono font-bold text-sm" style={{ color: "#2b2f33" }}>
+                                        #{request.linkedTrade.id.slice(0, 12).toUpperCase()}
+                                    </p>
+                                </div>
+                                <Badge
+                                    variant="outline"
+                                    style={{
+                                        backgroundColor: tradeStyle.bg,
+                                        color: tradeStyle.text,
+                                        borderColor: tradeStyle.bg,
+                                    }}
+                                >
+                                    {tradeStyle.label}
+                                </Badge>
+                            </div>
+
+                            {/* Agent rate info */}
+                            {agentSetRate ? (
+                                <div
+                                    className="p-4 rounded-xl mb-4"
+                                    style={{ backgroundColor: "#E2FDED", border: "1px solid #A7F3D0" }}
+                                >
+                                    <p className="text-sm font-bold mb-1" style={{ color: "#27AE60" }}>
+                                        ✅ Agent has set the exchange rate
+                                    </p>
+                                    <p className="text-xl font-black" style={{ color: "#27AE60" }}>
+                                        1 {request.sendCurrency} = {parseFloat(request.linkedTrade.fxRate!).toLocaleString()} {request.receiveCurrency}
+                                    </p>
+                                    {request.linkedTrade.payoutAmount && (
+                                        <p className="text-sm mt-1" style={{ color: "#27AE60" }}>
+                                            Payout: {request.linkedTrade.payoutAmount} {request.receiveCurrency}
+                                        </p>
+                                    )}
+                                </div>
+                            ) : (
+                                <div
+                                    className="p-4 rounded-xl mb-4"
+                                    style={{ backgroundColor: "#FFF8E1", border: "1px solid #FDE68A" }}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Clock className="w-4 h-4" style={{ color: "#F59E0B" }} />
+                                        <p className="text-sm font-semibold" style={{ color: "#92400E" }}>
+                                            Waiting for agent to set the exchange rate…
+                                        </p>
+                                    </div>
+                                    {request.assignedAgent && (
+                                        <p className="text-xs mt-1" style={{ color: "#B45309" }}>
+                                            Assigned to: {request.assignedAgent.firstName} {request.assignedAgent.lastName}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Receipt section */}
+                            <div>
+                                <p className="text-sm font-bold mb-3" style={{ color: "#2b2f33" }}>
+                                    Upload Receipt for Customer
+                                </p>
+
+                                {request.linkedTrade.receiptUrl || receiptFile ? (
+                                    <div
+                                        className="flex items-center justify-between p-4 rounded-xl"
+                                        style={{ backgroundColor: "#E2FDED", border: "1px solid #A7F3D0" }}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Receipt className="w-5 h-5" style={{ color: "#27AE60" }} />
+                                            <span className="text-sm font-semibold" style={{ color: "#27AE60" }}>
+                                                {receiptFile ? receiptFile.name : "Receipt uploaded — customer notified"}
+                                            </span>
+                                        </div>
+                                        {request.linkedTrade.receiptUrl && (
+                                            <a
+                                                href={request.linkedTrade.receiptUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="flex items-center gap-1 text-xs font-bold"
+                                                style={{ color: "#27AE60" }}
+                                            >
+                                                View <ExternalLink className="w-3 h-3" />
+                                            </a>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <label
+                                        className="flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-xl p-6 cursor-pointer hover:border-green-400 transition-colors"
+                                        style={{ borderColor: "#E1E3E6", backgroundColor: "#F7F8F9" }}
+                                    >
+                                        <div
+                                            className="w-11 h-11 rounded-full flex items-center justify-center"
+                                            style={{ backgroundColor: "#E2FDED" }}
+                                        >
+                                            {uploadingReceipt ? (
+                                                <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#27AE60" }} />
+                                            ) : (
+                                                <Upload className="w-5 h-5" style={{ color: "#27AE60" }} />
+                                            )}
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-sm font-bold" style={{ color: "#2b2f33" }}>
+                                                {uploadingReceipt ? "Uploading…" : "Upload receipt/invoice for customer"}
+                                            </p>
+                                            <p className="text-xs mt-0.5" style={{ color: "#9AA0A6" }}>
+                                                JPG, PNG or PDF · Customer will be notified instantly
+                                            </p>
+                                        </div>
+                                        <input
+                                            ref={receiptInputRef}
+                                            type="file"
+                                            className="hidden"
+                                            accept=".jpg,.jpeg,.png,.pdf"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) handleReceiptUpload(file);
+                                            }}
+                                        />
+                                    </label>
+                                )}
+                            </div>
+
+                            {/* Link to full transaction */}
+                            <Link
+                                href={`/admin/transactions/${request.linkedTrade.id}`}
+                                className="mt-4 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold transition-colors hover:opacity-80"
+                                style={{ backgroundColor: "#012333", color: "white" }}
+                            >
+                                View Full Trade Details
+                                <ExternalLink className="w-4 h-4" />
+                            </Link>
+                        </div>
+                    )}
+                </div>
+
+                {/* Right Column — Actions */}
+                <div className="space-y-5">
+
+                    {/* Step 1: Assign Agent */}
+                    <div
+                        className="bg-white rounded-2xl border p-5"
+                        style={{
+                            borderColor: request.assignedAgent ? "#A7F3D0" : "#E1E3E6",
+                            borderLeftWidth: "3px",
+                            borderLeftColor: request.assignedAgent ? "#27AE60" : "#C9A227",
+                        }}
+                    >
+                        <div className="flex items-center gap-2 mb-3">
+                            <div
+                                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white"
+                                style={{ backgroundColor: request.assignedAgent ? "#27AE60" : "#C9A227" }}
+                            >
+                                1
+                            </div>
+                            <h3 className="font-bold text-sm" style={{ color: "#2b2f33" }}>
+                                Assign Agent for Rate
+                            </h3>
+                        </div>
+
+                        {request.assignedAgent ? (
+                            <div className="flex items-center gap-2 p-3 rounded-xl" style={{ backgroundColor: "#E2FDED" }}>
+                                <CheckCircle className="w-4 h-4 shrink-0" style={{ color: "#27AE60" }} />
+                                <div>
+                                    <p className="text-sm font-bold" style={{ color: "#27AE60" }}>
+                                        {request.assignedAgent.firstName} {request.assignedAgent.lastName}
+                                    </p>
+                                    <p className="text-xs" style={{ color: "#27AE60" }}>
+                                        {request.assignedAgent.email}
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <p className="text-xs" style={{ color: "#9AA0A6" }}>
+                                    Select an agent to set the exchange rate. They will receive a notification.
+                                </p>
+                                <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Choose agent…" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {(agents as any[]).map((a: any) => (
+                                            <SelectItem key={a.id} value={a.id}>
+                                                {a.name || `${a.firstName || ""} ${a.lastName || ""}`.trim() || a.email}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Button
+                                    onClick={handleAssign}
+                                    disabled={assignMutation.isPending || !selectedAgentId}
+                                    className="w-full font-bold text-white"
+                                    style={{ backgroundColor: "#012333" }}
+                                >
+                                    {assignMutation.isPending ? (
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <UserCheck className="w-4 h-4 mr-2" />
+                                    )}
+                                    Assign Agent
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Step 2: Process Trade */}
+                    <div
+                        className="bg-white rounded-2xl border p-5"
+                        style={{
+                            borderColor: request.linkedTrade ? "#A7F3D0" : "#E1E3E6",
+                            borderLeftWidth: "3px",
+                            borderLeftColor: request.linkedTrade ? "#27AE60" : "#9AA0A6",
+                        }}
+                    >
+                        <div className="flex items-center gap-2 mb-3">
+                            <div
+                                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white"
+                                style={{ backgroundColor: request.linkedTrade ? "#27AE60" : "#9AA0A6" }}
+                            >
+                                2
+                            </div>
+                            <h3 className="font-bold text-sm" style={{ color: "#2b2f33" }}>
+                                Create Trade
+                            </h3>
+                        </div>
+
+                        {request.linkedTrade ? (
+                            <div className="flex items-center gap-2 p-3 rounded-xl" style={{ backgroundColor: "#E2FDED" }}>
+                                <CheckCircle className="w-4 h-4 shrink-0" style={{ color: "#27AE60" }} />
+                                <p className="text-sm font-bold" style={{ color: "#27AE60" }}>
+                                    Trade created successfully
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <p className="text-xs" style={{ color: "#9AA0A6" }}>
+                                    {request.assignedAgent
+                                        ? agentSetRate
+                                            ? "Agent has set the rate. Process the trade to notify the customer."
+                                            : "Waiting for agent to set the rate, or process directly without a rate."
+                                        : "You can process without assigning an agent — trade will be created directly."}
+                                </p>
+                                <Button
+                                    onClick={() => processMutation.mutate(undefined as any)}
+                                    disabled={processMutation.isPending || request.status === "PROCESSED"}
+                                    className="w-full font-bold text-white"
+                                    style={{ backgroundColor: "#C9A227" }}
+                                >
+                                    {processMutation.isPending ? (
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <CheckCircle className="w-4 h-4 mr-2" />
+                                    )}
+                                    Process &amp; Create Trade
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Step 3: Upload Receipt */}
+                    <div
+                        className="bg-white rounded-2xl border p-5"
+                        style={{
+                            borderColor: (request.linkedTrade?.receiptUrl || receiptFile) ? "#A7F3D0" : "#E1E3E6",
+                            borderLeftWidth: "3px",
+                            borderLeftColor: (request.linkedTrade?.receiptUrl || receiptFile) ? "#27AE60" : "#9AA0A6",
+                        }}
+                    >
+                        <div className="flex items-center gap-2 mb-3">
+                            <div
+                                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white"
+                                style={{ backgroundColor: (request.linkedTrade?.receiptUrl || receiptFile) ? "#27AE60" : "#9AA0A6" }}
+                            >
+                                3
+                            </div>
+                            <h3 className="font-bold text-sm" style={{ color: "#2b2f33" }}>
+                                Send Receipt to Customer
+                            </h3>
+                        </div>
+
+                        {(request.linkedTrade?.receiptUrl || receiptFile) ? (
+                            <div className="flex items-center gap-2 p-3 rounded-xl" style={{ backgroundColor: "#E2FDED" }}>
+                                <CheckCircle className="w-4 h-4 shrink-0" style={{ color: "#27AE60" }} />
+                                <p className="text-sm font-bold" style={{ color: "#27AE60" }}>
+                                    Receipt sent to customer
+                                </p>
+                            </div>
+                        ) : request.linkedTrade ? (
+                            <div className="space-y-3">
+                                <p className="text-xs" style={{ color: "#9AA0A6" }}>
+                                    Upload the payment receipt or invoice. Customer will be instantly notified.
+                                </p>
+                                <label
+                                    className="flex items-center justify-center gap-2 w-full py-2.5 border-2 border-dashed rounded-xl cursor-pointer hover:border-green-400 transition-colors text-sm font-semibold"
+                                    style={{ borderColor: "#E1E3E6", color: "#6B7078" }}
+                                >
+                                    {uploadingReceipt ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <Upload className="w-4 h-4" />
+                                    )}
+                                    {uploadingReceipt ? "Uploading…" : "Upload Receipt"}
+                                    <input
+                                        type="file"
+                                        className="hidden"
+                                        accept=".jpg,.jpeg,.png,.pdf"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) handleReceiptUpload(file);
+                                        }}
+                                    />
+                                </label>
+                            </div>
+                        ) : (
+                            <p className="text-xs" style={{ color: "#C9A8A8" }}>
+                                Create the trade first to upload a receipt.
+                            </p>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}

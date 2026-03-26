@@ -3,7 +3,6 @@
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, Clock } from "lucide-react";
 import type { Agent } from "@/lib/types/agent";
-import { API_BASE_URL } from "@/lib/api/client";
 
 interface AgentProfileTabProps {
     // ...
@@ -145,7 +144,7 @@ export function AgentProfileTab({ agent }: AgentProfileTabProps) {
                                     Government ID (NIN/International Passport)
                                 </p>
                                 <a
-                                    href={profile.governmentIdUrl.startsWith('http') ? profile.governmentIdUrl : `${API_BASE_URL}${profile.governmentIdUrl}`}
+                                href={profile.governmentIdUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-xs mt-0.5"
@@ -170,7 +169,7 @@ export function AgentProfileTab({ agent }: AgentProfileTabProps) {
                                     Proof of Address (Utility Bill)
                                 </p>
                                 <a
-                                    href={profile.proofOfAddressUrl.startsWith('http') ? profile.proofOfAddressUrl : `${API_BASE_URL}${profile.proofOfAddressUrl}`}
+                                href={profile.proofOfAddressUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-xs mt-0.5"

@@ -10,6 +10,8 @@ import {
   CheckCircle,
   Clock,
   MessageCircle,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 import { customerApi, CustomerTradeDetail } from "@/lib/api/customer";
 import { TransactionChat } from "@/components/transactions/TransactionChat";
@@ -248,6 +250,49 @@ export default function CustomerTradeDetailsPage({
                 ))}
               </div>
             </div>
+
+            {/* Receipt from Admin/Agent */}
+            {trade.receiptUrl && (
+              <div
+                className="bg-white rounded-2xl border p-5"
+                style={{ borderColor: "var(--border-custom)" }}
+              >
+                <div className="flex items-start gap-4">
+                  <div
+                    className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: "#E2FDED" }}
+                  >
+                    <FileText className="w-5 h-5" style={{ color: "#27AE60" }} />
+                  </div>
+                  <div className="flex-1">
+                    <h3
+                      className="font-bold mb-1"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      Receipt / Invoice from Agent
+                    </h3>
+                    <p className="body-secondary mb-4">
+                      Your agent has sent a receipt or invoice for this trade. Review it
+                      before making payment.
+                    </p>
+                    <a
+                      href={trade.receiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors"
+                      style={{
+                        borderColor: "#27AE60",
+                        color: "#27AE60",
+                        backgroundColor: "#E2FDED",
+                      }}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      View Receipt
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Payment Proof / Receipt */}
             {trade.paymentProofUrl && (

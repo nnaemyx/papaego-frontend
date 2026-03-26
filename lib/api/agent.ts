@@ -48,6 +48,7 @@ export const agentApi = {
         amount: number;
         sendCurrency: string;
         receiveCurrency: string;
+        fxRate?: string;
         paymentMethod?: string;
         paymentSource?: string;
         payoutMethod?: string;
