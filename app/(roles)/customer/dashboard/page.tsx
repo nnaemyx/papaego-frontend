@@ -78,7 +78,7 @@ export default function CustomerDashboardPage() {
       setStats(s);
       setTrades(t.trades);
       setRates(r.rates);
-      setTradeRequests(reqs.filter((req: any) => req.status === "PENDING"));
+      setTradeRequests(reqs.requests ? reqs.requests.filter((req: any) => req.status === "PENDING") : []);
     } catch {
       setStats({ totalTrades: 0, todayTrades: 0, pendingActions: 0, kycVerified: false });
       setTrades([]);

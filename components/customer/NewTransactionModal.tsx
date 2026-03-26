@@ -70,7 +70,6 @@ export function NewTransactionModal({ onClose }: NewTransactionModalProps) {
                 amount,
                 sendCurrency: fromCurrency,
                 receiveCurrency: toCurrency,
-                // No agentId — admin handles routing
                 purpose,
                 tradeType: "BUY",
                 // Supplier details
@@ -85,7 +84,8 @@ export function NewTransactionModal({ onClose }: NewTransactionModalProps) {
                 onClose();
                 window.location.reload();
             }, 2500);
-        } catch {
+        } catch (err) {
+            console.error("Trade initiation error:", err);
             alert("Failed to initiate trade. Please try again.");
         } finally {
             setSubmitting(false);

@@ -9,6 +9,7 @@ import { agentsApi } from "@/lib/api/agents";
 import { transactionsApi } from "@/lib/api/transactions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
     Select,
     SelectContent,
@@ -36,6 +37,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { formatCurrency } from "@/lib/formatters";
 import { format } from "date-fns";
 import Link from "next/link";
 
@@ -43,6 +45,7 @@ const STATUS_STYLE: Record<string, { bg: string; text: string; border: string; l
     PENDING: { bg: "#FFF8E1", text: "#F59E0B", border: "#FDE68A", label: "Pending" },
     POOL: { bg: "#FFF8E1", text: "#F59E0B", border: "#FDE68A", label: "In Pool" },
     ASSIGNED: { bg: "#EFF6FF", text: "#3B82F6", border: "#BFDBFE", label: "Agent Assigned" },
+    QUOTED: { bg: "#EDE9FE", text: "#8B5CF6", border: "#DDD6FE", label: "Rate Quoted" },
     PROCESSED: { bg: "#E2FDED", text: "#27AE60", border: "#A7F3D0", label: "Processed" },
     REJECTED: { bg: "#FFE5E5", text: "#E05555", border: "#FECACA", label: "Rejected" },
 };
@@ -72,6 +75,11 @@ export default function AdminTradeRequestDetailPage({
     const [uploadingReceipt, setUploadingReceipt] = useState(false);
     const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
+    const [paymentAccountName, setPaymentAccountName] = useState("");
+    const [paymentAccountNumber, setPaymentAccountNumber] = useState("");
+    const [paymentBankName, setPaymentBankName] = useState("");
+    const [paymentAmount, setPaymentAmount] = useState("");
+
     const { data: request, isLoading } = useQuery({
         queryKey: ["admin-trade-request", id],
         queryFn: () => adminTradeRequestsApi.getTradeRequest(id),
@@ -96,11 +104,16 @@ export default function AdminTradeRequestDetailPage({
     });
 
     const processMutation = useMutation({
-        mutationFn: () => adminTradeRequestsApi.processRequest(id),
+        mutationFn: () => adminTradeRequestsApi.processRequest(id, {
+            paymentAccountName,
+            paymentAccountNumber,
+            paymentBankName,
+            paymentAmount: paymentAmount || request?.amount?.toString() || ""
+        }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["admin-trade-request", id] });
             queryClient.invalidateQueries({ queryKey: ["admin-trade-requests"] });
-            toast.success("Trade created and customer notified");
+            toast.success("Trade created and customer notified with payment details");
         },
         onError: () => toast.error("Failed to process request"),
     });
@@ -174,9 +187,9 @@ export default function AdminTradeRequestDetailPage({
         : null;
     const hasSupplier =
         request.supplierDetails?.businessName || request.supplierDetails?.bankName;
-    const isActionable = ["PENDING", "POOL", "ASSIGNED"].includes(request.status);
+    const isActionable = ["PENDING", "POOL", "ASSIGNED", "QUOTED"].includes(request.status);
     const agentSetRate =
-        request.linkedTrade?.fxRate && parseFloat(request.linkedTrade.fxRate) > 0;
+        request.fxRate && parseFloat(request.fxRate) > 0;
 
     return (
         <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-5xl mx-auto" style={{ backgroundColor: "#F7F8F9", minHeight: "100vh" }}>
@@ -243,10 +256,7 @@ export default function AdminTradeRequestDetailPage({
                             <div>
                                 <p className="text-xs uppercase tracking-wider font-bold mb-1" style={{ color: "#9AA0A6" }}>Customer Sends</p>
                                 <p className="text-3xl font-black" style={{ color: "#012333" }}>
-                                    {request.amount}
-                                    <span className="text-base font-normal ml-1.5" style={{ color: "#9AA0A6" }}>
-                                        {request.sendCurrency}
-                                    </span>
+                                    {formatCurrency(request.amount, request.sendCurrency)}
                                 </p>
                             </div>
                             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: "#C9A22720" }}>
@@ -263,6 +273,22 @@ export default function AdminTradeRequestDetailPage({
                             <p className="text-sm mt-4 italic" style={{ color: "#6B7078" }}>
                                 Purpose: "{request.purpose}"
                             </p>
+                        )}
+                        {request.receiptUrl && (
+                            <div className="mt-4 p-3 rounded-xl border border-[#C9A227] bg-amber-50 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Receipt className="w-4 h-4 text-[#C9A227]" />
+                                    <span className="text-sm font-semibold text-[#012333]">Customer Receipt Attached</span>
+                                </div>
+                                <a 
+                                    href={request.receiptUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-xs font-bold text-[#C9A227] hover:underline flex items-center gap-1"
+                                >
+                                    View <ExternalLink className="w-3 h-3" />
+                                </a>
+                            </div>
                         )}
                     </div>
 
@@ -340,8 +366,8 @@ export default function AdminTradeRequestDetailPage({
                                 </Badge>
                             </div>
 
-                            {/* Agent rate info */}
-                            {agentSetRate ? (
+                             {/* Agent rate info moved here or shown if exists on request */}
+                             {agentSetRate ? (
                                 <div
                                     className="p-4 rounded-xl mb-4"
                                     style={{ backgroundColor: "#E2FDED", border: "1px solid #A7F3D0" }}
@@ -350,15 +376,15 @@ export default function AdminTradeRequestDetailPage({
                                         ✅ Agent has set the exchange rate
                                     </p>
                                     <p className="text-xl font-black" style={{ color: "#27AE60" }}>
-                                        1 {request.sendCurrency} = {parseFloat(request.linkedTrade.fxRate!).toLocaleString()} {request.receiveCurrency}
+                                        1 {request.sendCurrency} = {formatCurrency(request.fxRate || 0, "NGN")}
                                     </p>
-                                    {request.linkedTrade.payoutAmount && (
+                                    {request.payoutAmount && (
                                         <p className="text-sm mt-1" style={{ color: "#27AE60" }}>
-                                            Payout: {request.linkedTrade.payoutAmount} {request.receiveCurrency}
+                                            Estimated Payout: {formatCurrency(request.payoutAmount, request.receiveCurrency)}
                                         </p>
                                     )}
                                 </div>
-                            ) : (
+                            ) : request.assignedAgent ? (
                                 <div
                                     className="p-4 rounded-xl mb-4"
                                     style={{ backgroundColor: "#FFF8E1", border: "1px solid #FDE68A" }}
@@ -369,18 +395,16 @@ export default function AdminTradeRequestDetailPage({
                                             Waiting for agent to set the exchange rate…
                                         </p>
                                     </div>
-                                    {request.assignedAgent && (
-                                        <p className="text-xs mt-1" style={{ color: "#B45309" }}>
-                                            Assigned to: {request.assignedAgent.firstName} {request.assignedAgent.lastName}
-                                        </p>
-                                    )}
+                                    <p className="text-xs mt-1" style={{ color: "#B45309" }}>
+                                        Assigned to: {request.assignedAgent.firstName} {request.assignedAgent.lastName}
+                                    </p>
                                 </div>
-                            )}
+                            ) : null}
 
                             {/* Receipt section */}
                             <div>
                                 <p className="text-sm font-bold mb-3" style={{ color: "#2b2f33" }}>
-                                    Upload Receipt for Customer
+                                    Upload Payout Receipt for Customer
                                 </p>
 
                                 {request.linkedTrade.receiptUrl || receiptFile ? (
@@ -423,7 +447,7 @@ export default function AdminTradeRequestDetailPage({
                                         </div>
                                         <div className="text-center">
                                             <p className="text-sm font-bold" style={{ color: "#2b2f33" }}>
-                                                {uploadingReceipt ? "Uploading…" : "Upload receipt/invoice for customer"}
+                                                {uploadingReceipt ? "Uploading…" : "Upload payout receipt for customer"}
                                             </p>
                                             <p className="text-xs mt-0.5" style={{ color: "#9AA0A6" }}>
                                                 JPG, PNG or PDF · Customer will be notified instantly
@@ -452,6 +476,48 @@ export default function AdminTradeRequestDetailPage({
                                 View Full Trade Details
                                 <ExternalLink className="w-4 h-4" />
                             </Link>
+                        </div>
+                    )}
+
+                    {/* Customer Payment Proof (if uploaded) */}
+                    {request.linkedTrade?.paymentProofUrl && (
+                        <div className="bg-white rounded-2xl border p-6" style={{ borderColor: "#E1E3E6" }}>
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="font-bold text-lg flex items-center gap-2" style={{ color: "#2b2f33" }}>
+                                    <CheckCircle className="w-5 h-5" style={{ color: "#27AE60" }} />
+                                    Customer Payment Proof
+                                </h2>
+                                <a
+                                    href={request.linkedTrade.paymentProofUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-sm font-bold text-brand-primary hover:underline flex items-center gap-1"
+                                    style={{ color: "#C9A227" }}
+                                >
+                                    View Full Image <ExternalLink className="w-4 h-4" />
+                                </a>
+                            </div>
+                            <div className="rounded-xl overflow-hidden border bg-gray-50 aspect-video flex items-center justify-center relative group">
+                                <img
+                                    src={request.linkedTrade.paymentProofUrl}
+                                    alt="Payment Proof"
+                                    className="max-h-full object-contain"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <a
+                                        href={request.linkedTrade.paymentProofUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="bg-white text-black px-4 py-2 rounded-lg font-bold text-sm shadow-lg flex items-center gap-2"
+                                    >
+                                        <ExternalLink className="w-4 h-4" />
+                                        Open Original
+                                    </a>
+                                </div>
+                            </div>
+                            <p className="text-xs mt-3 text-gray-500 italic">
+                                * Verify this proof against your bank statement before completing the trade.
+                            </p>
                         </div>
                     )}
                 </div>
@@ -555,17 +621,42 @@ export default function AdminTradeRequestDetailPage({
                                 </p>
                             </div>
                         ) : (
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 <p className="text-xs" style={{ color: "#9AA0A6" }}>
                                     {request.assignedAgent
                                         ? agentSetRate
-                                            ? "Agent has set the rate. Process the trade to notify the customer."
-                                            : "Waiting for agent to set the rate, or process directly without a rate."
-                                        : "You can process without assigning an agent — trade will be created directly."}
+                                            ? "Agent has provided a rate. Enter the payment details you want the customer to pay into."
+                                            : "Waiting for agent to set the rate. You can still process manually if needed."
+                                        : "Assign an agent first, or process directly if you have a rate ready."}
                                 </p>
+                                
+                                <div className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                    <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Payment Details to Customer</h4>
+                                    <Input 
+                                        placeholder="Bank Name" 
+                                        value={paymentBankName}
+                                        onChange={(e) => setPaymentBankName(e.target.value)}
+                                    />
+                                    <Input 
+                                        placeholder="Account Name" 
+                                        value={paymentAccountName}
+                                        onChange={(e) => setPaymentAccountName(e.target.value)}
+                                    />
+                                    <Input 
+                                        placeholder="Account Number" 
+                                        value={paymentAccountNumber}
+                                        onChange={(e) => setPaymentAccountNumber(e.target.value)}
+                                    />
+                                    <Input 
+                                        placeholder={`Amount (Default: ${formatCurrency(request.amount, request.sendCurrency)})`} 
+                                        value={paymentAmount}
+                                        onChange={(e) => setPaymentAmount(e.target.value)}
+                                    />
+                                </div>
+
                                 <Button
-                                    onClick={() => processMutation.mutate(undefined as any)}
-                                    disabled={processMutation.isPending || request.status === "PROCESSED"}
+                                    onClick={() => processMutation.mutate()}
+                                    disabled={processMutation.isPending || request.status === "PROCESSED" || (!paymentBankName || !paymentAccountName || !paymentAccountNumber)}
                                     className="w-full font-bold text-white"
                                     style={{ backgroundColor: "#C9A227" }}
                                 >
@@ -574,7 +665,7 @@ export default function AdminTradeRequestDetailPage({
                                     ) : (
                                         <CheckCircle className="w-4 h-4 mr-2" />
                                     )}
-                                    Process &amp; Create Trade
+                                    Send Payment Details &amp; Create Trade
                                 </Button>
                             </div>
                         )}

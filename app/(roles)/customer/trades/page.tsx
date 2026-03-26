@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Clock, TrendingUp, Plus, ArrowRight, RefreshCw } from "lucide-react";
 import { customerApi, CustomerTrade, CustomerTradeRequest } from "@/lib/api/customer";
+import { formatCurrency } from "@/lib/formatters";
 import { CustomerTradeItem } from "@/components/customer/CustomerTradeItem";
 import { NewTransactionModal } from "@/components/customer/NewTransactionModal";
 import Link from "next/link";
@@ -30,6 +31,7 @@ const REQUEST_STATUS_STYLE: Record<string, { label: string; bg: string; color: s
   PENDING:   { label: "Submitted", bg: "#FFF8E1", color: "#F59E0B" },
   POOL:      { label: "Submitted", bg: "#FFF8E1", color: "#F59E0B" },
   ASSIGNED:  { label: "Rate Pending", bg: "#EFF6FF", color: "#3B82F6" },
+  QUOTED:    { label: "Rate Ready", bg: "#E2FDED", color: "#27AE60" },
   PROCESSED: { label: "Processing", bg: "#EDE9FE", color: "#8B5CF6" },
   REJECTED:  { label: "Rejected",   bg: "#FFE5E5", color: "#E05555" },
 };
@@ -53,7 +55,7 @@ function TradeRequestItem({ req }: { req: CustomerTradeRequest }) {
             Trade Request
           </p>
           <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
-            {req.amount} {req.sendCurrency}{" "}
+            {formatCurrency(req.amount, req.sendCurrency)}{" "}
             <ArrowRight className="inline w-3.5 h-3.5 mx-0.5" />{" "}
             {req.receiveCurrency}
           </p>
@@ -78,6 +80,8 @@ function TradeRequestItem({ req }: { req: CustomerTradeRequest }) {
             ? "Awaiting admin review"
             : req.status === "ASSIGNED"
             ? "Agent setting rate…"
+            : req.status === "QUOTED"
+            ? "Admin processing rate…"
             : req.status === "PROCESSED"
             ? "Trade in progress"
             : ""}
@@ -93,35 +97,53 @@ export default function CustomerTradesPage() {
   const [tradeRequests, setTradeRequests] = useState<CustomerTradeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewTrade, setShowNewTrade] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const limit = 10;
+
+  useEffect(() => {
+    setCurrentPage(1); // Reset page on tab change
+  }, [activeTab]);
 
   useEffect(() => {
     fetchAll();
-  }, [activeTab]);
+  }, [activeTab, currentPage]);
 
   const fetchAll = async () => {
     setLoading(true);
     try {
       const promises: Promise<any>[] = [
-        customerApi.getTrades({ status: STATUS_MAP[activeTab], limit: 50 }),
+        customerApi.getTrades({ status: STATUS_MAP[activeTab], page: currentPage, limit }),
       ];
       // Always fetch requests for "All" and "Requests" tabs
       if (activeTab === "All" || activeTab === "Requests") {
-        promises.push(customerApi.getTradeRequests());
+        promises.push(customerApi.getTradeRequests({ page: currentPage, limit }));
       }
 
       const [tradeResult, requestResult] = await Promise.all(promises);
       setTrades(tradeResult.trades);
+      
+      if (activeTab === "Requests") {
+        setTotalPages(Math.ceil(requestResult.total / limit));
+        setTotalCount(requestResult.total);
+      } else {
+        setTotalPages(Math.ceil(tradeResult.total / limit));
+        setTotalCount(tradeResult.total);
+      }
 
       if (requestResult) {
         // Filter: only show non-REJECTED requests (or include REJECTED on Requests tab)
+        const requests = requestResult.requests || [];
         const filtered = activeTab === "Requests"
-          ? requestResult
-          : requestResult.filter((r: CustomerTradeRequest) => r.status !== "REJECTED");
+          ? requests
+          : requests.filter((r: CustomerTradeRequest) => r.status !== "REJECTED");
         setTradeRequests(filtered);
       } else {
         setTradeRequests([]);
       }
-    } catch {
+    } catch (error) {
+      console.error("Fetch error:", error);
       setTrades([]);
       setTradeRequests([]);
     } finally {
@@ -245,6 +267,33 @@ export default function CustomerTradesPage() {
               trades.map((trade) => (
                 <CustomerTradeItem key={trade.id} trade={trade} />
               ))}
+
+            {/* Pagination UI */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-6 border-t mt-8" style={{ borderColor: "var(--border-custom)" }}>
+                <p className="caption" style={{ color: "var(--text-tertiary)" }}>
+                  Showing page {currentPage} of {totalPages} ({totalCount} items)
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    disabled={currentPage === 1 || loading}
+                    onClick={() => setCurrentPage(p => p - 1)}
+                    className="px-4 py-2 rounded-lg text-sm font-bold border transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50"
+                    style={{ borderColor: "var(--border-custom)", color: "var(--text-secondary)" }}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    disabled={currentPage === totalPages || loading}
+                    onClick={() => setCurrentPage(p => p + 1)}
+                    className="px-4 py-2 rounded-lg text-sm font-bold border transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50"
+                    style={{ borderColor: "var(--border-custom)", color: "var(--text-secondary)" }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

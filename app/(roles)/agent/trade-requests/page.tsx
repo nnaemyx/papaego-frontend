@@ -16,12 +16,13 @@ import {
   Calendar,
   AlertCircle
 } from 'lucide-react';
-import Link from 'next/link';
 import { toast } from 'sonner';
+import { SetRateModal } from '@/components/agent/SetRateModal';
 
 export default function TradeRequestsPage() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState('PENDING');
+  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
 
   const { data: requests, isLoading, error } = useQuery({
     queryKey: ['agent-trade-requests', statusFilter],
@@ -61,7 +62,7 @@ export default function TradeRequestsPage() {
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b pb-px">
-        {['PENDING', 'ASSIGNED', 'PROCESSED', 'REJECTED'].map((status) => (
+        {['PENDING', 'ASSIGNED', 'QUOTED', 'PROCESSED', 'REJECTED'].map((status) => (
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
@@ -103,6 +104,8 @@ export default function TradeRequestsPage() {
                 <div className="flex justify-between items-start mb-4">
                   <Badge variant="outline" className={`
                     ${req.status === 'PENDING' ? 'bg-amber-50 text-amber-600 border-amber-200' : ''}
+                    ${req.status === 'ASSIGNED' ? 'bg-blue-50 text-blue-600 border-blue-200' : ''}
+                    ${req.status === 'QUOTED' ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : ''}
                     ${req.status === 'PROCESSED' ? 'bg-green-50 text-green-600 border-green-200' : ''}
                     ${req.status === 'REJECTED' ? 'bg-red-50 text-red-600 border-red-200' : ''}
                   `}>
@@ -153,13 +156,14 @@ export default function TradeRequestsPage() {
                   )}
                 </div>
 
-                {(req.status === 'PENDING' || req.status === 'ASSIGNED') && (
-                  <div className="mt-6 flex gap-3">
-                    <Link href={`/agent/trades/new?requestId=${req.id}`} className="flex-1">
-                      <Button className="w-full bg-[#012333] hover:bg-[#02334a] text-white rounded-xl h-11 font-bold">
+                  {(req.status === 'PENDING' || req.status === 'ASSIGNED') && (
+                    <div className="mt-6 flex gap-3">
+                      <Button 
+                        onClick={() => setSelectedRequest(req)}
+                        className="flex-1 bg-[#012333] hover:bg-[#02334a] text-white rounded-xl h-11 font-bold"
+                      >
                         Set Rate
                       </Button>
-                    </Link>
                     <Button 
                       variant="outline" 
                       onClick={() => handleReject(req.id)}
@@ -173,6 +177,16 @@ export default function TradeRequestsPage() {
             </Card>
           ))}
         </div>
+      )}
+
+      {selectedRequest && (
+        <SetRateModal
+          request={selectedRequest}
+          onClose={() => setSelectedRequest(null)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['agent-trade-requests'] });
+          }}
+        />
       )}
     </div>
   );

@@ -32,8 +32,10 @@ import {
     ChevronRight,
     TrendingUp,
     Clock,
+    Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/formatters";
 import Link from "next/link";
 
 const STATUS_TABS = ["ALL", "PENDING", "ASSIGNED", "PROCESSED", "REJECTED"] as const;
@@ -50,15 +52,19 @@ const STATUS_STYLE: Record<string, { bg: string; text: string; border: string }>
 export default function AdminTradeRequestsPage() {
     const queryClient = useQueryClient();
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
+    const [page, setPage] = useState<number>(1);
     const [assigningId, setAssigningId] = useState<string | null>(null);
     const [selectedAgentId, setSelectedAgentId] = useState<string>("");
 
-    const { data: requests, isLoading, error } = useQuery({
-        queryKey: ["admin-trade-requests", statusFilter],
-        queryFn: () => adminTradeRequestsApi.getTradeRequests(statusFilter),
+    const { data, isLoading, error } = useQuery({
+        queryKey: ["admin-trade-requests", statusFilter, page],
+        queryFn: () => adminTradeRequestsApi.getTradeRequests(statusFilter, page, 20),
         refetchInterval: 15_000, // Auto-refresh every 15s to catch new customer requests
         staleTime: 0,
     });
+
+    const requests = data?.requests || [];
+    const totalPages = data ? Math.ceil(data.total / data.limit) : 1;
 
     const { data: agents = [] } = useQuery({
         queryKey: ["agents"],
@@ -96,9 +102,24 @@ export default function AdminTradeRequestsPage() {
         onError: () => toast.error("Failed to process request"),
     });
 
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => adminTradeRequestsApi.deleteRequest(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["admin-trade-requests"] });
+            toast.success("Trade request deleted");
+        },
+        onError: () => toast.error("Failed to delete request"),
+    });
+
     const handleReject = (id: string) => {
         if (confirm("Are you sure you want to reject this request?")) {
             rejectMutation.mutate(id);
+        }
+    };
+
+    const handleDelete = (id: string) => {
+        if (confirm("Are you sure you want to completely delete this trade request? This action cannot be undone.")) {
+            deleteMutation.mutate(id);
         }
     };
 
@@ -137,7 +158,10 @@ export default function AdminTradeRequestsPage() {
                 {STATUS_TABS.map((status) => (
                     <button
                         key={status}
-                        onClick={() => setStatusFilter(status)}
+                        onClick={() => {
+                            setStatusFilter(status);
+                            setPage(1);
+                        }}
                         className="px-4 py-2 text-sm font-bold transition-all border-b-2 shrink-0"
                         style={{
                             borderColor:
@@ -149,6 +173,7 @@ export default function AdminTradeRequestsPage() {
                     </button>
                 ))}
             </div>
+
 
             {/* Content */}
             {isLoading ? (
@@ -199,7 +224,21 @@ export default function AdminTradeRequestsPage() {
                                         <span className="text-xs font-semibold" style={{ color: "#9AA0A6" }}>
                                             View Details
                                         </span>
-                                        <ChevronRight className="w-4 h-4" style={{ color: "#C9A227" }} />
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    handleDelete(req.id);
+                                                }}
+                                                className="w-8 h-8 p-0 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+                                                disabled={deleteMutation.isPending}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                            <ChevronRight className="w-4 h-4" style={{ color: "#C9A227" }} />
+                                        </div>
                                     </div>
                                 </Link>
                                 <div className="p-6 space-y-4">
@@ -260,13 +299,7 @@ export default function AdminTradeRequestsPage() {
                                                     className="text-lg font-black"
                                                     style={{ color: "#012333" }}
                                                 >
-                                                    {req.amount}{" "}
-                                                    <span
-                                                        className="text-sm font-normal"
-                                                        style={{ color: "#9AA0A6" }}
-                                                    >
-                                                        {req.sendCurrency}
-                                                    </span>
+                                                    {formatCurrency(req.amount, req.sendCurrency)}
                                                 </p>
                                             </div>
                                             <ArrowRight
@@ -380,7 +413,7 @@ export default function AdminTradeRequestsPage() {
                                                 style={{ backgroundColor: "#E2FDED", color: "#27AE60" }}
                                             >
                                                 <TrendingUp className="w-3.5 h-3.5" />
-                                                Rate Set: 1 {req.sendCurrency} = {parseFloat(req.linkedTradeFxRate).toLocaleString()} {req.receiveCurrency} — Ready to process
+                                                Rate Set: 1 {req.sendCurrency} = {formatCurrency(req.linkedTradeFxRate || 0, "NGN")} — Ready to process
                                             </div>
                                         ) : (
                                             <div
@@ -467,6 +500,31 @@ export default function AdminTradeRequestsPage() {
                             </Card>
                         );
                     })}
+                </div>
+            )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-4 pt-6">
+                    <Button
+                        variant="outline"
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="rounded-xl border-gray-200"
+                    >
+                        Previous
+                    </Button>
+                    <span className="text-sm font-semibold text-gray-600">
+                        Page {page} of {totalPages}
+                    </span>
+                    <Button
+                        variant="outline"
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                        className="rounded-xl border-gray-200"
+                    >
+                        Next
+                    </Button>
                 </div>
             )}
         </div>

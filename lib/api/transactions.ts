@@ -34,6 +34,22 @@ export interface DashboardStats {
     tradeVolume: number;
     activeAgents: number;
     pendingReviews: number;
+    tradeHealth?: {
+        completed: number;
+        inProgress: number;
+        pending: number;
+        failed: number;
+    };
+    risk?: {
+        highValueTradesCount: number;
+        flaggedTodayCount: number;
+        flaggedUnderReview: number;
+        flaggedCustomersCount: number;
+    };
+    financial?: {
+        mostTradedCurrency: string;
+        avgProcessingMinutes: number;
+    };
 }
 
 export interface AgentActivity {
@@ -64,7 +80,7 @@ export const transactionsApi = {
             volume: "₦0",
             status: a.status === "Active" ? "Active" : "Inactive",
         }));
-    }, // <-- comma added here for safety, plus the new function below
+    },
 
     deleteTransaction: async (id: string): Promise<void> => {
         await api.delete(`/admin/transactions/${id}`);

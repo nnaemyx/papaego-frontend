@@ -40,6 +40,10 @@ export interface CustomerTradeDetail extends CustomerTrade {
     payoutMethod: string | null;
     recipientDetails: string | null;
     receiptUrl: string | null;
+    paymentAccountName: string | null;
+    paymentAccountNumber: string | null;
+    paymentBankName: string | null;
+    paymentAmount: string | null;
     timeline: { action: string; createdAt: string }[];
 }
 
@@ -62,7 +66,7 @@ export interface CustomerTradeRequest {
     amount: string;
     sendCurrency: string;
     receiveCurrency: string;
-    status: "PENDING" | "REJECTED" | "PROCESSED" | "POOL" | "ASSIGNED";
+    status: "PENDING" | "REJECTED" | "PROCESSED" | "POOL" | "ASSIGNED" | "QUOTED";
     createdAt: string;
 }
 
@@ -149,8 +153,8 @@ export const customerApi = {
         return response.data;
     },
 
-    getTradeRequests: async (): Promise<CustomerTradeRequest[]> => {
-        const response = await api.get("/customer/portal/trade-requests");
+    getTradeRequests: async (params?: { page?: number; limit?: number }): Promise<{ requests: CustomerTradeRequest[]; total: number; page: number; limit: number }> => {
+        const response = await api.get("/customer/portal/trade-requests", { params });
         return response.data;
     },
 
@@ -175,6 +179,16 @@ export const customerApi = {
         const formData = new FormData();
         formData.append("proof", file);
         const response = await api.patch(`/customer/portal/trades/${tradeId}/proof`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+        });
+        return response.data;
+    },
+
+    /** Upload receipt (alternate for new flow) */
+    uploadReceipt: async (tradeId: string, file: File): Promise<any> => {
+        const formData = new FormData();
+        formData.append("receipt", file);
+        const response = await api.patch(`/customer/portal/trades/${tradeId}/upload-receipt`, formData, {
             headers: { "Content-Type": "multipart/form-data" },
         });
         return response.data;

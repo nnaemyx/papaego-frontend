@@ -7,8 +7,12 @@ export interface AdminTradeRequest {
     receiveCurrency: string;
     purpose?: string;
     tradeType?: string;
-    status: "PENDING" | "PROCESSED" | "REJECTED" | "ASSIGNED";
+    status: "PENDING" | "PROCESSED" | "REJECTED" | "ASSIGNED" | "QUOTED" | "POOL";
     createdAt: string;
+    fxRate?: string | null;
+    payoutAmount?: string | null;
+    quotedAt?: string;
+    receiptUrl?: string;
     customer: {
         id: string;
         firstName: string;
@@ -41,14 +45,25 @@ export interface AdminTradeRequestDetail extends AdminTradeRequest {
         fxRate: string | null;
         payoutAmount: string | null;
         receiptUrl: string | null;
+        paymentProofUrl: string | null;
         createdAt: string;
         agent: { id: string; firstName: string; lastName: string } | null;
     } | null;
 }
 
+export interface AdminTradeRequestsResponse {
+    requests: AdminTradeRequest[];
+    total: number;
+    page: number;
+    limit: number;
+}
+
 export const adminTradeRequestsApi = {
-    getTradeRequests: async (status?: string): Promise<AdminTradeRequest[]> => {
-        const params = (status && status !== "ALL") ? { status } : {};
+    getTradeRequests: async (status?: string, page: number = 1, limit: number = 20): Promise<AdminTradeRequestsResponse> => {
+        const params: any = { page, limit };
+        if (status && status !== "ALL") {
+            params.status = status;
+        }
         const response = await api.get("/admin/trade-requests", { params });
         return response.data;
     },
@@ -86,11 +101,24 @@ export const adminTradeRequestsApi = {
         return response.data;
     },
 
-    processRequest: async (id: string): Promise<any> => {
+    processRequest: async (
+        id: string,
+        paymentDetails?: {
+            paymentAccountName: string;
+            paymentAccountNumber: string;
+            paymentBankName: string;
+            paymentAmount: string;
+        }
+    ): Promise<any> => {
         const response = await api.patch(
             `/admin/trade-requests/${id}/process`,
-            {}
+            paymentDetails || {}
         );
+        return response.data;
+    },
+
+    deleteRequest: async (id: string): Promise<{ success: boolean; message: string }> => {
+        const response = await api.delete(`/admin/trade-requests/${id}`);
         return response.data;
     },
 };

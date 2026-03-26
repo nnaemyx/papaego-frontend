@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { CustomerTrade } from "@/lib/api/customer";
+import { formatCurrency } from "@/lib/formatters";
 
 export const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   AWAITING_PAYMENT:   { label: "Awaiting Payment",  color: "#F59E0B", bg: "#FFF8E1" },
@@ -53,7 +54,7 @@ export function CustomerTradeItem({ trade }: { trade: CustomerTrade }) {
               {trade.tradeId}
             </p>
             <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
-              {trade.amount} {trade.sendCurrency} → {trade.receiveCurrency}
+              {formatCurrency(trade.amount, trade.sendCurrency)} → {trade.receiveCurrency}
             </p>
             <p className="caption" style={{ color: "var(--text-tertiary)" }}>
               {new Date(trade.createdAt).toLocaleDateString("en-NG", {

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { customerApi, CustomerTradeDetail } from "@/lib/api/customer";
 import { TransactionChat } from "@/components/transactions/TransactionChat";
+import { formatCurrency } from "@/lib/formatters";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -35,6 +36,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   UNDER_REVIEW:       { label: "Under Review",      color: "#F59E0B", bg: "#FFF8E1" },
   CANCELLED:          { label: "Cancelled",         color: "#E05555", bg: "#FFE5E5" },
   EXPIRED:            { label: "Expired",           color: "#9AA0A6", bg: "#F6F6F6" },
+  PAYMENT_UPLOADED:   { label: "Payment Submitted", color: "#3B82F6", bg: "#EFF6FF" },
 };
 
 const ACTION_STATUSES = [
@@ -43,6 +45,7 @@ const ACTION_STATUSES = [
   "SENT_TO_CUSTOMER",
   "AWAITING_PAYMENT",
   "CUSTOMER_CONFIRMED",
+  "PAYMENT_UPLOADED",
 ];
 
 export default function CustomerTradeDetailsPage({
@@ -81,6 +84,22 @@ export default function CustomerTradeDetailsPage({
       fetchTrade();
     } catch {
       toast.error("Failed to upload proof");
+    } finally {
+      setUploadingProof(false);
+    }
+  };
+
+  const handleReceiptUpload = async (file: File) => {
+    if (!trade) return;
+    setUploadingProof(true);
+    try {
+      await customerApi.uploadReceipt(trade.id, file);
+      setProofSuccess(true);
+      toast.success("Receipt uploaded successfully. Admin will process shortly.");
+      setTimeout(() => setProofSuccess(false), 3000);
+      fetchTrade();
+    } catch {
+      toast.error("Failed to upload receipt");
     } finally {
       setUploadingProof(false);
     }
@@ -174,7 +193,7 @@ export default function CustomerTradeDetailsPage({
             </div>
             <div>
               <h1 className="text-xl md:text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-                {trade.amount} {trade.sendCurrency} → {trade.receiveCurrency}
+                {formatCurrency(trade.amount, trade.sendCurrency)} → {trade.receiveCurrency}
               </h1>
               <p className="body-secondary mt-0.5">
                 Initiated on {format(new Date(trade.createdAt), "MMMM d, yyyy")}
@@ -191,7 +210,7 @@ export default function CustomerTradeDetailsPage({
             </span>
             {trade.fxRate && (
               <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-                Rate: ₦{Number(trade.fxRate).toLocaleString()}
+                Rate: {formatCurrency(trade.fxRate || 0, "NGN")}
               </p>
             )}
           </div>
@@ -217,18 +236,18 @@ export default function CustomerTradeDetailsPage({
               </div>
               <div className="divide-y" style={{ borderColor: "var(--border-light)" }}>
                 {[
-                  { label: "Send Amount",          val: `${trade.amount} ${trade.sendCurrency}` },
+                  { label: "Send Amount",          val: formatCurrency(trade.amount, trade.sendCurrency) },
                   { label: "Receive Currency",      val: trade.receiveCurrency },
                   {
                     label: "Locked Exchange Rate",
                     val: trade.fxRate
-                      ? `₦${Number(trade.fxRate).toLocaleString()}`
+                      ? formatCurrency(trade.fxRate, "NGN")
                       : "Not finalized",
                   },
                   {
                     label: "Total Payout",
                     val: trade.payoutAmount
-                      ? `${trade.payoutAmount} ${trade.receiveCurrency}`
+                      ? formatCurrency(trade.payoutAmount, trade.receiveCurrency)
                       : "Pending",
                   },
                   {
@@ -354,7 +373,6 @@ export default function CustomerTradeDetailsPage({
                     </h3>
                     <p
                       className="text-sm leading-relaxed whitespace-pre-wrap font-medium"
-                      style={{ color: "#78350F" }}
                     >
                       {trade.recipientDetails}
                     </p>
@@ -398,7 +416,7 @@ export default function CustomerTradeDetailsPage({
                         if (confirm("Accept quote and lock this exchange rate?")) {
                           try {
                             await customerApi.confirmTrade(trade.id);
-                            toast.success("Quote accepted!");
+                            toast.success(`Quote for ${formatCurrency(trade.amount, trade.sendCurrency)} accepted!`);
                             fetchTrade();
                           } catch {
                             toast.error("Failed to accept quote");
@@ -413,54 +431,113 @@ export default function CustomerTradeDetailsPage({
                   </div>
                 )}
 
-                {/* Upload Proof */}
-                <div>
-                  <p
-                    className="text-sm font-semibold mb-3"
-                    style={{ color: "var(--text-secondary)" }}
+                {/* Upload Receipt (New Flow) */}
+                {trade.status === "AWAITING_PAYMENT" && (
+                  <div
+                    className="p-4 rounded-xl border mb-5"
+                    style={{ borderColor: "#C9A22750", backgroundColor: "#FFF8E1" }}
                   >
-                    Upload Payment Proof
-                  </p>
-                  {proofSuccess ? (
-                    <div
-                      className="flex items-center gap-3 p-4 rounded-xl"
-                      style={{ backgroundColor: "#E2FDED" }}
-                    >
-                      <CheckCircle className="w-5 h-5 flex-shrink-0" style={{ color: "#27AE60" }} />
-                      <span className="text-sm font-bold" style={{ color: "#27AE60" }}>
-                        Proof uploaded successfully! Your agent will review it shortly.
-                      </span>
-                    </div>
-                  ) : (
-                    <label
-                      className="flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-xl p-8 cursor-pointer hover:border-amber-400 transition-colors"
-                      style={{ borderColor: "var(--border-custom)", backgroundColor: "var(--bg-muted)" }}
-                    >
-                      <div
-                        className="w-12 h-12 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: "#FFF8E1" }}
-                      >
-                        <Upload className="w-6 h-6" style={{ color: "var(--brand-primary)" }} />
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-6 h-6 rounded-full bg-brand-primary flex items-center justify-center text-white text-xs font-black">
+                        !
                       </div>
-                      <div className="text-center">
-                        <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
-                          {uploadingProof ? "Uploading…" : "Click to upload payment receipt"}
-                        </p>
-                        <p className="caption mt-1" style={{ color: "var(--text-tertiary)" }}>
-                          JPG, PNG, PDF formats accepted
-                        </p>
+                      <p className="text-sm font-bold" style={{ color: "#92400E" }}>
+                        Payment Required
+                      </p>
+                    </div>
+
+                    <div className="bg-white/50 backdrop-blur-sm border rounded-lg p-3 mb-4 space-y-2">
+                        <p className="text-xs font-bold uppercase tracking-wider text-gray-500">Pay into this account:</p>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                            <span className="text-gray-500">Bank:</span>
+                            <span className="font-bold">{trade.paymentBankName}</span>
+                            <span className="text-gray-500">Account:</span>
+                            <span className="font-bold">{trade.paymentAccountNumber}</span>
+                            <span className="text-gray-500">Name:</span>
+                            <span className="font-bold">{trade.paymentAccountName}</span>
+                        </div>
+                    </div>
+
+                    <label className="cursor-pointer">
+                      <div
+                        className="w-full py-2.5 rounded-lg font-bold text-white flex items-center justify-center gap-2 transition-opacity hover:opacity-90"
+                        style={{ backgroundColor: "#012333" }}
+                      >
+                        {uploadingProof ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : proofSuccess ? (
+                          <CheckCircle className="w-4 h-4" />
+                        ) : (
+                          <Upload className="w-4 h-4" />
+                        )}
+                        {uploadingProof ? "Uploading…" : "Upload Payment Receipt"}
                       </div>
                       <input
                         type="file"
                         className="hidden"
-                        accept=".jpg,.jpeg,.png,.pdf"
-                        onChange={(e) =>
-                          e.target.files?.[0] && handleProofUpload(e.target.files[0])
-                        }
+                        accept="image/*,.pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleReceiptUpload(file);
+                        }}
                       />
                     </label>
-                  )}
-                </div>
+                    <p className="text-[10px] text-center mt-2 text-gray-500 italic">
+                       * Once uploaded, Admin will verify and complete your trade.
+                    </p>
+                  </div>
+                )}
+
+                {/* Original Upload Proof (Legacy/Direct) */}
+                {(trade.status === "INITIATED" || trade.status === "QUOTED") && !trade.paymentProofUrl && (
+                  <div>
+                    <p
+                      className="text-sm font-semibold mb-3"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      Upload Payment Proof
+                    </p>
+                    {proofSuccess ? (
+                      <div
+                        className="flex items-center gap-3 p-4 rounded-xl"
+                        style={{ backgroundColor: "#E2FDED" }}
+                      >
+                        <CheckCircle className="w-5 h-5 flex-shrink-0" style={{ color: "#27AE60" }} />
+                        <span className="text-sm font-bold" style={{ color: "#27AE60" }}>
+                          Proof uploaded successfully! Your agent will review it shortly.
+                        </span>
+                      </div>
+                    ) : (
+                      <label
+                        className="flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-xl p-8 cursor-pointer hover:border-amber-400 transition-colors"
+                        style={{ borderColor: "var(--border-custom)", backgroundColor: "var(--bg-muted)" }}
+                      >
+                        <div
+                          className="w-12 h-12 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: "#FFF8E1" }}
+                        >
+                          <Upload className="w-6 h-6" style={{ color: "var(--brand-primary)" }} />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+                            {uploadingProof ? "Uploading…" : "Click to upload payment receipt"}
+                          </p>
+                          <p className="caption mt-1" style={{ color: "var(--text-tertiary)" }}>
+                            JPG, PNG, PDF formats accepted
+                          </p>
+                        </div>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept=".jpg,.jpeg,.png,.pdf"
+                          onChange={(e) =>
+                            e.target.files?.[0] && handleProofUpload(e.target.files[0])
+                          }
+                        />
+                      </label>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -138,14 +138,18 @@ export default function AdminDashboardPage() {
       {/* Trade Health & Risk Compliance */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TradeHealthOverview
-          data={{ completed: 82, inProgress: 11, pending: 5, failed: 2 }}
-          improvement={2}
+          data={{
+            completed: stats?.tradeHealth?.completed ?? 0,
+            inProgress: stats?.tradeHealth?.inProgress ?? 0,
+            pending: stats?.tradeHealth?.pending ?? 0,
+            failed: stats?.tradeHealth?.failed ?? 0,
+          }}
         />
         <RiskComplianceSnapshot
-          highValueTrades="4 above ₦10M"
-          flaggedTrades={`${stats?.pendingReviews ?? 0} today`}
-          flaggedTradesReview="Awaiting review"
-          flaggedCustomers="Check compliance tab"
+          highValueTrades={`${stats?.risk?.highValueTradesCount ?? 0} trades`}
+          flaggedTrades={`${stats?.risk?.flaggedTodayCount ?? 0} today`}
+          flaggedTradesReview={`${stats?.risk?.flaggedUnderReview ?? 0} under review`}
+          flaggedCustomers={`${stats?.risk?.flaggedCustomersCount ?? 0} customers`}
         />
       </div>
 
@@ -161,8 +165,14 @@ export default function AdminDashboardPage() {
             title="Agent Commissions Paid"
             value={commissionStats?.totalPaid ?? "—"}
           />
-          <FinancialPerformanceCard title="Most Traded Currency" value="USD" />
-          <FinancialPerformanceCard title="Avg Trade Processing Time" value="7m 32s" />
+          <FinancialPerformanceCard 
+            title="Most Traded Currency" 
+            value={stats?.financial?.mostTradedCurrency ?? "N/A"} 
+          />
+          <FinancialPerformanceCard 
+            title="Avg Trade Processing Time" 
+            value={stats?.financial?.avgProcessingMinutes ? `${stats.financial.avgProcessingMinutes}m` : "—"} 
+          />
         </div>
       </div>
 
@@ -201,10 +211,10 @@ export default function AdminDashboardPage() {
         </div>
         <div>
           <AlertsNotifications alerts={[
-            ...(pendingRequests && pendingRequests.length > 0 ? [{
+            ...(pendingRequests?.requests && pendingRequests.requests.length > 0 ? [{
               type: "warning" as const,
-              title: `${pendingRequests.length} Pending Trade Request${pendingRequests.length !== 1 ? "s" : ""}`,
-              message: `You have ${pendingRequests.length} customer trade request${pendingRequests.length !== 1 ? "s" : ""} awaiting review and action.`,
+              title: `${pendingRequests.requests.length} Pending Trade Request${pendingRequests.requests.length !== 1 ? "s" : ""}`,
+              message: `You have ${pendingRequests.requests.length} customer trade request${pendingRequests.requests.length !== 1 ? "s" : ""} awaiting review and action.`,
               time: "Now",
             }] : []),
             ...staticAlerts,

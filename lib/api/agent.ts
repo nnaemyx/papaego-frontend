@@ -42,6 +42,10 @@ export const agentApi = {
         return apiClient.patch(`/agent/trade-requests/${id}/claim`, {});
     },
 
+    setTradeRequestRate: async (id: string, fxRate: string, payoutAmount: string): Promise<any> => {
+        return apiClient.patch(`/agent/trade-requests/${id}/set-rate`, { fxRate, payoutAmount });
+    },
+
     // Create a new trade (can be linked to a TradeRequest)
     createTrade: async (data: {
         customerId: string;

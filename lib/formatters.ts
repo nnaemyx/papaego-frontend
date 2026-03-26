@@ -5,23 +5,40 @@ export function formatAgentId(id: string): string {
 
 // Format currency
 export function formatCurrency(
-  amount: number,
+  amount: number | string,
   currency: string = "NGN"
 ): string {
-  const symbol = currency === "NGN" ? "₦" : "$";
+  const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
+  if (isNaN(numAmount)) return `${currency} ${amount}`;
+
+  const symbols: Record<string, string> = {
+    NGN: "₦",
+    USD: "$",
+    GBP: "£",
+    EUR: "€",
+    CAD: "C$",
+    AUD: "A$",
+    GHS: "GH₵",
+    KES: "KSh",
+    ZAR: "R",
+    CNY: "¥",
+    JPY: "¥",
+  };
+
+  const symbol = symbols[currency.toUpperCase()] || currency;
+  const decimals = numAmount < 1 && numAmount > 0 ? 4 : 2;
+
+  if (numAmount >= 1000000000) {
+    return `${symbol}${(numAmount / 1000000000).toFixed(1)}B`;
+  }
+  if (numAmount >= 1000000) {
+    return `${symbol}${(numAmount / 1000000).toFixed(1)}M`;
+  }
   
-  // Format large numbers with K, M, B
-  if (amount >= 1000000000) {
-    return `${symbol}${(amount / 1000000000).toFixed(1)}B`;
-  }
-  if (amount >= 1000000) {
-    return `${symbol}${(amount / 1000000).toFixed(1)}M`;
-  }
-  if (amount >= 1000) {
-    return `${symbol}${(amount / 1000).toFixed(1)}K`;
-  }
-  
-  return `${symbol}${amount.toLocaleString()}`;
+  return `${symbol}${numAmount.toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })}`;
 }
 
 // Format date
