@@ -51,6 +51,29 @@ export default function AdminCustomersPage() {
         },
     });
 
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => adminCustomersApi.deleteCustomer(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["admin-customers"] });
+            queryClient.invalidateQueries({ queryKey: ["admin-customer-stats"] });
+        },
+    });
+
+    const restrictMutation = useMutation({
+        mutationFn: (id: string) => adminCustomersApi.restrictCustomer(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["admin-customers"] });
+        },
+    });
+
+    const messageMutation = useMutation({
+        mutationFn: ({ id, payload }: { id: string; payload: { subject: string; message: string } }) =>
+            adminCustomersApi.sendMessage(id, payload),
+        onSuccess: () => {
+            // Optional: could show a toast success message here
+        },
+    });
+
     const handleExport = async () => {
         try {
             const blob = await adminCustomersApi.exportCustomers();
@@ -177,6 +200,9 @@ export default function AdminCustomersPage() {
                     isLoading={customersLoading}
                     onViewDetails={(id) => router.push(`/admin/customers/${id}`)}
                     onApprove={(id) => approveMutation.mutate(id)}
+                    onDelete={(id) => deleteMutation.mutate(id)}
+                    onRestrict={(id) => restrictMutation.mutate(id)}
+                    onSendMessage={(id, payload) => messageMutation.mutate({ id, payload })}
                 />
             </div>
         </div>

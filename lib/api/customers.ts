@@ -91,4 +91,22 @@ export const adminCustomersApi = {
     const response = await api.patch(`/admin/customers/${id}/approve`);
     return response.data;
   },
+
+  // Delete customer
+  deleteCustomer: async (id: string) => {
+    const response = await api.delete(`/admin/customers/${id}`);
+    return response.data;
+  },
+
+  // Restrict customer
+  restrictCustomer: async (id: string) => {
+    const response = await api.patch(`/admin/customers/${id}/restrict`);
+    return response.data;
+  },
+
+  // Send message to customer
+  sendMessage: async (id: string, payload: { subject: string; message: string }) => {
+    const response = await api.post(`/admin/customers/${id}/message`, payload);
+    return response.data;
+  },
 };
