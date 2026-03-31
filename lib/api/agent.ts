@@ -109,4 +109,9 @@ export const agentApi = {
     getExchangeRate: async (base: string, quote: string, countryId: string): Promise<{ rate: number }> => {
         return apiClient.get<{ rate: number }>(`/fx/rate?base=${base}&quote=${quote}&countryId=${countryId}`);
     },
+
+    // Get agent's commissions
+    getCommissions: async (): Promise<any[]> => {
+        return apiClient.get<any[]>('/agent/commissions');
+    },
 };

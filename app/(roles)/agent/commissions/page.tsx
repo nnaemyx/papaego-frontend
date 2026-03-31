@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { commissionsApi } from '@/lib/api/commissions';
+import { agentApi } from '@/lib/api/agent';
 import { Wallet, TrendingUp, Clock, CheckCircle, AlertCircle, Search, Filter } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatters';
 
@@ -13,7 +13,7 @@ export default function AgentCommissionsPage() {
   useEffect(() => {
     async function loadCommissions() {
       try {
-        const data = await commissionsApi.getAgentCommissions();
+        const data = await agentApi.getCommissions();
         setCommissions(data);
       } catch (err) {
         console.error('Failed to load commissions:', err);
