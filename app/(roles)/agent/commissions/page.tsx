@@ -38,13 +38,19 @@ export default function AgentCommissionsPage() {
     }
   };
 
+  const parseAmount = (amount: string | number) => {
+    if (typeof amount === 'number') return amount;
+    if (!amount) return 0;
+    return parseFloat(amount.toString().replace(/₦/g, '').replace(/,/g, '')) || 0;
+  };
+
   const totalEarned = commissions
     .filter(c => c.status === 'PAID')
-    .reduce((sum, c) => sum + parseFloat(c.amount.replace('₦', '').replace(/,/g, '')), 0);
+    .reduce((sum, c) => sum + parseAmount(c.amount), 0);
 
   const pendingPayout = commissions
     .filter(c => c.status === 'PENDING')
-    .reduce((sum, c) => sum + parseFloat(c.amount.replace('₦', '').replace(/,/g, '')), 0);
+    .reduce((sum, c) => sum + parseAmount(c.amount), 0);
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
