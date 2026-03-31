@@ -45,6 +45,7 @@ export function NewTransactionModal({ onClose }: NewTransactionModalProps) {
     const [step, setStep] = useState<Step>(1);
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
 
     useEffect(() => {
         customerApi.getSuppliers?.().then(setSavedSuppliers).catch(() => {});
@@ -66,6 +67,12 @@ export function NewTransactionModal({ onClose }: NewTransactionModalProps) {
         e.preventDefault();
         setSubmitting(true);
         try {
+            let invoiceUrl = undefined;
+            if (invoiceFile) {
+                const uploadRes = await customerApi.uploadDocument(invoiceFile);
+                invoiceUrl = uploadRes.url;
+            }
+
             await customerApi.createTradeRequest({
                 amount,
                 sendCurrency: fromCurrency,
@@ -78,6 +85,7 @@ export function NewTransactionModal({ onClose }: NewTransactionModalProps) {
                 accountNumber: supplier.accountNumber || undefined,
                 sector: supplier.sector || undefined,
                 address: supplier.address || undefined,
+                invoiceUrl,
             });
             setSubmitted(true);
             setTimeout(() => {
@@ -481,6 +489,33 @@ export function NewTransactionModal({ onClose }: NewTransactionModalProps) {
                                 </div>
                                 </div>
                                 )}
+
+                                {/* Invoice Upload */}
+                                <div>
+                                    <label
+                                        className="caption font-medium mb-1 block mt-2"
+                                        style={{ color: "var(--text-secondary)" }}
+                                    >
+                                        Attach Invoice / Supporting Document{" "}
+                                        <span style={{ color: "var(--text-tertiary)" }}>
+                                            (optional)
+                                        </span>
+                                    </label>
+                                    <input
+                                        type="file"
+                                        onChange={(e) => {
+                                            if (e.target.files && e.target.files[0]) {
+                                                setInvoiceFile(e.target.files[0]);
+                                            }
+                                        }}
+                                        accept="image/jpeg,image/png,image/jpg,application/pdf"
+                                        className="w-full border rounded-lg px-3 py-2 text-sm outline-none bg-white cursor-pointer"
+                                        style={{ borderColor: "var(--border-custom)" }}
+                                    />
+                                    {invoiceFile && (
+                                        <p className="text-xs mt-1 text-green-600 font-medium">Selected: {invoiceFile.name}</p>
+                                    )}
+                                </div>
 
                                 <div className="flex gap-3 pt-4">
                                     <button

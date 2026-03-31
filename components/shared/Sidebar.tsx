@@ -13,11 +13,13 @@ const roleNavigation = {
     { name: 'Trade Requests', href: '/agent/trade-requests', icon: FileText },
     { name: 'Transactions', href: '/agent/transactions', icon: Wallet },
     { name: 'Customers', href: '/agent/customers', icon: Users },
+    { name: 'Commissions', href: '/agent/commissions', icon: TrendingUp },
     { name: 'Settings', href: '/agent/settings', icon: Settings },
   ],
   CUSTOMER: [
     { name: 'Home', href: '/customer/dashboard', icon: Home },
     { name: 'My Trades', href: '/customer/trades', icon: Wallet },
+    { name: 'Suppliers', href: '/customer/suppliers', icon: Building2 },
     { name: 'Rates', href: '/customer/rates', icon: TrendingUp },
     { name: 'Profile', href: '/customer/profile', icon: Users },
   ],

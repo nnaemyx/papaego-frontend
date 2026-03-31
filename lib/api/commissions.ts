@@ -97,4 +97,8 @@ export const commissionsApi = {
     const response = await api.get("/admin/commissions/export", { responseType: "blob" });
     return response.data;
   },
+  // Get commissions for the authenticated agent
+  getAgentCommissions: async (): Promise<any[]> => {
+    return apiClient.get<any[]>("/admin/commissions/my-commissions");
+  },
 };

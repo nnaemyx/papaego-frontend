@@ -30,10 +30,19 @@ export function SetRateModal({ request, onClose, onSuccess }: SetRateModalProps)
     useEffect(() => {
         const rate = parseFloat(fxRate);
         const amount = parseFloat(request.amount);
-        if (!isNaN(rate) && !isNaN(amount)) {
-            setPayoutAmount((amount * rate).toFixed(2));
+        if (!isNaN(rate) && !isNaN(amount) && rate > 0) {
+            // Because rate represents "1 Foreign = X NGN"
+            // If sending NGN, Payout = Amount / Rate (e.g. 900 NGN / 1800 = 0.5 EUR)
+            // If receiving NGN, Payout = Amount * Rate (e.g. 100 EUR * 1800 = 180,000 NGN)
+            if (request.sendCurrency.toUpperCase() === "NGN") {
+                setPayoutAmount((amount / rate).toFixed(2));
+            } else {
+                setPayoutAmount((amount * rate).toFixed(2));
+            }
+        } else {
+            setPayoutAmount("");
         }
-    }, [fxRate, request.amount]);
+    }, [fxRate, request.amount, request.sendCurrency]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -82,7 +91,7 @@ export function SetRateModal({ request, onClose, onSuccess }: SetRateModalProps)
                     <div className="space-y-4">
                         <div>
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                                FX Rate (1 {request.sendCurrency} = ? {request.receiveCurrency})
+                                FX Rate (1 {request.sendCurrency.toUpperCase() === 'NGN' ? request.receiveCurrency : request.sendCurrency} = ? NGN)
                             </label>
                             <div className="relative">
                                 <div className="absolute left-3 top-1/2 -translate-y-1/2">

@@ -859,7 +859,10 @@ export default function TransactionDetailPage({
           </AccordionTrigger>
           <AccordionContent>
             <div className="pt-4 h-[450px]">
-                <TransactionChat tradeId={id} />
+                <TransactionChat 
+                  tradeId={id} 
+                  tradeRequestId={rawTransaction?.tradeRequestId} 
+                />
             </div>
           </AccordionContent>
         </AccordionItem>

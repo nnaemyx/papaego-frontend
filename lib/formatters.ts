@@ -41,6 +41,21 @@ export function formatCurrency(
   })}`;
 }
 
+// Format exchange rate
+export function formatExchangeRate(rate: number | string, sendCurrency: string, receiveCurrency: string): string {
+  const numRate = typeof rate === "string" ? parseFloat(rate) : rate;
+  if (isNaN(numRate)) return `1 ${sendCurrency} = ${rate} ${receiveCurrency}`;
+  
+  // PapaEgo uses NGN as the base weak currency.
+  // When sending NGN (e.g. NGN to EUR), the rate is defined as 1 EUR = X NGN.
+  if (sendCurrency?.toUpperCase() === "NGN" && receiveCurrency?.toUpperCase() !== "NGN") {
+    return `1 ${receiveCurrency} = ${numRate.toLocaleString(undefined, { maximumFractionDigits: 4 })} NGN`;
+  }
+  
+  // In other cases (e.g. USD to NGN), the rate is 1 USD = X NGN.
+  return `1 ${sendCurrency} = ${numRate.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${receiveCurrency}`;
+}
+
 // Format date
 export function formatDate(date: string | Date): string {
   return new Date(date).toLocaleDateString("en-GB", {

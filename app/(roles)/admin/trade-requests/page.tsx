@@ -35,7 +35,7 @@ import {
     Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatExchangeRate } from "@/lib/formatters";
 import Link from "next/link";
 
 const STATUS_TABS = ["ALL", "PENDING", "ASSIGNED", "PROCESSED", "REJECTED"] as const;
@@ -413,7 +413,7 @@ export default function AdminTradeRequestsPage() {
                                                 style={{ backgroundColor: "#E2FDED", color: "#27AE60" }}
                                             >
                                                 <TrendingUp className="w-3.5 h-3.5" />
-                                                Rate Set: 1 {req.sendCurrency} = {formatCurrency(req.linkedTradeFxRate || 0, "NGN")} — Ready to process
+                                                Rate Set: {formatExchangeRate(req.linkedTradeFxRate || 0, req.sendCurrency, req.receiveCurrency)} — Ready to process
                                             </div>
                                         ) : (
                                             <div

@@ -32,6 +32,7 @@ export interface AdminTradeRequest {
         accountNumber?: string;
         sector?: string;
         address?: string;
+        invoiceUrl?: string;
     };
     /** Populated by backend when the linked trade has a rate set */
     linkedTradeStatus?: string;

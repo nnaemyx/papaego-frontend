@@ -31,6 +31,7 @@ export interface CustomerTrade {
     recipientName: string | null;
     payoutAmount: string | null;
     lockedUntil: string | null;
+    tradeRequestId?: string | null;
     createdAt: string;
 }
 
@@ -103,7 +104,7 @@ export const customerApi = {
     uploadDocument: async (file: File): Promise<{ url: string }> => {
         const formData = new FormData();
         formData.append("file", file); // Backend expects 'file' for general uploads
-        const response = await api.post("/uploads", formData, {
+        const response = await api.post("/upload", formData, {
             headers: { "Content-Type": "multipart/form-data" },
         });
         return response.data;
@@ -148,6 +149,7 @@ export const customerApi = {
         accountNumber?: string;
         sector?: string;
         address?: string;
+        invoiceUrl?: string;
     }) => {
         const response = await api.post("/customer/portal/trade-requests", payload);
         return response.data;
@@ -155,6 +157,11 @@ export const customerApi = {
 
     getTradeRequests: async (params?: { page?: number; limit?: number }): Promise<{ requests: CustomerTradeRequest[]; total: number; page: number; limit: number }> => {
         const response = await api.get("/customer/portal/trade-requests", { params });
+        return response.data;
+    },
+
+    getTradeRequest: async (id: string): Promise<any> => {
+        const response = await api.get(`/customer/portal/trade-requests/${id}`);
         return response.data;
     },
 
@@ -169,8 +176,24 @@ export const customerApi = {
         return response.data;
     },
 
+    /** Suppliers Section */
     getSuppliers: async (): Promise<any[]> => {
-        const response = await api.get("/customer/portal/suppliers");
+        const response = await api.get("/suppliers");
+        return response.data;
+    },
+
+    createSupplier: async (payload: any): Promise<any> => {
+        const response = await api.post("/suppliers", payload);
+        return response.data;
+    },
+
+    updateSupplier: async (id: string, payload: any): Promise<any> => {
+        const response = await api.put(`/suppliers/${id}`, payload);
+        return response.data;
+    },
+
+    deleteSupplier: async (id: string): Promise<any> => {
+        const response = await api.delete(`/suppliers/${id}`);
         return response.data;
     },
 

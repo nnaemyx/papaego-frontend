@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import { customerApi, CustomerTradeDetail } from "@/lib/api/customer";
 import { TransactionChat } from "@/components/transactions/TransactionChat";
-import { formatCurrency } from "@/lib/formatters";
+import { TradeProgressStepper, TradeStage } from "@/components/transactions/TradeProgressStepper";
+import { formatCurrency, formatExchangeRate } from "@/lib/formatters";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -179,6 +180,10 @@ export default function CustomerTradeDetailsPage({
       </div>
 
       <main className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
+        
+        {/* Progress Stepper */}
+        <TradeProgressStepper currentStatus={trade.status as TradeStage} />
+
         {/* ── Info Banner ── */}
         <div
           className="bg-white rounded-2xl border p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4"
@@ -210,7 +215,7 @@ export default function CustomerTradeDetailsPage({
             </span>
             {trade.fxRate && (
               <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-                Rate: {formatCurrency(trade.fxRate || 0, "NGN")}
+                Rate: {formatExchangeRate(Number(trade.fxRate), trade.sendCurrency, trade.receiveCurrency)}
               </p>
             )}
           </div>
@@ -241,13 +246,13 @@ export default function CustomerTradeDetailsPage({
                   {
                     label: "Locked Exchange Rate",
                     val: trade.fxRate
-                      ? formatCurrency(trade.fxRate, "NGN")
+                      ? `1 ${trade.sendCurrency} = ${Number(trade.fxRate).toLocaleString()} ${trade.receiveCurrency}`
                       : "Not finalized",
                   },
                   {
                     label: "Total Payout",
                     val: trade.payoutAmount
-                      ? formatCurrency(trade.payoutAmount, trade.receiveCurrency)
+                      ? `${Number(trade.payoutAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${trade.receiveCurrency}`
                       : "Pending",
                   },
                   {
@@ -544,7 +549,18 @@ export default function CustomerTradeDetailsPage({
 
           {/* ── Right: Chat + Timeline ── */}
           <div className="space-y-6">
-            <TransactionChat tradeId={transactionId} />
+            <TransactionChat 
+              tradeId={transactionId} 
+              tradeRequestId={trade?.tradeRequestId || undefined} 
+              tradeInfo={{
+                amount: typeof trade.amount === 'string' ? parseFloat(trade.amount) : Number(trade.amount),
+                sendCurrency: trade.sendCurrency,
+                receiveCurrency: trade.receiveCurrency,
+                fxRate: trade.fxRate?.toString(),
+                payoutAmount: trade.payoutAmount != null ? (typeof trade.payoutAmount === 'string' ? parseFloat(trade.payoutAmount) : Number(trade.payoutAmount)) : undefined,
+                status: trade.status
+              }}
+            />
 
             {/* Timeline */}
             {trade.timeline && trade.timeline.length > 0 && (

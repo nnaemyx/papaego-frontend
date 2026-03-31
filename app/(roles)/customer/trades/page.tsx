@@ -39,8 +39,9 @@ const REQUEST_STATUS_STYLE: Record<string, { label: string; bg: string; color: s
 function TradeRequestItem({ req }: { req: CustomerTradeRequest }) {
   const cfg = REQUEST_STATUS_STYLE[req.status] || REQUEST_STATUS_STYLE.PENDING;
   return (
-    <div
-      className="bg-white rounded-xl border p-4 flex items-center justify-between"
+    <Link
+      href={`/customer/trade-requests/${req.id}`}
+      className="bg-white rounded-xl border p-4 flex items-center justify-between hover:bg-gray-50 transition-colors group"
       style={{ borderColor: "var(--border-custom)", borderLeftWidth: "3px", borderLeftColor: cfg.color }}
     >
       <div className="flex items-center gap-3">
@@ -87,7 +88,7 @@ function TradeRequestItem({ req }: { req: CustomerTradeRequest }) {
             : ""}
         </span>
       </div>
-    </div>
+    </Link>
   );
 }
 

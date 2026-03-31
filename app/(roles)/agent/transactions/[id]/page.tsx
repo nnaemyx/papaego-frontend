@@ -12,7 +12,6 @@ import { PaymentMethod } from '@/components/transactions/PaymentMethod';
 import { Timeline } from '@/components/transactions/Timeline';
 import { AgentNotes } from '@/components/transactions/AgentNotes';
 import { agentApi } from '@/lib/api/agent';
-import { TransactionChat } from '@/components/transactions/TransactionChat';
 import { format } from 'date-fns';
 import { ShieldAlert } from 'lucide-react';
 
@@ -229,10 +228,8 @@ export default function TransactionDetailsPage({ params }: TransactionDetailsPag
             message={details.paymentDetails.paymentMessage}
           />
 
-          {/* Chat + Timeline side by side */}
-          <div className="grid grid-cols-2 gap-5">
-            <TransactionChat tradeId={transactionId} />
-            <div className="space-y-5">
+          <div className="grid grid-cols-1 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <Timeline events={details.timeline} />
               <AgentNotes notes={details.notes} />
             </div>

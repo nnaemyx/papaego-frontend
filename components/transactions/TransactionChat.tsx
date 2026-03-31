@@ -1,28 +1,42 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Send, Image as ImageIcon, X, Loader2 } from "lucide-react";
+import { Send, Image as ImageIcon, Paperclip, X, Loader2, File as FileIcon, MessageCircle } from "lucide-react";
 import { chatApi, ChatMessage } from "@/lib/api/chat";
 import { useAuthStore } from "@/store/auth-store";
 import { format } from "date-fns";
+import { formatCurrency, formatExchangeRate } from "@/lib/formatters";
 
 interface TransactionChatProps {
-    tradeId: string;
+    tradeId?: string;
+    tradeRequestId?: string;
+    tradeInfo?: {
+        amount: number;
+        sendCurrency: string;
+        receiveCurrency: string;
+        fxRate?: string;
+        payoutAmount?: number;
+        status?: string;
+    };
 }
 
-export function TransactionChat({ tradeId }: TransactionChatProps) {
+export function TransactionChat({ tradeId, tradeRequestId, tradeInfo }: TransactionChatProps) {
     const { user } = useAuthStore();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState("");
     const [loading, setLoading] = useState(true);
-    const [sendingImage, setSendingImage] = useState(false);
-    const [imagePreview, setImagePreview] = useState<{ file: File; url: string } | null>(null);
+    const [sendingFile, setSendingFile] = useState(false);
+    const [filePreview, setFilePreview] = useState<{ file: File; url: string; isImage: boolean } | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
-    const imageInputRef = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const activeId = tradeRequestId || tradeId;
+    const isTradeRequest = !!tradeRequestId;
 
     const fetchMessages = async () => {
+        if (!activeId) return;
         try {
-            const data = await chatApi.getMessages(tradeId);
+            const data = await chatApi.getMessages(activeId, isTradeRequest);
             setMessages(data);
         } catch (error) {
             console.error("Failed to fetch messages:", error);
@@ -35,7 +49,7 @@ export function TransactionChat({ tradeId }: TransactionChatProps) {
         fetchMessages();
         const interval = setInterval(fetchMessages, 5000);
         return () => clearInterval(interval);
-    }, [tradeId]);
+    }, [activeId, isTradeRequest]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -45,26 +59,40 @@ export function TransactionChat({ tradeId }: TransactionChatProps) {
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMessage.trim() && !imagePreview) return;
+        if ((!newMessage.trim() && !filePreview) || !activeId) return;
 
-        if (imagePreview) {
-            // Send image
-            setSendingImage(true);
+        // If user is AGENT, don't allow sending (per requirement)
+        if (user?.role === "AGENT") {
+            console.error("Agents are not allowed to use chat");
+            return;
+        }
+
+        if (filePreview) {
+            setSendingFile(true);
             try {
-                const sent = await chatApi.sendImage(tradeId, imagePreview.file);
+                const sent = await chatApi.sendFile({
+                    tradeId: tradeId || null,
+                    tradeRequestId: tradeRequestId || null,
+                    file: filePreview.file,
+                    isImage: filePreview.isImage
+                });
                 setMessages((prev) => [...prev, sent]);
-                setImagePreview(null);
+                setFilePreview(null);
                 setNewMessage("");
             } catch (error) {
-                console.error("Failed to send image:", error);
+                console.error("Failed to send file:", error);
             } finally {
-                setSendingImage(false);
+                setSendingFile(false);
             }
             return;
         }
 
         try {
-            const sent = await chatApi.sendMessage(tradeId, newMessage);
+            const sent = await chatApi.sendMessage({
+                tradeId: tradeId || null,
+                tradeRequestId: tradeRequestId || null,
+                message: newMessage
+            });
             setMessages((prev) => [...prev, sent]);
             setNewMessage("");
         } catch (error) {
@@ -72,19 +100,21 @@ export function TransactionChat({ tradeId }: TransactionChatProps) {
         }
     };
 
-    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        
+        const isImage = file.type.startsWith("image/");
         const url = URL.createObjectURL(file);
-        setImagePreview({ file, url });
-        // Reset input so same file can be selected again
-        e.target.value = "";
+        
+        setFilePreview({ file, url, isImage });
+        e.target.value = ""; // Reset input
     };
 
-    const cancelImagePreview = () => {
-        if (imagePreview) {
-            URL.revokeObjectURL(imagePreview.url);
-            setImagePreview(null);
+    const cancelFilePreview = () => {
+        if (filePreview) {
+            URL.revokeObjectURL(filePreview.url);
+            setFilePreview(null);
         }
     };
 
@@ -102,12 +132,49 @@ export function TransactionChat({ tradeId }: TransactionChatProps) {
                     className="text-sm font-bold flex items-center gap-2"
                     style={{ color: "#012333" }}
                 >
+                    <MessageCircle className="w-4 h-4" style={{ color: "#C9A227" }} />
                     Transaction Chat
                 </h3>
                 <span className="text-[10px] uppercase font-bold tracking-wider text-[#6B7078]">
                     Real-time Support
                 </span>
             </div>
+
+            {/* Trade Info Banner */}
+            {tradeInfo && (
+                <div 
+                    className="px-4 py-2 border-b flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]"
+                    style={{ backgroundColor: "#F0F2F5", borderColor: "#E1E3E6" }}
+                >
+                    <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-[#6B7078]">Trade:</span>
+                        <span className="font-medium text-[#012333]">
+                            {tradeInfo.amount} {tradeInfo.sendCurrency} → {tradeInfo.receiveCurrency}
+                        </span>
+                    </div>
+                    {tradeInfo.fxRate && (
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-[#6B7078]">Rate:</span>
+                            <span className="font-medium text-[#012333]">
+                                {formatExchangeRate(Number(tradeInfo.fxRate), tradeInfo.sendCurrency, tradeInfo.receiveCurrency)}
+                            </span>
+                        </div>
+                    )}
+                    {tradeInfo.status && (
+                        <div className="flex items-center gap-1.5 ml-auto">
+                            <span 
+                                className="px-1.5 py-0.5 rounded-md font-bold text-[9px] uppercase tracking-wide"
+                                style={{ 
+                                    backgroundColor: tradeInfo.status === 'COMPLETED' ? '#E2FDED' : '#FFF8E1',
+                                    color: tradeInfo.status === 'COMPLETED' ? '#27AE60' : '#F59E0B'
+                                }}
+                            >
+                                {tradeInfo.status.replace(/_/g, ' ')}
+                            </span>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Messages */}
             <div
@@ -175,6 +242,16 @@ export function TransactionChat({ tradeId }: TransactionChatProps) {
                                                     className="max-w-[200px] max-h-[200px] rounded-lg object-cover"
                                                 />
                                             </a>
+                                        ) : msg.fileUrl ? (
+                                            <a
+                                                href={msg.fileUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-2 p-2 hover:bg-black/5 rounded transition-colors"
+                                            >
+                                                <FileIcon className="w-5 h-5 flex-shrink-0" />
+                                                <span className="underline decoration-1 underline-offset-2">View Attached File</span>
+                                            </a>
                                         ) : (
                                             <span className="break-words">{msg.message}</span>
                                         )}
@@ -189,26 +266,31 @@ export function TransactionChat({ tradeId }: TransactionChatProps) {
                 )}
             </div>
 
-            {/* Image preview bar */}
-            {imagePreview && (
+            {filePreview && (
                 <div
                     className="px-3 py-2 border-t flex items-center gap-3"
                     style={{ borderColor: "#E1E3E6", backgroundColor: "#F7F8F9" }}
                 >
                     <div className="relative">
-                        <img
-                            src={imagePreview.url}
-                            alt="Preview"
-                            className="w-12 h-12 object-cover rounded-lg border"
-                            style={{ borderColor: "#E1E3E6" }}
-                        />
+                        {filePreview.isImage ? (
+                            <img
+                                src={filePreview.url}
+                                alt="Preview"
+                                className="w-12 h-12 object-cover rounded-lg border"
+                                style={{ borderColor: "#E1E3E6" }}
+                            />
+                        ) : (
+                            <div className="w-12 h-12 flex items-center justify-center bg-gray-200 rounded-lg border border-gray-300">
+                                <FileIcon className="w-6 h-6 text-gray-500" />
+                            </div>
+                        )}
                     </div>
                     <span className="text-xs text-[#6B7078] flex-1 truncate">
-                        {imagePreview.file.name}
+                        {filePreview.file.name}
                     </span>
                     <button
                         type="button"
-                        onClick={cancelImagePreview}
+                        onClick={cancelFilePreview}
                         className="p-1 rounded-full hover:bg-gray-200 transition-colors"
                     >
                         <X className="w-4 h-4 text-[#6B7078]" />
@@ -223,39 +305,39 @@ export function TransactionChat({ tradeId }: TransactionChatProps) {
                 style={{ borderColor: "#E1E3E6" }}
             >
                 <div className="relative flex items-center gap-2">
-                    {/* Image upload button */}
+                    {/* File upload button */}
                     <button
                         type="button"
-                        onClick={() => imageInputRef.current?.click()}
-                        disabled={sendingImage}
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={sendingFile}
                         className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg transition-colors hover:bg-gray-100 disabled:opacity-50"
-                        title="Send image"
+                        title="Attach file"
                     >
-                        <ImageIcon className="w-4 h-4 text-[#9AA0A6]" />
+                        <Paperclip className="w-4 h-4 text-[#9AA0A6]" />
                     </button>
                     <input
-                        ref={imageInputRef}
+                        ref={fileInputRef}
                         type="file"
-                        accept="image/jpeg,image/png,image/jpg,image/webp,image/gif"
+                        accept="image/jpeg,image/png,image/jpg,image/webp,image/gif,application/pdf"
                         className="hidden"
-                        onChange={handleImageSelect}
+                        onChange={handleFileSelect}
                     />
 
                     <input
                         type="text"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder={imagePreview ? "Add a caption (optional)…" : "Type your message…"}
-                        disabled={sendingImage}
+                        placeholder={filePreview ? "Add a caption (optional)…" : "Type your message…"}
+                        disabled={sendingFile}
                         className="flex-1 pl-4 pr-4 py-3 bg-[#F7F8F9] rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[#C9A227] disabled:opacity-60"
                     />
 
                     <button
                         type="submit"
-                        disabled={(!newMessage.trim() && !imagePreview) || sendingImage}
+                        disabled={(!newMessage.trim() && !filePreview) || sendingFile}
                         className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-[#012333] text-white disabled:opacity-50 transition-opacity"
                     >
-                        {sendingImage ? (
+                        {sendingFile ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                             <Send className="w-4 h-4" />

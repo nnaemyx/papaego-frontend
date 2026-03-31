@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useTradeFormStore } from "@/store/trade-form-store";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,22 @@ export function AgentRateDetailsForm() {
     const fromCurrency = tradeDetails.fromCurrency || "GBP";
     const toCurrency = tradeDetails.toCurrency || "NGN";
     const amountSent = tradeDetails.amountSent || "0";
+
+    const fxRate = form.watch("fxRate");
+
+    useEffect(() => {
+        const rate = parseFloat(fxRate);
+        const amount = parseFloat(String(amountSent).replace(/[^0-9.]/g, ""));
+        if (!isNaN(rate) && !isNaN(amount) && rate > 0) {
+            if (fromCurrency.toUpperCase() === "NGN") {
+                form.setValue("payoutAmount", (amount / rate).toFixed(2));
+            } else {
+                form.setValue("payoutAmount", (amount * rate).toFixed(2));
+            }
+        } else {
+            form.setValue("payoutAmount", "");
+        }
+    }, [fxRate, amountSent, fromCurrency, form]);
 
     const onSubmit = async (data: RateDetailsFormData) => {
         if (!customerInformation.customerId) {
@@ -145,7 +161,7 @@ export function AgentRateDetailsForm() {
                                         className="text-xs"
                                         style={{ color: "var(--text-tertiary)" }}
                                     >
-                                        FX Rate (1 {fromCurrency} = ? {toCurrency}){" "}
+                                        FX Rate (1 {fromCurrency.toUpperCase() === 'NGN' ? toCurrency : fromCurrency} = ? NGN){" "}
                                         <span className="text-red-500">*</span>
                                     </FormLabel>
                                     <FormControl>
@@ -177,10 +193,14 @@ export function AgentRateDetailsForm() {
                                     <FormControl>
                                         <Input
                                             {...field}
+                                            readOnly
                                             placeholder="e.g. 1,850,000"
-                                            className="h-12 rounded-lg border-border-light"
+                                            className="h-12 rounded-lg border-border-light bg-gray-50 text-gray-500 font-medium"
                                         />
                                     </FormControl>
+                                    <p className="text-[10px] text-gray-400 mt-1">
+                                        Automatically calculated based on rate.
+                                    </p>
                                     <FormMessage />
                                 </FormItem>
                             )}

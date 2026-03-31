@@ -37,7 +37,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency, formatExchangeRate } from "@/lib/formatters";
+import { TransactionChat } from "@/components/transactions/TransactionChat";
 import { format } from "date-fns";
 import Link from "next/link";
 
@@ -336,6 +337,20 @@ export default function AdminTradeRequestDetailPage({
                                             </span>
                                         </div>
                                     ))}
+                                {request.supplierDetails?.invoiceUrl && (
+                                    <div className="mt-4 pt-3 border-t border-amber-200">
+                                        <a 
+                                            href={request.supplierDetails.invoiceUrl} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="flex items-center justify-center gap-2 w-full py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-xs font-bold transition-colors"
+                                        >
+                                            <Paperclip className="w-3.5 h-3.5" />
+                                            View Customer Invoice
+                                            <ExternalLink className="w-3 h-3" />
+                                        </a>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -376,11 +391,11 @@ export default function AdminTradeRequestDetailPage({
                                         ✅ Agent has set the exchange rate
                                     </p>
                                     <p className="text-xl font-black" style={{ color: "#27AE60" }}>
-                                        1 {request.sendCurrency} = {formatCurrency(request.fxRate || 0, "NGN")}
+                                        {formatExchangeRate(request.fxRate || 0, request.sendCurrency, request.receiveCurrency)}
                                     </p>
                                     {request.payoutAmount && (
                                         <p className="text-sm mt-1" style={{ color: "#27AE60" }}>
-                                            Estimated Payout: {formatCurrency(request.payoutAmount, request.receiveCurrency)}
+                                            Estimated Payout: {Number(request.payoutAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {request.receiveCurrency}
                                         </p>
                                     )}
                                 </div>
@@ -630,6 +645,22 @@ export default function AdminTradeRequestDetailPage({
                                         : "Assign an agent first, or process directly if you have a rate ready."}
                                 </p>
                                 
+                                {agentSetRate && (
+                                    <div className="p-3 rounded-xl border border-green-200 bg-green-50 mb-3">
+                                        <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider mb-1">Current Quoted Rate</p>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-lg font-black text-green-700">
+                                                {formatExchangeRate(request.fxRate || 0, request.sendCurrency, request.receiveCurrency)}
+                                            </span>
+                                            {request.payoutAmount && (
+                                                <span className="text-xs text-green-600 font-medium">
+                                                    (Payout: {Number(request.payoutAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {request.receiveCurrency})
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                                
                                 <div className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
                                     <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Payment Details to Customer</h4>
                                     <Input 
@@ -730,6 +761,27 @@ export default function AdminTradeRequestDetailPage({
                                 Create the trade first to upload a receipt.
                             </p>
                         )}
+                    </div>
+
+                    {/* Step 4: Chat with Customer */}
+                    <div className="bg-white rounded-2xl border overflow-hidden flex flex-col" style={{ borderColor: "#E1E3E6" }}>
+                        <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between" style={{ borderColor: "#E1E3E6" }}>
+                            <h3 className="font-bold text-sm" style={{ color: "#2b2f33" }}>Chat with Customer</h3>
+                        </div>
+                        <div className="h-[400px]">
+                            <TransactionChat 
+                                tradeRequestId={id} 
+                                tradeId={request.linkedTrade?.id} 
+                                tradeInfo={{
+                                    amount: typeof request.amount === 'string' ? parseFloat(request.amount) : Number(request.amount),
+                                    sendCurrency: request.sendCurrency,
+                                    receiveCurrency: request.receiveCurrency,
+                                    fxRate: request.fxRate ?? undefined,
+                                    payoutAmount: request.payoutAmount != null ? (typeof request.payoutAmount === 'string' ? parseFloat(request.payoutAmount) : Number(request.payoutAmount)) : undefined,
+                                    status: request.linkedTrade?.status || request.status
+                                }}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

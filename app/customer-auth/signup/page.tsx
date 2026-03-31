@@ -352,7 +352,7 @@ export default function CustomerSignupPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FloatingSelect label="Gender" value={form.gender} onChange={(v) => set("gender", v)}
                     options={["Male", "Female", "Prefer not to say"]} />
-                  <FloatingInput type="date" label="Date of Birth" value={form.dateOfBirth} onChange={(v) => set("dateOfBirth", v)} />
+                  <FloatingInput type="date" label="Date of Birth" value={form.dateOfBirth} onChange={(v) => set("dateOfBirth", v)} max={new Date().toISOString().split("T")[0]} />
                   <div className="sm:col-span-2">
                     <FloatingInput label="Home Address" value={form.homeAddress} onChange={(v) => set("homeAddress", v)} />
                   </div>
@@ -449,10 +449,10 @@ export default function CustomerSignupPage() {
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function FloatingInput({
-  label, value, onChange, type = "text", placeholder,
+  label, value, onChange, type = "text", placeholder, max,
 }: {
   label: string; value: string; onChange: (v: string) => void;
-  type?: string; placeholder?: string;
+  type?: string; placeholder?: string; max?: string;
 }) {
   return (
     <div className="relative border rounded-lg px-3 pt-4 pb-2" style={{ borderColor: "#E1E3E6" }}>
@@ -462,6 +462,7 @@ function FloatingInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder || ""}
+        max={max}
         className="w-full text-sm bg-transparent outline-none mt-1"
         style={{ color: "#012333" }}
       />

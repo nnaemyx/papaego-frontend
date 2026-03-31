@@ -2,49 +2,55 @@ import api from "./client";
 
 export interface ChatMessage {
     id: string;
-    tradeId: string;
+    tradeId?: string | null;
+    tradeRequestId?: string | null;
     senderId: string;
     message: string;
     imageUrl?: string | null;
+    fileUrl?: string | null;
     role: "CUSTOMER" | "AGENT" | "ADMIN";
     createdAt: string;
 }
 
 export const chatApi = {
     /**
-     * Send a text message for a specific trade
+     * Send a text message for a specific trade or request
      */
-    sendMessage: async (tradeId: string, message: string, imageUrl?: string) => {
-        const response = await api.post("/chat/messages", { tradeId, message, imageUrl });
+    sendMessage: async (payload: { tradeId?: string | null; tradeRequestId?: string | null; message: string; imageUrl?: string; fileUrl?: string }) => {
+        const response = await api.post("/chat/messages", payload);
         return response.data as ChatMessage;
     },
 
     /**
-     * Upload an image to Cloudinary and send as a chat message
+     * Upload an image/file to Cloudinary and send as a chat message
      */
-    sendImage: async (tradeId: string, file: File): Promise<ChatMessage> => {
+    sendFile: async (payload: { tradeId?: string | null; tradeRequestId?: string | null; file: File; isImage: boolean }): Promise<ChatMessage> => {
         // Step 1: Upload to Cloudinary via the uploads endpoint
         const formData = new FormData();
-        formData.append("file", file);
-        const uploadRes = await api.post<{ url: string }>("/uploads", formData, {
+        formData.append("file", payload.file);
+        const uploadRes = await api.post<{ url: string }>("/upload", formData, {
             headers: { "Content-Type": "multipart/form-data" },
         });
-        const imageUrl = uploadRes.data.url;
+        
+        // Use generic upload url for file or image
+        const fileUrl = uploadRes.data.url;
 
-        // Step 2: Send as a chat message with imageUrl
+        // Step 2: Send as a chat message
         const response = await api.post("/chat/messages", {
-            tradeId,
+            tradeId: payload.tradeId,
+            tradeRequestId: payload.tradeRequestId,
             message: "",
-            imageUrl,
+            imageUrl: payload.isImage ? fileUrl : undefined,
+            fileUrl: !payload.isImage ? fileUrl : undefined,
         });
         return response.data as ChatMessage;
     },
 
     /**
-     * Get all messages for a trade
+     * Get all messages for a trade or tradeRequest
      */
-    getMessages: async (tradeId: string) => {
-        const response = await api.get(`/chat/messages/${tradeId}`);
+    getMessages: async (id: string, isTradeRequest = false) => {
+        const response = await api.get(`/chat/messages/${id}${isTradeRequest ? "?isTradeRequest=true" : ""}`);
         return response.data as ChatMessage[];
     },
 };
