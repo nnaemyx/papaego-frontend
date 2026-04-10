@@ -17,12 +17,11 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { SetRateModal } from '@/components/agent/SetRateModal';
+import { Info } from 'lucide-react';
 
 export default function TradeRequestsPage() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState('PENDING');
-  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
 
   const { data: requests, isLoading, error } = useQuery({
     queryKey: ['agent-trade-requests', statusFilter],
@@ -157,37 +156,26 @@ export default function TradeRequestsPage() {
                 </div>
 
                   {(req.status === 'PENDING' || req.status === 'ASSIGNED') && (
-                    <div className="mt-6 flex gap-3">
-                      <Button 
-                        onClick={() => setSelectedRequest(req)}
-                        className="flex-1 bg-[#012333] hover:bg-[#02334a] text-white rounded-xl h-11 font-bold"
+                    <div className="mt-5 space-y-3">
+                      <div className="flex items-start gap-2 p-3 rounded-xl text-xs" style={{ backgroundColor: '#FFF8E1', color: '#92400E' }}>
+                        <Info className="w-4 h-4 shrink-0 mt-0.5" style={{ color: '#C9A227' }} />
+                        <p>Exchange rates for this request are set by administrators. You will be notified once the rate is confirmed.</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleReject(req.id)}
+                        className="w-full h-10 rounded-xl border-red-100 text-red-500 hover:bg-red-50 hover:text-red-600 text-sm font-semibold"
                       >
-                        Set Rate
+                        <XCircle className="w-4 h-4 mr-1.5" /> Reject Request
                       </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => handleReject(req.id)}
-                      className="w-12 h-11 rounded-xl border-red-100 text-red-500 hover:bg-red-50 hover:text-red-600"
-                    >
-                      <XCircle className="w-5 h-5" />
-                    </Button>
-                  </div>
-                )}
+                    </div>
+                  )}
               </div>
             </Card>
           ))}
         </div>
       )}
 
-      {selectedRequest && (
-        <SetRateModal
-          request={selectedRequest}
-          onClose={() => setSelectedRequest(null)}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['agent-trade-requests'] });
-          }}
-        />
-      )}
     </div>
   );
 }

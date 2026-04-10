@@ -17,6 +17,10 @@ export interface CustomerSignupPayload {
     companySector?: string;
     governmentIdUrl?: string;
     proofOfAddressUrl?: string;
+    /** Referral code from an agent or CORPORATE for company-referred signups */
+    referralCode?: string;
+    /** AGENT | CORPORATE | DIRECT */
+    referralType?: 'AGENT' | 'CORPORATE' | 'DIRECT';
 }
 
 export interface CustomerTrade {

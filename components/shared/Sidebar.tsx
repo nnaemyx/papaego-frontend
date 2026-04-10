@@ -3,18 +3,19 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, PlusCircle, Wallet, Users, FolderOpen, Settings, LogOut, ShieldAlert, FileText, X, TrendingUp, UserCircle, Building2 } from 'lucide-react';
+import { Home, Wallet, Users, Settings, LogOut, ShieldAlert, FileText, X, TrendingUp, UserCircle, Building2, BarChart2, User } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useState, useEffect } from 'react';
 
 const roleNavigation = {
   AGENT: [
     { name: 'Home', href: '/agent/dashboard', icon: Home },
-    { name: 'Trade Requests', href: '/agent/trade-requests', icon: FileText },
     { name: 'Transactions', href: '/agent/transactions', icon: Wallet },
     { name: 'Customers', href: '/agent/customers', icon: Users },
     { name: 'Commissions', href: '/agent/commissions', icon: TrendingUp },
-    { name: 'Settings', href: '/agent/settings', icon: Settings },
+    { name: 'Rates', href: '/agent/rates', icon: BarChart2 },
+    { name: 'Reports', href: '/agent/reports', icon: FileText },
+    { name: 'Profile', href: '/agent/profile', icon: User },
   ],
   CUSTOMER: [
     { name: 'Home', href: '/customer/dashboard', icon: Home },
@@ -31,6 +32,7 @@ const roleNavigation = {
     { name: 'Agents', href: '/admin/agents', icon: Users },
     { name: 'Customers', href: '/admin/customers', icon: UserCircle },
     { name: 'Commissions', href: '/admin/commissions', icon: Wallet },
+    { name: 'Rates', href: '/admin/rates', icon: BarChart2 },
     { name: 'Audit Logs', href: '/admin/audit-logs', icon: FileText },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ],

@@ -34,6 +34,7 @@ import {
     Clock,
     Receipt,
     ExternalLink,
+    Calculator,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -81,6 +82,11 @@ export default function AdminTradeRequestDetailPage({
     const [paymentBankName, setPaymentBankName] = useState("");
     const [paymentAmount, setPaymentAmount] = useState("");
 
+    // Admin rate-setting state
+    const [adminFxRate, setAdminFxRate] = useState("");
+    const [adminPayoutAmount, setAdminPayoutAmount] = useState("");
+    const [settingRate, setSettingRate] = useState(false);
+
     const { data: request, isLoading } = useQuery({
         queryKey: ["admin-trade-request", id],
         queryFn: () => adminTradeRequestsApi.getTradeRequest(id),
@@ -117,6 +123,17 @@ export default function AdminTradeRequestDetailPage({
             toast.success("Trade created and customer notified with payment details");
         },
         onError: () => toast.error("Failed to process request"),
+    });
+
+    const setRateMutation = useMutation({
+        mutationFn: () => adminTradeRequestsApi.setRate(id, adminFxRate, adminPayoutAmount),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["admin-trade-request", id] });
+            queryClient.invalidateQueries({ queryKey: ["admin-trade-requests"] });
+            toast.success("Exchange rate set successfully");
+            setSettingRate(false);
+        },
+        onError: () => toast.error("Failed to set rate"),
     });
 
     const rejectMutation = useMutation({
@@ -552,57 +569,104 @@ export default function AdminTradeRequestDetailPage({
                         <div className="flex items-center gap-2 mb-3">
                             <div
                                 className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white"
-                                style={{ backgroundColor: request.assignedAgent ? "#27AE60" : "#C9A227" }}
+                                style={{ backgroundColor: (request.fxRate && parseFloat(request.fxRate) > 0) ? "#27AE60" : "#C9A227" }}
                             >
                                 1
                             </div>
                             <h3 className="font-bold text-sm" style={{ color: "#2b2f33" }}>
-                                Assign Agent for Rate
+                                Set Exchange Rate
                             </h3>
                         </div>
 
-                        {request.assignedAgent ? (
-                            <div className="flex items-center gap-2 p-3 rounded-xl" style={{ backgroundColor: "#E2FDED" }}>
-                                <CheckCircle className="w-4 h-4 shrink-0" style={{ color: "#27AE60" }} />
-                                <div>
-                                    <p className="text-sm font-bold" style={{ color: "#27AE60" }}>
-                                        {request.assignedAgent.firstName} {request.assignedAgent.lastName}
-                                    </p>
-                                    <p className="text-xs" style={{ color: "#27AE60" }}>
-                                        {request.assignedAgent.email}
-                                    </p>
+                        {(request.fxRate && parseFloat(request.fxRate) > 0) ? (
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2 p-3 rounded-xl" style={{ backgroundColor: "#E2FDED" }}>
+                                    <CheckCircle className="w-4 h-4 shrink-0" style={{ color: "#27AE60" }} />
+                                    <div>
+                                        <p className="text-xs font-bold" style={{ color: "#27AE60" }}>Rate Set</p>
+                                        <p className="text-sm font-black" style={{ color: "#27AE60" }}>
+                                            {formatExchangeRate(request.fxRate || 0, request.sendCurrency, request.receiveCurrency)}
+                                        </p>
+                                    </div>
                                 </div>
+                                <button
+                                    onClick={() => { setSettingRate(true); setAdminFxRate(request.fxRate || ""); }}
+                                    className="text-xs underline"
+                                    style={{ color: "#9AA0A6" }}
+                                >
+                                    Update Rate
+                                </button>
                             </div>
-                        ) : (
+                        ) : settingRate || !(request.fxRate && parseFloat(request.fxRate) > 0) ? (
                             <div className="space-y-3">
                                 <p className="text-xs" style={{ color: "#9AA0A6" }}>
-                                    Select an agent to set the exchange rate. They will receive a notification.
+                                    Set the exchange rate for this trade. The agent will be notified.
                                 </p>
-                                <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Choose agent…" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {(agents as any[]).map((a: any) => (
-                                            <SelectItem key={a.id} value={a.id}>
-                                                {a.name || `${a.firstName || ""} ${a.lastName || ""}`.trim() || a.email}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <div className="space-y-2">
+                                    <div className="relative">
+                                        <Calculator className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#9AA0A6" }} />
+                                        <Input
+                                            type="number"
+                                            step="0.0001"
+                                            placeholder={`FX Rate (1 ${request.sendCurrency === 'NGN' ? request.receiveCurrency : request.sendCurrency} = ? NGN)`}
+                                            value={adminFxRate}
+                                            onChange={(e) => {
+                                                setAdminFxRate(e.target.value);
+                                                const r = parseFloat(e.target.value);
+                                                const a = parseFloat(String(request.amount));
+                                                if (!isNaN(r) && !isNaN(a) && r > 0) {
+                                                    setAdminPayoutAmount(request.sendCurrency === 'NGN' ? (a / r).toFixed(2) : (a * r).toFixed(2));
+                                                }
+                                            }}
+                                            className="pl-9 h-10"
+                                        />
+                                    </div>
+                                    {adminPayoutAmount && (
+                                        <p className="text-xs" style={{ color: "#27AE60" }}>
+                                            Est. payout: {adminPayoutAmount} {request.receiveCurrency}
+                                        </p>
+                                    )}
+                                </div>
                                 <Button
-                                    onClick={handleAssign}
-                                    disabled={assignMutation.isPending || !selectedAgentId}
+                                    onClick={() => setRateMutation.mutate()}
+                                    disabled={setRateMutation.isPending || !adminFxRate || parseFloat(adminFxRate) <= 0}
                                     className="w-full font-bold text-white"
                                     style={{ backgroundColor: "#012333" }}
                                 >
-                                    {assignMutation.isPending ? (
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    ) : (
-                                        <UserCheck className="w-4 h-4 mr-2" />
-                                    )}
-                                    Assign Agent
+                                    {setRateMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Calculator className="w-4 h-4 mr-2" />}
+                                    Confirm Rate
                                 </Button>
+                                {/* Still allow agent assignment as optional step */}
+                                <div className="pt-2 border-t" style={{ borderColor: "#F0F0F0" }}>
+                                    <p className="text-xs mb-2" style={{ color: "#9AA0A6" }}>Or assign agent to handle:</p>
+                                    <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+                                        <SelectTrigger className="h-9 text-sm">
+                                            <SelectValue placeholder="Assign agent (optional)…" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {(agents as any[]).map((a: any) => (
+                                                <SelectItem key={a.id} value={a.id}>
+                                                    {a.name || `${a.firstName || ""} ${a.lastName || ""}`.trim() || a.email}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {selectedAgentId && (
+                                        <Button onClick={handleAssign} disabled={assignMutation.isPending} size="sm" variant="outline" className="w-full mt-2 h-8 text-xs">
+                                            {assignMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <UserCheck className="w-3 h-3 mr-1" />}
+                                            Assign Agent
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        ) : null}
+
+                        {request.assignedAgent && (
+                            <div className="flex items-center gap-2 p-2 rounded-lg mt-3" style={{ backgroundColor: "#F7F8F9" }}>
+                                <UserCheck className="w-4 h-4 shrink-0" style={{ color: "#3B82F6" }} />
+                                <p className="text-xs" style={{ color: "#3B82F6" }}>
+                                    {request.assignedAgent.firstName} {request.assignedAgent.lastName} assigned
+                                </p>
                             </div>
                         )}
                     </div>

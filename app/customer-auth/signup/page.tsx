@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Upload, CheckCircle, AlertCircle, ChevronDown, X, User } from "lucide-react";
+import { useState, useRef, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Eye, EyeOff, Upload, CheckCircle, AlertCircle, ChevronDown, X, User, Link2, Building2, Loader2, Building } from "lucide-react";
 import { customerApi, NIGERIAN_SECTORS } from "@/lib/api/customer";
+import { referralApi, CORPORATE_REFERRAL_CODE } from "@/lib/api/referral";
 import { useAuthStore } from "@/store/auth-store";
 import Link from "next/link";
 
@@ -15,10 +16,12 @@ const STEPS = [
 ];
 
 type Step = 0 | 1 | 2 | 3 | "success" | "failed";
+type ReferralType = 'AGENT' | 'CORPORATE' | 'DIRECT';
 
 // ── Component ──────────────────────────────────────────────────────────────────
-export default function CustomerSignupPage() {
+function CustomerSignupPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const login = useAuthStore((s) => s.login);
 
   const [step, setStep] = useState<Step>(0);
@@ -35,12 +38,56 @@ export default function CustomerSignupPage() {
     companyName: "", companySector: "",
   });
   const [accountType, setAccountType] = useState<"individual" | "business" | null>(null);
+
+  // Referral state
+  const [referralCode, setReferralCode] = useState("");
+  const [referralType, setReferralType] = useState<ReferralType>('DIRECT');
+  const [referralValidating, setReferralValidating] = useState(false);
+  const [referralInfo, setReferralInfo] = useState<{ agentName?: string; valid?: boolean } | null>(null);
+  const [isCorporate, setIsCorporate] = useState(false);
+
+  // Read ?ref= from URL on mount
+  useEffect(() => {
+    const refCode = searchParams.get("ref");
+    if (refCode) {
+      setReferralCode(refCode);
+      handleValidateReferral(refCode);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [govIdFile, setGovIdFile] = useState<File | null>(null);
   const [proofFile, setProofFile] = useState<File | null>(null);
   const govIdRef = useRef<HTMLInputElement>(null);
   const proofRef = useRef<HTMLInputElement>(null);
 
   const set = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }));
+
+  const handleValidateReferral = async (code: string) => {
+    if (!code.trim()) { setReferralInfo(null); return; }
+    setReferralValidating(true);
+    try {
+      const result = await referralApi.validateReferralCode(code);
+      setReferralInfo({ agentName: result.agentName, valid: result.valid });
+      setReferralType(result.referralType === 'CORPORATE' ? 'CORPORATE' : result.valid ? 'AGENT' : 'DIRECT');
+    } catch {
+      setReferralInfo(null);
+    } finally {
+      setReferralValidating(false);
+    }
+  };
+
+  const handleCorporateToggle = (checked: boolean) => {
+    setIsCorporate(checked);
+    if (checked) {
+      setReferralCode(CORPORATE_REFERRAL_CODE);
+      setReferralType('CORPORATE');
+      setReferralInfo({ valid: true });
+    } else {
+      setReferralCode("");
+      setReferralType('DIRECT');
+      setReferralInfo(null);
+    }
+  };
 
   // ── Step 1 validation ────────────────────────────────────────────────────────
   const step1Valid =
@@ -73,6 +120,8 @@ export default function CustomerSignupPage() {
         ...form,
         governmentIdUrl: govIdUrl,
         proofOfAddressUrl: proofUrl,
+        ...(referralCode && { referralCode }),
+        ...(referralType !== 'DIRECT' && { referralType }),
       });
 
       // Save auth state
@@ -341,6 +390,103 @@ export default function CustomerSignupPage() {
                   </div>
                 </div>
                 <InfoBox text="Use at least 8 characters with a mix of letters, numbers, and symbols" />
+
+                {/* ── Referral Section ── */}
+                <div className="mt-5 pt-5 border-t" style={{ borderColor: "#E1E3E6" }}>
+                  <p className="text-sm font-bold mb-3" style={{ color: "#012333" }}>
+                    Referral <span className="font-normal text-xs" style={{ color: "#9AA0A6" }}>(Optional)</span>
+                  </p>
+
+                  {/* Corporate Referral Toggle */}
+                  <label className="flex items-center gap-3 mb-4 cursor-pointer select-none">
+                    <div
+                      onClick={() => handleCorporateToggle(!isCorporate)}
+                      className="relative w-10 h-6 rounded-full transition-colors shrink-0"
+                      style={{ backgroundColor: isCorporate ? "#C9A227" : "#E1E3E6" }}
+                    >
+                      <div
+                        className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform"
+                        style={{ left: isCorporate ? "18px" : "2px" }}
+                      />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: "#012333" }}>
+                        This is a Corporate Referral
+                      </p>
+                      <p className="text-xs" style={{ color: "#9AA0A6" }}>
+                        Select if you were referred by PapaEgo directly (not through an agent)
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* Referral code input — hidden when corporate selected */}
+                  {!isCorporate && (
+                    <div>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1 border rounded-lg px-3 pt-4 pb-2" style={{ borderColor: "#E1E3E6" }}>
+                          <label className="absolute top-1.5 left-3 text-xs" style={{ color: "#9AA0A6" }}>
+                            Agent Referral Code
+                          </label>
+                          <input
+                            type="text"
+                            value={referralCode}
+                            onChange={(e) => {
+                              setReferralCode(e.target.value);
+                              setReferralInfo(null);
+                            }}
+                            placeholder="e.g. AGENT-ABC123"
+                            className="w-full text-sm bg-transparent outline-none mt-1"
+                            style={{ color: "#012333" }}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleValidateReferral(referralCode)}
+                          disabled={!referralCode.trim() || referralValidating}
+                          className="px-4 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-40"
+                          style={{ backgroundColor: "#012333", color: "#C9A227" }}
+                        >
+                          {referralValidating ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : "Verify"}
+                        </button>
+                      </div>
+
+                      {/* Validation feedback */}
+                      {referralInfo && (
+                        <div
+                          className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium"
+                          style={{
+                            backgroundColor: referralInfo.valid ? "#E2FDED" : "#FEE2E2",
+                            color: referralInfo.valid ? "#27AE60" : "#EB5757",
+                          }}
+                        >
+                          {referralInfo.valid ? (
+                            <CheckCircle className="w-4 h-4 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                          )}
+                          {referralInfo.valid
+                            ? referralInfo.agentName
+                              ? `Referred by: ${referralInfo.agentName}`
+                              : "Valid referral code"
+                            : "Invalid referral code — please check and try again"}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Corporate badge */}
+                  {isCorporate && (
+                    <div
+                      className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold"
+                      style={{ backgroundColor: "#EFF6FF", color: "#1D4ED8", border: "1px solid #BFDBFE" }}
+                    >
+                      <Building className="w-4 h-4 shrink-0" />
+                      Corporate referral applied — this account will be linked to PapaEgo
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -548,5 +694,17 @@ function InfoBox({ text }: { text: string }) {
       </div>
       <p className="text-sm" style={{ color: "#1E40AF" }}>{text}</p>
     </div>
+  );
+}
+
+export default function CustomerSignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F7F8F9' }}>
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#C9A227' }} />
+      </div>
+    }>
+      <CustomerSignupPageInner />
+    </Suspense>
   );
 }

@@ -122,4 +122,10 @@ export const adminTradeRequestsApi = {
         const response = await api.delete(`/admin/trade-requests/${id}`);
         return response.data;
     },
+
+    /** Admin sets the FX rate for a trade request (rate-fixing moved from agents to admin) */
+    setRate: async (id: string, fxRate: string, payoutAmount: string): Promise<AdminTradeRequest> => {
+        const response = await api.patch(`/admin/trade-requests/${id}/set-rate`, { fxRate, payoutAmount });
+        return response.data;
+    },
 };

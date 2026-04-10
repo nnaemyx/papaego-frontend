@@ -42,6 +42,31 @@ interface CustomersTableProps {
     onSendMessage?: (id: string, payload: { subject: string; message: string }) => void;
 }
 
+function ReferralBadge({ referralType, agentName }: { referralType?: string | null; agentName?: string | null }) {
+    if (referralType === 'CORPORATE') {
+        return (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE' }}>
+                🏢 Corporate
+            </span>
+        );
+    }
+    if (referralType === 'AGENT' && agentName) {
+        return (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                style={{ backgroundColor: '#FBF4DC', color: '#92400E', border: '1px solid #FDE68A' }}>
+                👤 {agentName}
+            </span>
+        );
+    }
+    return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
+            style={{ backgroundColor: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB' }}>
+            Direct
+        </span>
+    );
+}
+
 function getVerificationColor(status: string) {
     switch (status) {
         case "Verified":
@@ -149,6 +174,7 @@ export function CustomersTable({
                         <TableHead className="text-xs font-medium">Total Trades</TableHead>
                         <TableHead className="text-xs font-medium">Last Trade</TableHead>
                         <TableHead className="text-xs font-medium">Verification</TableHead>
+                        <TableHead className="text-xs font-medium">Referred By</TableHead>
                         <TableHead className="text-xs font-medium">Action</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -186,6 +212,12 @@ export function CustomersTable({
                                 >
                                     {customer.verificationStatus}
                                 </Badge>
+                            </TableCell>
+                            <TableCell>
+                                <ReferralBadge
+                                    referralType={customer.referralType}
+                                    agentName={customer.referredByAgent}
+                                />
                             </TableCell>
                             <TableCell>
                                 <DropdownMenu>

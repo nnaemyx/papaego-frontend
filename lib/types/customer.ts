@@ -11,6 +11,10 @@ export interface Customer {
   customerType?: 'Individual' | 'Business';
   companyName?: string | null;
   companySector?: string | null;
+  /** How the customer was onboarded */
+  referralType?: 'AGENT' | 'CORPORATE' | 'DIRECT';
+  /** Name of the agent who referred this customer (if referralType === 'AGENT') */
+  referredByAgent?: string | null;
   governmentIdUrl?: string | null;
   proofOfAddressUrl?: string | null;
   dateJoined: string; // ISO date string
