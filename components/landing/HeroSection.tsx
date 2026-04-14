@@ -5,11 +5,10 @@ import { motion } from 'framer-motion';
 import { RotatingGlobe } from '@/components/animations/RotatingGlobe';
 
 interface HeroSectionProps {
-  onJoinWaitlist: () => void;
   onContactUs: () => void;
 }
 
-export function HeroSection({ onJoinWaitlist, onContactUs }: HeroSectionProps) {
+export function HeroSection({ onContactUs }: HeroSectionProps) {
   return (
     <section
       className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden"
@@ -65,7 +64,7 @@ export function HeroSection({ onJoinWaitlist, onContactUs }: HeroSectionProps) {
                 </p>
 
                 <p className="landing-body" style={{ color: 'var(--text-gray)' }}>
-                  The platform is currently under development. We&apos;re working closely with banks, regulators, and payment partners to shape what comes next.
+                  Start transacting globally with secure, automated, and robust financial solutions.
                 </p>
               </motion.div>
             </div>
@@ -77,7 +76,7 @@ export function HeroSection({ onJoinWaitlist, onContactUs }: HeroSectionProps) {
               transition={{ delay: 0.7 }}
             >
               <Button
-                onClick={onJoinWaitlist}
+                onClick={() => window.location.href = '/customer-auth/signup'}
                 className="landing-button px-8 h-[52px] rounded-lg transition-transform hover:scale-105 w-full sm:w-auto"
                 style={{
                   backgroundColor: 'var(--primary-gold)',
@@ -86,7 +85,7 @@ export function HeroSection({ onJoinWaitlist, onContactUs }: HeroSectionProps) {
                   fontWeight: 600,
                 }}
               >
-                Join the Waitlist
+                Create Account
               </Button>
 
               <Button

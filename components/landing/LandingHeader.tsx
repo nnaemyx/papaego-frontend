@@ -8,11 +8,10 @@ import { Menu } from 'lucide-react';
 import { MobileNav } from './MobileNav';
 
 interface LandingHeaderProps {
-  onJoinWaitlist: () => void;
   onContactUs: () => void;
 }
 
-export function LandingHeader({ onJoinWaitlist, onContactUs }: LandingHeaderProps) {
+export function LandingHeader({ onContactUs }: LandingHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -63,7 +62,7 @@ export function LandingHeader({ onJoinWaitlist, onContactUs }: LandingHeaderProp
               </Button>
 
               <Button
-                onClick={onJoinWaitlist}
+                onClick={() => window.location.href = '/customer-auth/login'}
                 variant="outline"
                 className="landing-button px-6 h-[44px] rounded-lg transition-transform hover:scale-105"
                 style={{
@@ -73,7 +72,7 @@ export function LandingHeader({ onJoinWaitlist, onContactUs }: LandingHeaderProp
                   fontWeight: 600,
                 }}
               >
-                Join Waitlist
+                Login
               </Button>
             </div>
 
@@ -93,7 +92,6 @@ export function LandingHeader({ onJoinWaitlist, onContactUs }: LandingHeaderProp
       <MobileNav
         open={mobileNavOpen}
         onOpenChange={setMobileNavOpen}
-        onJoinWaitlist={onJoinWaitlist}
         onContactUs={onContactUs}
       />
     </>

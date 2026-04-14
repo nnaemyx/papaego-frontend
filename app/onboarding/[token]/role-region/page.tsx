@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useOnboarding } from "@/components/onboarding/OnboardingContext";
 import { onboardingApi } from "@/lib/api/onboarding";
 import { useMutation } from "@tanstack/react-query";
+import { LEGAL_LINKS } from "@/lib/constants/legal";
 
 export default function RoleRegionPage({
   params,
@@ -18,6 +19,7 @@ export default function RoleRegionPage({
   const router = useRouter();
   const { formData } = useOnboarding();
   const [confirmed, setConfirmed] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
   // Mock data - would come from invitation
@@ -156,19 +158,49 @@ export default function RoleRegionPage({
           </div>
         )}
 
-        <div className="flex items-center gap-2 mb-8">
-          <Checkbox
-            id="confirm"
-            checked={confirmed}
-            onCheckedChange={(checked) => setConfirmed(checked as boolean)}
-          />
-          <label
-            htmlFor="confirm"
-            className="text-sm cursor-pointer"
-            style={{ color: "#2b2f33" }}
-          >
-            I confirm that this information is correct
-          </label>
+        <div className="space-y-4 mb-8">
+          <div className="flex items-start gap-2">
+            <Checkbox
+              id="confirm"
+              checked={confirmed}
+              onCheckedChange={(checked) => setConfirmed(checked as boolean)}
+              className="mt-1"
+            />
+            <label
+              htmlFor="confirm"
+              className="text-sm cursor-pointer leading-tight"
+              style={{ color: "#2b2f33" }}
+            >
+              I confirm that this information is correct
+            </label>
+          </div>
+          
+          <div className="flex items-start gap-2 p-4 rounded-xl border bg-gray-50/50" style={{ borderColor: "#E1E3E6" }}>
+            <Checkbox 
+              id="agent-terms" 
+              checked={agreedToTerms} 
+              onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+              className="mt-1"
+            />
+            <label htmlFor="agent-terms" className="text-sm cursor-pointer" style={{ color: "#2B2F33" }}>
+              I have read and agree to the{" "}
+              <a href={LEGAL_LINKS.AGENT_AGREEMENT} target="_blank" rel="noopener noreferrer" className="font-semibold underline hover:text-[#C9A227]">
+                Agent Agreement
+              </a>
+              ,{" "}
+              <a href={LEGAL_LINKS.AGENT_PPM} target="_blank" rel="noopener noreferrer" className="font-semibold underline hover:text-[#C9A227]">
+                Agent Policy & Procedures Manual
+              </a>
+              ,{" "}
+              <a href={LEGAL_LINKS.TERMS_AND_CONDITIONS} target="_blank" rel="noopener noreferrer" className="font-semibold underline hover:text-[#C9A227]">
+                Terms and Conditions
+              </a>
+              , and{" "}
+              <a href={LEGAL_LINKS.PRIVACY_POLICY} target="_blank" rel="noopener noreferrer" className="font-semibold underline hover:text-[#C9A227]">
+                Privacy Policy
+              </a>.
+            </label>
+          </div>
         </div>
 
         <div className="flex justify-between">
@@ -186,7 +218,7 @@ export default function RoleRegionPage({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!confirmed || submitMutation.isPending}
+            disabled={!confirmed || !agreedToTerms || submitMutation.isPending}
             style={{
               backgroundColor: "#c9a227",
               color: "#ffffff",

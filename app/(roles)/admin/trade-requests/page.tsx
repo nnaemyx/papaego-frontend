@@ -6,7 +6,6 @@ import {
     adminTradeRequestsApi,
     type AdminTradeRequest,
 } from "@/lib/api/admin-trade-requests";
-import { agentsApi } from "@/lib/api/agents";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,12 +37,12 @@ import { toast } from "sonner";
 import { formatCurrency, formatExchangeRate } from "@/lib/formatters";
 import Link from "next/link";
 
-const STATUS_TABS = ["ALL", "PENDING", "ASSIGNED", "PROCESSED", "REJECTED"] as const;
+const STATUS_TABS = ["ALL", "PENDING", "QUOTED", "PROCESSED", "REJECTED"] as const;
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; border: string }> = {
     PENDING:   { bg: "#FFF8E1", text: "#F59E0B", border: "#FDE68A" },
     POOL:      { bg: "#FFF8E1", text: "#F59E0B", border: "#FDE68A" },
-    ASSIGNED:  { bg: "#EFF6FF", text: "#3B82F6", border: "#BFDBFE" },
+    QUOTED:    { bg: "#EDE9FE", text: "#8B5CF6", border: "#DDD6FE" },
     PROCESSED: { bg: "#E2FDED", text: "#27AE60", border: "#A7F3D0" },
     REJECTED:  { bg: "#FFE5E5", text: "#E05555", border: "#FECACA" },
     ALL:       { bg: "#F7F8F9", text: "#6B7078", border: "#E1E3E6" },
@@ -53,8 +52,6 @@ export default function AdminTradeRequestsPage() {
     const queryClient = useQueryClient();
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
     const [page, setPage] = useState<number>(1);
-    const [assigningId, setAssigningId] = useState<string | null>(null);
-    const [selectedAgentId, setSelectedAgentId] = useState<string>("");
 
     const { data, isLoading, error } = useQuery({
         queryKey: ["admin-trade-requests", statusFilter, page],
@@ -66,12 +63,6 @@ export default function AdminTradeRequestsPage() {
     const requests = data?.requests || [];
     const totalPages = data ? Math.ceil(data.total / data.limit) : 1;
 
-    const { data: agents = [] } = useQuery({
-        queryKey: ["agents"],
-        queryFn: () => agentsApi.getAgents(),
-        staleTime: 60_000,
-    });
-
     const rejectMutation = useMutation({
         mutationFn: (id: string) => adminTradeRequestsApi.rejectRequest(id),
         onSuccess: () => {
@@ -79,18 +70,6 @@ export default function AdminTradeRequestsPage() {
             toast.success("Trade request rejected");
         },
         onError: () => toast.error("Failed to reject request"),
-    });
-
-    const assignMutation = useMutation({
-        mutationFn: ({ id, agentId }: { id: string; agentId: string }) =>
-            adminTradeRequestsApi.assignAgent(id, agentId),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["admin-trade-requests"] });
-            toast.success("Agent assigned successfully");
-            setAssigningId(null);
-            setSelectedAgentId("");
-        },
-        onError: () => toast.error("Failed to assign agent"),
     });
 
     const processMutation = useMutation({
@@ -120,19 +99,6 @@ export default function AdminTradeRequestsPage() {
     const handleDelete = (id: string) => {
         if (confirm("Are you sure you want to completely delete this trade request? This action cannot be undone.")) {
             deleteMutation.mutate(id);
-        }
-    };
-
-    const handleAssign = (req: AdminTradeRequest) => {
-        if (assigningId === req.id) {
-            if (!selectedAgentId) {
-                toast.error("Please select an agent first");
-                return;
-            }
-            assignMutation.mutate({ id: req.id, agentId: selectedAgentId });
-        } else {
-            setAssigningId(req.id);
-            setSelectedAgentId(agents[0]?.id || "");
         }
     };
 
@@ -208,7 +174,6 @@ export default function AdminTradeRequestsPage() {
                     {requests.map((req) => {
                         const style =
                             STATUS_STYLE[req.status] || STATUS_STYLE.PENDING;
-                        const isAssigning = assigningId === req.id;
 
                         return (
                             <Card
@@ -394,99 +359,29 @@ export default function AdminTradeRequestsPage() {
                                             </div>
                                         )}
 
-                                    {/* Assigned Agent */}
-                                    {req.assignedAgent && (
-                                        <div className="flex items-center gap-2 text-xs" style={{ color: "#3B82F6" }}>
-                                            <UserCheck className="w-4 h-4" />
-                                            <span className="font-semibold">
-                                                Assigned: {req.assignedAgent.firstName}{" "}
-                                                {req.assignedAgent.lastName}
-                                            </span>
-                                        </div>
-                                    )}
-
                                     {/* Rate Set Indicator */}
-                                    {req.status === "ASSIGNED" && (
-                                        req.linkedTradeFxRate ? (
-                                            <div
-                                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold"
-                                                style={{ backgroundColor: "#E2FDED", color: "#27AE60" }}
-                                            >
-                                                <TrendingUp className="w-3.5 h-3.5" />
-                                                Rate Set: {formatExchangeRate(req.linkedTradeFxRate || 0, req.sendCurrency, req.receiveCurrency)} — Ready to process
-                                            </div>
-                                        ) : (
-                                            <div
-                                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold"
-                                                style={{ backgroundColor: "#FFF8E1", color: "#92400E" }}
-                                            >
-                                                <Clock className="w-3.5 h-3.5" />
-                                                Waiting for agent to set exchange rate…
-                                            </div>
-                                        )
-                                    )}
-
-                                    {/* Agent Assignment Dropdown (when assigning) */}
-                                    {isAssigning && (
-                                        <Select
-                                            value={selectedAgentId}
-                                            onValueChange={setSelectedAgentId}
+                                    {req.status === "QUOTED" && (
+                                        <div
+                                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold"
+                                            style={{ backgroundColor: "#E2FDED", color: "#27AE60" }}
                                         >
-                                            <SelectTrigger className="h-10 text-sm">
-                                                <SelectValue placeholder="Select agent…" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {(agents as any[]).map((a: any) => (
-                                                    <SelectItem key={a.id} value={a.id}>
-                                                        {a.name || a.email}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                            <TrendingUp className="w-3.5 h-3.5" />
+                                            Rate Set: {formatExchangeRate(req.fxRate || 0, req.sendCurrency, req.receiveCurrency)} — Ready to process
+                                        </div>
                                     )}
 
                                     {/* Actions */}
-                                    {req.status === "PENDING" && (
+                                    {(req.status === "PENDING" || req.status === "POOL" || req.status === "QUOTED") && (
                                         <div className="flex gap-3 pt-1">
-                                            <Button
-                                                onClick={() => handleAssign(req)}
-                                                disabled={assignMutation.isPending}
-                                                className="flex-1 h-10 rounded-xl font-bold text-white"
-                                                style={{ backgroundColor: "#012333" }}
-                                            >
-                                                <UserCheck className="w-4 h-4 mr-2" />
-                                                {isAssigning ? "Confirm Assign" : "Assign Agent"}
-                                            </Button>
-                                            <Button
-                                                onClick={() => processMutation.mutate(req.id)}
-                                                disabled={processMutation.isPending}
-                                                className="flex-1 h-10 rounded-xl font-bold text-white"
-                                                style={{ backgroundColor: "#C9A227" }}
-                                            >
-                                                <CheckCircle className="w-4 h-4 mr-2" />
-                                                Process
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                onClick={() => handleReject(req.id)}
-                                                className="w-10 h-10 rounded-xl border-red-100 text-red-500 hover:bg-red-50 p-0"
-                                            >
-                                                <XCircle className="w-5 h-5" />
-                                            </Button>
-                                        </div>
-                                    )}
-
-                                    {req.status === "ASSIGNED" && (
-                                        <div className="flex gap-3 pt-1">
-                                            <Button
-                                                onClick={() => processMutation.mutate(req.id)}
-                                                disabled={processMutation.isPending}
-                                                className="flex-1 h-10 rounded-xl font-bold text-white"
-                                                style={{ backgroundColor: "#C9A227" }}
-                                            >
-                                                <CheckCircle className="w-4 h-4 mr-2" />
-                                                Process Trade
-                                            </Button>
+                                            <Link href={`/admin/trade-requests/${req.id}`} className="flex-1">
+                                                <Button
+                                                    className="w-full h-10 rounded-xl font-bold text-white"
+                                                    style={{ backgroundColor: "#012333" }}
+                                                >
+                                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                                    View &amp; Process
+                                                </Button>
+                                            </Link>
                                             <Button
                                                 variant="outline"
                                                 onClick={() => handleReject(req.id)}

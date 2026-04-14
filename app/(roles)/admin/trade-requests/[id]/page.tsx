@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     adminTradeRequestsApi,
 } from "@/lib/api/admin-trade-requests";
-import { agentsApi } from "@/lib/api/agents";
+import { adminRatesApi } from "@/lib/api/fx-rates";
 import { transactionsApi } from "@/lib/api/transactions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,6 @@ import {
     Building2,
     Hash,
     MapPin,
-    UserCheck,
     CheckCircle,
     XCircle,
     Loader2,
@@ -46,7 +45,6 @@ import Link from "next/link";
 const STATUS_STYLE: Record<string, { bg: string; text: string; border: string; label: string }> = {
     PENDING: { bg: "#FFF8E1", text: "#F59E0B", border: "#FDE68A", label: "Pending" },
     POOL: { bg: "#FFF8E1", text: "#F59E0B", border: "#FDE68A", label: "In Pool" },
-    ASSIGNED: { bg: "#EFF6FF", text: "#3B82F6", border: "#BFDBFE", label: "Agent Assigned" },
     QUOTED: { bg: "#EDE9FE", text: "#8B5CF6", border: "#DDD6FE", label: "Rate Quoted" },
     PROCESSED: { bg: "#E2FDED", text: "#27AE60", border: "#A7F3D0", label: "Processed" },
     REJECTED: { bg: "#FFE5E5", text: "#E05555", border: "#FECACA", label: "Rejected" },
@@ -73,7 +71,6 @@ export default function AdminTradeRequestDetailPage({
     const router = useRouter();
     const queryClient = useQueryClient();
     const receiptInputRef = useRef<HTMLInputElement>(null);
-    const [selectedAgentId, setSelectedAgentId] = useState<string>("");
     const [uploadingReceipt, setUploadingReceipt] = useState(false);
     const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
@@ -93,22 +90,30 @@ export default function AdminTradeRequestDetailPage({
         refetchInterval: 10_000,
     });
 
-    const { data: agents = [] } = useQuery({
-        queryKey: ["agents"],
-        queryFn: () => agentsApi.getAgents(),
-        staleTime: 60_000,
+    const { data: adminRates = [] } = useQuery({
+        queryKey: ["admin-rates"],
+        queryFn: () => adminRatesApi.getRates(),
     });
 
-    const assignMutation = useMutation({
-        mutationFn: (agentId: string) =>
-            adminTradeRequestsApi.assignAgent(id, agentId),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["admin-trade-request", id] });
-            queryClient.invalidateQueries({ queryKey: ["admin-trade-requests"] });
-            toast.success("Agent assigned — they will be notified to set the rate");
-        },
-        onError: () => toast.error("Failed to assign agent"),
-    });
+    // Auto-prefill the fx rate if it hasn't been set by admin yet
+    if (request && !request.fxRate && !adminFxRate && adminRates.length > 0) {
+        const pairName = request.sendCurrency === 'NGN' 
+            ? `${request.receiveCurrency}/NGN` 
+            : `${request.sendCurrency}/NGN`;
+        const matchingRate = adminRates.find(r => r.pair === pairName);
+        if (matchingRate) {
+            // For sending NGN to foreign currency, we use sell rate; else buy rate (or default rate if custom logic needed)
+            const defaultRate = request.sendCurrency === 'NGN' ? matchingRate.sell : matchingRate.buy;
+            setAdminFxRate(String(defaultRate));
+            
+            // Auto fill payout amount as well
+            const a = parseFloat(String(request.amount));
+            const r = defaultRate;
+            if (!isNaN(r) && !isNaN(a) && r > 0) {
+                setAdminPayoutAmount(request.sendCurrency === 'NGN' ? (a / r).toFixed(2) : (a * r).toFixed(2));
+            }
+        }
+    }
 
     const processMutation = useMutation({
         mutationFn: () => adminTradeRequestsApi.processRequest(id, {
@@ -154,14 +159,6 @@ export default function AdminTradeRequestDetailPage({
         }
     };
 
-    const handleAssign = () => {
-        if (!selectedAgentId) {
-            toast.error("Please select an agent");
-            return;
-        }
-        assignMutation.mutate(selectedAgentId);
-    };
-
     const handleReceiptUpload = async (file: File) => {
         if (!request?.linkedTrade?.id) {
             toast.error("No linked trade found");
@@ -205,8 +202,8 @@ export default function AdminTradeRequestDetailPage({
         : null;
     const hasSupplier =
         request.supplierDetails?.businessName || request.supplierDetails?.bankName;
-    const isActionable = ["PENDING", "POOL", "ASSIGNED", "QUOTED"].includes(request.status);
-    const agentSetRate =
+    const isActionable = ["PENDING", "POOL", "QUOTED"].includes(request.status);
+    const rateSet =
         request.fxRate && parseFloat(request.fxRate) > 0;
 
     return (
@@ -398,14 +395,14 @@ export default function AdminTradeRequestDetailPage({
                                 </Badge>
                             </div>
 
-                             {/* Agent rate info moved here or shown if exists on request */}
-                             {agentSetRate ? (
+                             {/* Rate info */}
+                             {rateSet ? (
                                 <div
                                     className="p-4 rounded-xl mb-4"
                                     style={{ backgroundColor: "#E2FDED", border: "1px solid #A7F3D0" }}
                                 >
                                     <p className="text-sm font-bold mb-1" style={{ color: "#27AE60" }}>
-                                        ✅ Agent has set the exchange rate
+                                        ✅ Exchange rate is set
                                     </p>
                                     <p className="text-xl font-black" style={{ color: "#27AE60" }}>
                                         {formatExchangeRate(request.fxRate || 0, request.sendCurrency, request.receiveCurrency)}
@@ -415,21 +412,6 @@ export default function AdminTradeRequestDetailPage({
                                             Estimated Payout: {Number(request.payoutAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {request.receiveCurrency}
                                         </p>
                                     )}
-                                </div>
-                            ) : request.assignedAgent ? (
-                                <div
-                                    className="p-4 rounded-xl mb-4"
-                                    style={{ backgroundColor: "#FFF8E1", border: "1px solid #FDE68A" }}
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <Clock className="w-4 h-4" style={{ color: "#F59E0B" }} />
-                                        <p className="text-sm font-semibold" style={{ color: "#92400E" }}>
-                                            Waiting for agent to set the exchange rate…
-                                        </p>
-                                    </div>
-                                    <p className="text-xs mt-1" style={{ color: "#B45309" }}>
-                                        Assigned to: {request.assignedAgent.firstName} {request.assignedAgent.lastName}
-                                    </p>
                                 </div>
                             ) : null}
 
@@ -600,7 +582,7 @@ export default function AdminTradeRequestDetailPage({
                         ) : settingRate || !(request.fxRate && parseFloat(request.fxRate) > 0) ? (
                             <div className="space-y-3">
                                 <p className="text-xs" style={{ color: "#9AA0A6" }}>
-                                    Set the exchange rate for this trade. The agent will be notified.
+                                    Set the exchange rate for this trade. The customer will be emailed their rate immediately.
                                 </p>
                                 <div className="space-y-2">
                                     <div className="relative">
@@ -636,39 +618,10 @@ export default function AdminTradeRequestDetailPage({
                                     {setRateMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Calculator className="w-4 h-4 mr-2" />}
                                     Confirm Rate
                                 </Button>
-                                {/* Still allow agent assignment as optional step */}
-                                <div className="pt-2 border-t" style={{ borderColor: "#F0F0F0" }}>
-                                    <p className="text-xs mb-2" style={{ color: "#9AA0A6" }}>Or assign agent to handle:</p>
-                                    <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
-                                        <SelectTrigger className="h-9 text-sm">
-                                            <SelectValue placeholder="Assign agent (optional)…" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {(agents as any[]).map((a: any) => (
-                                                <SelectItem key={a.id} value={a.id}>
-                                                    {a.name || `${a.firstName || ""} ${a.lastName || ""}`.trim() || a.email}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {selectedAgentId && (
-                                        <Button onClick={handleAssign} disabled={assignMutation.isPending} size="sm" variant="outline" className="w-full mt-2 h-8 text-xs">
-                                            {assignMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <UserCheck className="w-3 h-3 mr-1" />}
-                                            Assign Agent
-                                        </Button>
-                                    )}
-                                </div>
                             </div>
                         ) : null}
 
-                        {request.assignedAgent && (
-                            <div className="flex items-center gap-2 p-2 rounded-lg mt-3" style={{ backgroundColor: "#F7F8F9" }}>
-                                <UserCheck className="w-4 h-4 shrink-0" style={{ color: "#3B82F6" }} />
-                                <p className="text-xs" style={{ color: "#3B82F6" }}>
-                                    {request.assignedAgent.firstName} {request.assignedAgent.lastName} assigned
-                                </p>
-                            </div>
-                        )}
+
                     </div>
 
                     {/* Step 2: Process Trade */}
@@ -702,14 +655,12 @@ export default function AdminTradeRequestDetailPage({
                         ) : (
                             <div className="space-y-4">
                                 <p className="text-xs" style={{ color: "#9AA0A6" }}>
-                                    {request.assignedAgent
-                                        ? agentSetRate
-                                            ? "Agent has provided a rate. Enter the payment details you want the customer to pay into."
-                                            : "Waiting for agent to set the rate. You can still process manually if needed."
-                                        : "Assign an agent first, or process directly if you have a rate ready."}
+                                    {rateSet
+                                        ? "Rate has been provided. Enter the payment details you want the customer to pay into."
+                                        : "Enter a rate above before processing."}
                                 </p>
                                 
-                                {agentSetRate && (
+                                {rateSet && (
                                     <div className="p-3 rounded-xl border border-green-200 bg-green-50 mb-3">
                                         <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider mb-1">Current Quoted Rate</p>
                                         <div className="flex items-baseline gap-2">

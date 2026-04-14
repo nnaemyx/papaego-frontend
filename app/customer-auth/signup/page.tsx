@@ -5,8 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Upload, CheckCircle, AlertCircle, ChevronDown, X, User, Link2, Building2, Loader2, Building } from "lucide-react";
 import { customerApi, NIGERIAN_SECTORS } from "@/lib/api/customer";
 import { referralApi, CORPORATE_REFERRAL_CODE } from "@/lib/api/referral";
+import { LEGAL_LINKS } from "@/lib/constants/legal";
 import { useAuthStore } from "@/store/auth-store";
 import Link from "next/link";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // ── Steps ──────────────────────────────────────────────────────────────────────
 const STEPS = [
@@ -29,6 +31,7 @@ function CustomerSignupPageInner() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // Form data
   const [form, setForm] = useState({
@@ -95,7 +98,7 @@ function CustomerSignupPageInner() {
     form.password.length >= 8 && form.password === form.confirmPassword;
 
   const step2Valid = form.gender && form.dateOfBirth && form.homeAddress && form.bvn;
-  const step3Valid = govIdFile && proofFile;
+  const step3Valid = govIdFile && proofFile && agreedToTerms;
 
   // ── Submit ────────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
@@ -547,6 +550,31 @@ function CustomerSignupPageInner() {
                     onChange={(f) => setProofFile(f)}
                   />
                 </div>
+                
+                {/* Terms and Conditions Checkbox */}
+                <div className="flex items-start gap-3 mt-6 p-4 rounded-xl border bg-gray-50/50" style={{ borderColor: "#E1E3E6" }}>
+                  <Checkbox 
+                    id="customer-terms" 
+                    checked={agreedToTerms} 
+                    onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+                    className="mt-1"
+                  />
+                  <label htmlFor="customer-terms" className="text-sm cursor-pointer" style={{ color: "#2B2F33" }}>
+                    I have read and agree to the{" "}
+                    <a href={LEGAL_LINKS.MERCHANT_AGREEMENT} target="_blank" rel="noopener noreferrer" className="font-semibold underline hover:text-[#C9A227]">
+                      Customer Service Agreement
+                    </a>
+                    ,{" "}
+                    <a href={LEGAL_LINKS.TERMS_AND_CONDITIONS} target="_blank" rel="noopener noreferrer" className="font-semibold underline hover:text-[#C9A227]">
+                      Terms and Conditions
+                    </a>
+                    , and{" "}
+                    <a href={LEGAL_LINKS.PRIVACY_POLICY} target="_blank" rel="noopener noreferrer" className="font-semibold underline hover:text-[#C9A227]">
+                      Privacy Policy
+                    </a>.
+                  </label>
+                </div>
+
                 <InfoBox text="Your documents are securely stored and reviewed by the compliance team" />
               </div>
             )}

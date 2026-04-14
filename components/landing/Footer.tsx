@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { LEGAL_LINKS } from '@/lib/constants/legal';
 
 interface FooterProps {
   onOpenWaitlist: () => void;
@@ -114,13 +115,17 @@ export function Footer({ onOpenWaitlist, onOpenContact }: FooterProps) {
           {/* Legal links */}
           <div className="flex items-center gap-6">
             <a
-              href="#"
+              href={LEGAL_LINKS.TERMS_AND_CONDITIONS}
+              target="_blank"
+              rel="noopener noreferrer"
               className="landing-button text-(--primary-gold) hover:underline text-sm"
             >
               Terms & Conditions
             </a>
             <a
-              href="#"
+              href={LEGAL_LINKS.PRIVACY_POLICY}
+              target="_blank"
+              rel="noopener noreferrer"
               className="landing-button text-(--primary-gold) hover:underline text-sm"
             >
               Privacy Policy

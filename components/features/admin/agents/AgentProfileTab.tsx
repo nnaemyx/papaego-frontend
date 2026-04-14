@@ -34,6 +34,9 @@ function VerificationBadge({ status }: { status: string }) {
 
 export function AgentProfileTab({ agent }: AgentProfileTabProps) {
     const profile = agent.agentProfile;
+    const regionParts = agent.region?.split(" - ");
+    const state = regionParts?.[0] || agent.region || "—";
+    const market = regionParts?.[1] || "—";
 
     return (
         <div className="space-y-6">
@@ -77,7 +80,8 @@ export function AgentProfileTab({ agent }: AgentProfileTabProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
                     {[
                         { label: "Assigned Role", value: agent.role },
-                        { label: "Region", value: agent.region },
+                        { label: "State", value: state },
+                        { label: "Market", value: market },
                         { label: "Date Joined", value: new Date(agent.createdAt).toLocaleDateString("en-GB") },
                         { label: "Agent ID", value: agent.agentId },
                     ].map((item) => (

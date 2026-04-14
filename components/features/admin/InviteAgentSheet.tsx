@@ -31,6 +31,7 @@ import { XIcon, Info } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { agentsApi } from "@/lib/api/agents";
 import type { InviteAgentFormData } from "@/lib/types/agent";
+import { NIGERIAN_MARKETS } from "@/lib/constants/nigerian-markets";
 
 interface InviteAgentSheetProps {
   open: boolean;
@@ -43,8 +44,11 @@ export function InviteAgentSheet({
   onOpenChange,
   onSuccess,
 }: InviteAgentSheetProps) {
-  const form = useForm<InviteAgentFormData>();
+  const form = useForm<InviteAgentFormData & { state: string; market: string }>();
   const [error, setError] = useState("");
+  const selectedState = form.watch("state");
+
+  const [availableMarkets, setAvailableMarkets] = useState<string[]>([]);
 
   const inviteMutation = useMutation({
     mutationFn: agentsApi.inviteAgent,
@@ -58,9 +62,17 @@ export function InviteAgentSheet({
     },
   });
 
-  const onSubmit = (data: InviteAgentFormData) => {
+  const onSubmit = (data: InviteAgentFormData & { state: string; market: string }) => {
     setError("");
-    inviteMutation.mutate(data);
+    const formattedData: InviteAgentFormData = {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      role: data.role,
+      region: `${data.state} - ${data.market}`,
+      notes: data.notes,
+    };
+    inviteMutation.mutate(formattedData);
   };
 
   return (
@@ -182,23 +194,57 @@ export function InviteAgentSheet({
 
             <FormField
               control={form.control}
-              name="region"
-              rules={{ required: "Region is required" }}
+              name="state"
+              rules={{ required: "State is required" }}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-500">Select Region</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <FormLabel className="text-gray-500">Select State</FormLabel>
+                  <Select 
+                    onValueChange={(val) => {
+                        field.onChange(val);
+                        const stateObj = NIGERIAN_MARKETS.find(m => m.state === val);
+                        setAvailableMarkets(stateObj ? stateObj.markets : []);
+                        form.setValue("market", "");
+                    }} 
+                    value={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger className="border-gray-300">
-                        <SelectValue placeholder="Select region" />
+                        <SelectValue placeholder="Select state in Nigeria" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Nigeria">Nigeria</SelectItem>
-                      <SelectItem value="Ghana">Ghana</SelectItem>
-                      <SelectItem value="Kenya">Kenya</SelectItem>
-                      <SelectItem value="UK">UK</SelectItem>
-                      <SelectItem value="USA">USA</SelectItem>
+                      {NIGERIAN_MARKETS.map((m) => (
+                          <SelectItem key={m.state} value={m.state}>{m.state}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="market"
+              rules={{ required: "Market is required" }}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-gray-500">Select Market</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value}
+                    disabled={!selectedState}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="border-gray-300">
+                        <SelectValue placeholder={selectedState ? "Select market" : "Select state first"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {availableMarkets.map((market) => (
+                          <SelectItem key={market} value={market}>{market}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

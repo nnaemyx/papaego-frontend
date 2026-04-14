@@ -8,25 +8,19 @@ import {
   SheetTitle,
   SheetFooter,
 } from '@/components/ui/sheet';
+import { LEGAL_LINKS } from '@/lib/constants/legal';
 
 interface MobileNavProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onJoinWaitlist: () => void;
   onContactUs: () => void;
 }
 
 export function MobileNav({
   open,
   onOpenChange,
-  onJoinWaitlist,
   onContactUs,
 }: MobileNavProps) {
-  const handleJoinWaitlist = () => {
-    onOpenChange(false);
-    onJoinWaitlist();
-  };
-
   const handleContactUs = () => {
     onOpenChange(false);
     onContactUs();
@@ -64,7 +58,10 @@ export function MobileNav({
           </Button>
 
           <Button
-            onClick={handleJoinWaitlist}
+            onClick={() => {
+              onOpenChange(false);
+              window.location.href = '/customer-auth/login';
+            }}
             variant="outline"
             className="landing-button px-6 h-[52px] rounded-lg transition-transform hover:scale-105 w-full"
             style={{
@@ -74,37 +71,35 @@ export function MobileNav({
               fontWeight: 600,
             }}
           >
-            Join Waitlist
+            Login
           </Button>
         </div>
 
         <SheetFooter className="flex flex-col gap-4">
           <div className="flex flex-col gap-2 text-sm">
             <a
-              href="#"
+              href={LEGAL_LINKS.TERMS_AND_CONDITIONS}
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-center py-2 hover:underline"
               style={{
                 color: 'var(--primary-gold)',
                 fontFamily: 'var(--font-bricolage-grotesque)',
               }}
-              onClick={(e) => {
-                e.preventDefault();
-                onOpenChange(false);
-              }}
+              onClick={() => onOpenChange(false)}
             >
               Terms & Conditions
             </a>
             <a
-              href="#"
+              href={LEGAL_LINKS.PRIVACY_POLICY}
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-center py-2 hover:underline"
               style={{
                 color: 'var(--primary-gold)',
                 fontFamily: 'var(--font-bricolage-grotesque)',
               }}
-              onClick={(e) => {
-                e.preventDefault();
-                onOpenChange(false);
-              }}
+              onClick={() => onOpenChange(false)}
             >
               Privacy Policy
             </a>

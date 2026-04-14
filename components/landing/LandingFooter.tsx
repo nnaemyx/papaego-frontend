@@ -8,13 +8,13 @@ import LinkedInIcon from './icons/linkedin.svg';
 import FacebookIcon from './icons/facebook.svg';
 import InstagramIcon from './icons/instagram.svg';
 import TwitterIcon from './icons/twitter.svg';
+import { LEGAL_LINKS } from '@/lib/constants/legal';
 
 interface LandingFooterProps {
-  onJoinWaitlist: () => void;
   onContactUs: () => void;
 }
 
-export function LandingFooter({ onJoinWaitlist, onContactUs }: LandingFooterProps) {
+export function LandingFooter({ onContactUs }: LandingFooterProps) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
 
@@ -61,7 +61,7 @@ export function LandingFooter({ onJoinWaitlist, onContactUs }: LandingFooterProp
           {/* Navigation Links */}
           <div className="flex items-center gap-4 lg:gap-8">
             <button
-              onClick={onJoinWaitlist}
+              onClick={() => window.location.href = '/customer-auth/login'}
               className="landing-button transition-colors hover:opacity-80"
               style={{
                 color: 'var(--primary-gold)',
@@ -69,7 +69,7 @@ export function LandingFooter({ onJoinWaitlist, onContactUs }: LandingFooterProp
                 fontWeight: 600,
               }}
             >
-              Join Waitlist
+              Login
             </button>
             
             <div 
@@ -122,14 +122,16 @@ export function LandingFooter({ onJoinWaitlist, onContactUs }: LandingFooterProp
             
             <div className="flex items-center gap-4 sm:gap-6">
               <a
-                href="#"
+                href={LEGAL_LINKS.TERMS_AND_CONDITIONS}
+                target="_blank" rel="noopener noreferrer"
                 className="landing-body text-xs sm:text-sm transition-colors hover:opacity-80"
                 style={{ color: 'var(--primary-gold)' }}
               >
                 Terms & Conditions
               </a>
               <a
-                href="#"
+                href={LEGAL_LINKS.PRIVACY_POLICY}
+                target="_blank" rel="noopener noreferrer"
                 className="landing-body text-xs sm:text-sm transition-colors hover:opacity-80"
                 style={{ color: 'var(--primary-gold)' }}
               >
