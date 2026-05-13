@@ -11,6 +11,14 @@ interface LandingHeaderProps {
   onContactUs: () => void;
 }
 
+// href: null means it opens the contact sheet
+const navLinks = [
+  { label: 'About Us', href: '#currencies' },
+  { label: 'Features', href: '#features' },
+  { label: 'Pricing', href: null },
+  { label: 'FAQ', href: '#faq' },
+];
+
 export function LandingHeader({ onContactUs }: LandingHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -19,10 +27,18 @@ export function LandingHeader({ onContactUs }: LandingHeaderProps) {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
     };
-
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleNavClick = (href: string | null) => {
+    if (!href) {
+      onContactUs();
+      return;
+    }
+    const el = document.querySelector(href);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
     <>
@@ -36,6 +52,7 @@ export function LandingHeader({ onContactUs }: LandingHeaderProps) {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-[80px] lg:h-[100px]">
+            {/* Logo */}
             <div className="flex items-center">
               <Image
                 src="/images/logo.png"
@@ -46,10 +63,37 @@ export function LandingHeader({ onContactUs }: LandingHeaderProps) {
               />
             </div>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-6 lg:gap-8">
+            {/* Desktop Nav Links */}
+            <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
+              {navLinks.map((link) => (
+                <button
+                  key={link.label}
+                  onClick={() => handleNavClick(link.href ?? null)}
+                  className="text-sm font-semibold transition-colors hover:opacity-60"
+                  style={{
+                    color: 'var(--text-gray)',
+                    fontFamily: 'var(--font-bricolage-grotesque)',
+                  }}
+                >
+                  {link.label}
+                </button>
+              ))}
+              <button
+                onClick={onContactUs}
+                className="text-sm font-semibold transition-colors hover:opacity-60"
+                style={{
+                  color: 'var(--text-gray)',
+                  fontFamily: 'var(--font-bricolage-grotesque)',
+                }}
+              >
+                Contact
+              </button>
+            </nav>
+
+            {/* Desktop Auth Buttons */}
+            <div className="hidden md:flex items-center gap-4">
               <Button
-                onClick={() => window.location.href = '/customer-auth/signup'}
+                onClick={() => (window.location.href = '/customer-auth/signup')}
                 className="landing-button px-6 h-[44px] rounded-lg transition-transform hover:scale-105"
                 style={{
                   backgroundColor: 'var(--primary-gold)',
@@ -58,11 +102,11 @@ export function LandingHeader({ onContactUs }: LandingHeaderProps) {
                   fontWeight: 600,
                 }}
               >
-                Sign Up
+                Create Account
               </Button>
 
               <Button
-                onClick={() => window.location.href = '/customer-auth/login'}
+                onClick={() => (window.location.href = '/customer-auth/login')}
                 variant="outline"
                 className="landing-button px-6 h-[44px] rounded-lg transition-transform hover:scale-105"
                 style={{
@@ -79,7 +123,7 @@ export function LandingHeader({ onContactUs }: LandingHeaderProps) {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileNavOpen(true)}
-              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
               aria-label="Open menu"
             >
               <Menu className="w-6 h-6" style={{ color: 'var(--primary-gold)' }} />

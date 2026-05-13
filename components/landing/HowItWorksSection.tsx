@@ -6,28 +6,32 @@ const steps = [
   {
     number: '01',
     title: 'Create an Account',
-    description: 'Sign up in minutes. Verify your identity with our streamlined onboarding process to unlock unrestricted trading.',
+    description:
+      'Sign up in minutes. Verify your identity with our streamlined onboarding process to unlock unrestricted trading.',
   },
   {
     number: '02',
     title: 'Initiate a Trade',
-    description: 'Select your currencies, enter the amount you wish to transfer, and instantly receive a competitive exchange rate quote.',
+    description:
+      'Select your currencies, enter the amount you wish to transfer, and instantly receive a competitive exchange rate quote.',
   },
   {
     number: '03',
     title: 'Secure Funding',
-    description: 'Deposit funds using local or international payment methods into our heavily secured, segregated bank accounts.',
+    description:
+      'Deposit funds using local or international payment methods into our heavily secured, segregated bank accounts.',
   },
   {
     number: '04',
-    title: 'Instant Settlement',
-    description: 'Once funded, your transaction is processed immediately and settled to your beneficiary account.',
+    title: 'Fast Settlement',
+    description:
+      'Once funded, your transaction is processed promptly and settled to your beneficiary account via our banking rails.',
   },
 ];
 
 export function HowItWorksSection() {
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-50 relative overflow-hidden">
+    <section id="how-it-works" className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-50 relative overflow-hidden">
       <div className="max-w-7xl mx-auto">
         <div className="text-center max-w-3xl mx-auto mb-20">
           <motion.h2
@@ -64,7 +68,7 @@ export function HowItWorksSection() {
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: idx * 0.15 }}
             >
-              <div 
+              <div
                 className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-black mb-8 border-8 border-gray-50 transition-transform duration-300 group-hover:scale-110"
                 style={{ backgroundColor: 'var(--primary-dark)', color: 'var(--primary-gold)' }}
               >
@@ -73,9 +77,7 @@ export function HowItWorksSection() {
               <h3 className="text-2xl font-bold mb-4" style={{ color: 'var(--primary-dark)' }}>
                 {step.title}
               </h3>
-              <p className="text-gray-600 leading-relaxed max-w-[280px]">
-                {step.description}
-              </p>
+              <p className="text-gray-600 leading-relaxed max-w-[280px]">{step.description}</p>
             </motion.div>
           ))}
         </div>

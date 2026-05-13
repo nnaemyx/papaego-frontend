@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { LandingHeader } from '@/components/landing/LandingHeader';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
+import { CurrenciesSection } from '@/components/landing/CurrenciesSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
+import { FAQSection } from '@/components/landing/FAQSection';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 import { ContactUsSheet } from '@/components/landing/ContactUsSheet';
 
@@ -13,28 +15,28 @@ export default function Home() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--light-bg)' }}>
-      <LandingHeader
-        onContactUs={() => setContactOpen(true)}
-      />
-      
+      <LandingHeader onContactUs={() => setContactOpen(true)} />
+
       <main>
-        <HeroSection
-          onContactUs={() => setContactOpen(true)}
-        />
-        
+        {/* Hero */}
+        <HeroSection onContactUs={() => setContactOpen(true)} />
+
+        {/* Features — id="features" is set inside the component */}
         <FeaturesSection />
-        
+
+        {/* Currencies & Global Coverage */}
+        <CurrenciesSection />
+
+        {/* How It Works */}
         <HowItWorksSection />
-        
-        <LandingFooter
-          onContactUs={() => setContactOpen(true)}
-        />
+
+        {/* FAQ — id="faq" */}
+        <FAQSection />
+
+        <LandingFooter onContactUs={() => setContactOpen(true)} />
       </main>
-      
-      <ContactUsSheet
-        open={contactOpen}
-        onOpenChange={setContactOpen}
-      />
+
+      <ContactUsSheet open={contactOpen} onOpenChange={setContactOpen} />
     </div>
   );
 }

@@ -7,28 +7,32 @@ const features = [
   {
     icon: Globe,
     title: 'Global Payment Network',
-    description: 'Send and receive money globally with our robust, interconnected financial infrastructure tailored for cross-border needs.',
+    description:
+      'Send and receive money to 40+ countries worldwide with our robust, interconnected financial infrastructure tailored for cross-border needs.',
   },
   {
     icon: ShieldCheck,
     title: 'Bank-Grade Security',
-    description: 'Your transactions are protected by industry-leading security protocols and rigorous compliance frameworks.',
+    description:
+      'Your transactions are protected by industry-leading security protocols and rigorous compliance frameworks — built to institutional standards.',
   },
   {
     icon: Zap,
-    title: 'Lightning Fast Processing',
-    description: 'Experience rapid settlement speeds ensuring your business keeps moving without unnecessary financial delays.',
+    title: 'Fast Settlement',
+    description:
+      'Experience rapid settlement speeds via trusted banking rails, ensuring your business keeps moving without unnecessary financial delays.',
   },
   {
     icon: HandCoins,
     title: 'Competitive FX Rates',
-    description: 'Access the best market exchange rates with transparent pricing and zero hidden fees on your transactions.',
+    description:
+      'Access live exchange rates for USD, EUR, GBP and more — with transparent pricing and zero hidden fees on every transaction.',
   },
 ];
 
 export function FeaturesSection() {
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white relative overflow-hidden">
+    <section id="features" className="py-24 px-4 sm:px-6 lg:px-8 bg-white relative overflow-hidden">
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <motion.p
@@ -58,7 +62,8 @@ export function FeaturesSection() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            We build tools that simplify international trade, breaking down borders to accelerate your global business growth.
+            We build tools that simplify international trade, breaking down borders to accelerate
+            your global business growth.
           </motion.p>
         </div>
 
@@ -72,18 +77,17 @@ export function FeaturesSection() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: idx * 0.1 + 0.3 }}
             >
-              <div 
-                className="absolute inset-0 bg-gradient-to-br from-transparent to-[#C9A22710] opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-              />
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-sm" style={{ backgroundColor: 'var(--primary-dark)' }}>
+              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-[#C9A22710] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-sm"
+                style={{ backgroundColor: 'var(--primary-dark)' }}
+              >
                 <feature.icon className="w-6 h-6" style={{ color: 'var(--primary-gold)' }} />
               </div>
               <h3 className="text-xl font-bold mb-3" style={{ color: 'var(--primary-dark)' }}>
                 {feature.title}
               </h3>
-              <p className="text-gray-600 leading-relaxed">
-                {feature.description}
-              </p>
+              <p className="text-gray-600 leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
         </div>
