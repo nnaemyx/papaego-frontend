@@ -106,7 +106,7 @@ export function LandingHeader({ onContactUs }: LandingHeaderProps) {
               </Button>
 
               <Button
-                onClick={() => (window.location.href = '/customer-auth/login')}
+                onClick={() => (window.location.href = '/customer-auth/signin')}
                 variant="outline"
                 className="landing-button px-6 h-[44px] rounded-lg transition-transform hover:scale-105"
                 style={{
