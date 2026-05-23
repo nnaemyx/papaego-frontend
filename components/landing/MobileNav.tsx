@@ -113,7 +113,7 @@ export function MobileNav({ open, onOpenChange, onContactUs }: MobileNavProps) {
           <Button
             onClick={() => {
               onOpenChange(false);
-              window.location.href = '/customer-auth/login';
+              window.location.href = '/customer-auth/signin';
             }}
             variant="outline"
             className="landing-button px-6 h-[52px] rounded-lg transition-transform hover:scale-105 w-full"
