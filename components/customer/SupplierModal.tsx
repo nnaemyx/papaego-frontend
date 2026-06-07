@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { customerApi } from "@/lib/api/customer";
 
 interface Supplier {
     id: string;
@@ -34,11 +35,45 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData }: Supplier
         currency: "USD",
         address: "",
     });
+    const [existingSuppliers, setExistingSuppliers] = useState<Supplier[]>([]);
+    const [swiftError, setSwiftError] = useState<string | null>(null);
+    const [swiftInfo, setSwiftInfo] = useState<{ bank: string; country: string; location: string; branch: string } | null>(null);
+
+    const validateSwift = (code: string) => {
+        if (!code) {
+            setSwiftError(null);
+            setSwiftInfo(null);
+            return;
+        }
+        const cleanCode = code.trim().toUpperCase();
+        const swiftRegex = /^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/;
+        if (!swiftRegex.test(cleanCode)) {
+            setSwiftError("Invalid SWIFT/BIC format. Must be 8 or 11 alphanumeric characters.");
+            setSwiftInfo(null);
+        } else {
+            setSwiftError(null);
+            setSwiftInfo({
+                bank: cleanCode.substring(0, 4),
+                country: cleanCode.substring(4, 6),
+                location: cleanCode.substring(6, 8),
+                branch: cleanCode.length === 11 ? cleanCode.substring(8, 11) : "Primary"
+            });
+        }
+    };
 
     useEffect(() => {
         if (isOpen) {
+            // Load existing suppliers for duplicate pre-check
+            customerApi.getSuppliers().then(setExistingSuppliers).catch(() => {});
+
             if (initialData) {
                 setFormData(initialData);
+                if (initialData.swiftBic) {
+                    validateSwift(initialData.swiftBic);
+                } else {
+                    setSwiftError(null);
+                    setSwiftInfo(null);
+                }
             } else {
                 setFormData({
                     beneficiaryName: "",
@@ -50,12 +85,28 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData }: Supplier
                     currency: "USD",
                     address: "",
                 });
+                setSwiftError(null);
+                setSwiftInfo(null);
             }
         }
     }, [isOpen, initialData]);
 
+    const isDuplicate = existingSuppliers.some((s) => 
+        s.id !== initialData?.id &&
+        s.bankName?.toLowerCase().trim() === formData.bankName?.toLowerCase().trim() &&
+        s.accountNumber?.trim() === formData.accountNumber?.trim() &&
+        formData.bankName?.trim() &&
+        formData.accountNumber?.trim()
+    );
+
+    const handleSwiftChange = (val: string) => {
+        setFormData({ ...formData, swiftBic: val });
+        validateSwift(val);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (swiftError) return;
         setLoading(true);
         try {
             await onSave(formData);
@@ -119,25 +170,43 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData }: Supplier
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div className="space-y-1.5 md:col-span-2">
+                                {isDuplicate && (
+                                    <div className="flex items-center gap-2 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+                                        <AlertCircle className="w-5 h-5 shrink-0 text-amber-500 animate-bounce" />
+                                        <div>
+                                            <span className="font-bold">Duplicate Supplier Warning:</span> A supplier with this Bank Name and Account Number already exists.
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="space-y-1.5">
-                                <label className="text-sm font-semibold text-[#012333]">Bank Name</label>
+                                <label className="text-sm font-semibold text-[#012333]">
+                                    Bank Name <span className="text-red-500">*</span>
+                                </label>
                                 <input
+                                    required
                                     type="text"
                                     value={formData.bankName || ""}
                                     onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
                                     placeholder="e.g. Chase Bank"
-                                    className="w-full h-12 px-4 rounded-xl border bg-gray-50 focus:bg-white transition-all outline-none focus:ring-2"
+                                    className="w-full h-12 px-4 rounded-xl border bg-gray-50 focus:bg-white transition-all outline-none focus:ring-2 focus:ring-[#C9A227]/50"
                                     style={{ borderColor: "#E1E3E6" }}
                                 />
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-sm font-semibold text-[#012333]">Account Number</label>
+                                <label className="text-sm font-semibold text-[#012333]">
+                                    Account Number <span className="text-red-500">*</span>
+                                </label>
                                 <input
+                                    required
                                     type="text"
                                     value={formData.accountNumber || ""}
                                     onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
-                                    className="w-full h-12 px-4 rounded-xl border bg-gray-50 focus:bg-white transition-all outline-none focus:ring-2"
+                                    placeholder="Enter account number"
+                                    className="w-full h-12 px-4 rounded-xl border bg-gray-50 focus:bg-white transition-all outline-none focus:ring-2 focus:ring-[#C9A227]/50"
                                     style={{ borderColor: "#E1E3E6" }}
                                 />
                             </div>
@@ -148,8 +217,8 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData }: Supplier
                                     type="text"
                                     value={formData.iban || ""}
                                     onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
-                                    placeholder="For Europe and others"
-                                    className="w-full h-12 px-4 rounded-xl border bg-gray-50 focus:bg-white transition-all outline-none focus:ring-2"
+                                    placeholder="For Europe and international"
+                                    className="w-full h-12 px-4 rounded-xl border bg-gray-50 focus:bg-white transition-all outline-none focus:ring-2 focus:ring-[#C9A227]/50"
                                     style={{ borderColor: "#E1E3E6" }}
                                 />
                             </div>
@@ -159,11 +228,31 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData }: Supplier
                                 <input
                                     type="text"
                                     value={formData.swiftBic || ""}
-                                    onChange={(e) => setFormData({ ...formData, swiftBic: e.target.value })}
-                                    placeholder="8 or 11 character code"
-                                    className="w-full h-12 px-4 rounded-xl border bg-gray-50 focus:bg-white transition-all outline-none focus:ring-2"
-                                    style={{ borderColor: "#E1E3E6" }}
+                                    onChange={(e) => handleSwiftChange(e.target.value)}
+                                    placeholder="8 or 11 characters"
+                                    className={`w-full h-12 px-4 rounded-xl border bg-gray-50 focus:bg-white transition-all outline-none focus:ring-2 ${
+                                        swiftError ? "border-rose-400 focus:ring-rose-200" : swiftInfo ? "border-emerald-400 focus:ring-emerald-200" : "focus:ring-[#C9A227]/50"
+                                    }`}
+                                    style={{ borderColor: swiftError ? "#EF4444" : swiftInfo ? "#10B981" : "#E1E3E6" }}
                                 />
+                                {swiftError && (
+                                    <p className="text-xs text-rose-500 font-medium flex items-center gap-1 mt-1">
+                                        <AlertCircle className="w-3.5 h-3.5" /> {swiftError}
+                                    </p>
+                                )}
+                                {swiftInfo && (
+                                    <div className="mt-2 p-3 bg-emerald-50/50 border border-emerald-100 rounded-xl text-xs text-emerald-800 space-y-1">
+                                        <p className="font-bold flex items-center gap-1 text-emerald-700">
+                                            <CheckCircle2 className="w-3.5 h-3.5" /> SWIFT Code Validated
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-2 font-mono text-[11px] mt-1.5">
+                                            <div>Bank: <span className="font-bold">{swiftInfo.bank}</span></div>
+                                            <div>Country: <span className="font-bold">{swiftInfo.country}</span></div>
+                                            <div>Location: <span className="font-bold">{swiftInfo.location}</span></div>
+                                            <div>Branch: <span className="font-bold">{swiftInfo.branch}</span></div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="space-y-1.5">
@@ -173,17 +262,20 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData }: Supplier
                                     value={formData.routingCode || ""}
                                     onChange={(e) => setFormData({ ...formData, routingCode: e.target.value })}
                                     placeholder="e.g. ABA / CLABE"
-                                    className="w-full h-12 px-4 rounded-xl border bg-gray-50 focus:bg-white transition-all outline-none focus:ring-2"
+                                    className="w-full h-12 px-4 rounded-xl border bg-gray-50 focus:bg-white transition-all outline-none focus:ring-2 focus:ring-[#C9A227]/50"
                                     style={{ borderColor: "#E1E3E6" }}
                                 />
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-sm font-semibold text-[#012333]">Expected Currency</label>
+                                <label className="text-sm font-semibold text-[#012333]">
+                                    Expected Currency <span className="text-red-500">*</span>
+                                </label>
                                 <select
+                                    required
                                     value={formData.currency || "USD"}
                                     onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                                    className="w-full h-12 px-4 rounded-xl border bg-gray-50 focus:bg-white transition-all outline-none focus:ring-2"
+                                    className="w-full h-12 px-4 rounded-xl border bg-gray-50 focus:bg-white transition-all outline-none focus:ring-2 focus:ring-[#C9A227]/50"
                                     style={{ borderColor: "#E1E3E6" }}
                                 >
                                     <option value="USD">USD - US Dollar</option>
@@ -210,7 +302,14 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData }: Supplier
                     <button
                         type="submit"
                         form="supplier-form"
-                        disabled={loading || !formData.beneficiaryName?.trim()}
+                        disabled={
+                            loading || 
+                            !formData.beneficiaryName?.trim() || 
+                            !formData.bankName?.trim() || 
+                            !formData.accountNumber?.trim() || 
+                            isDuplicate || 
+                            !!swiftError
+                        }
                         className="px-6 py-2.5 rounded-xl font-bold text-white transition-opacity disabled:opacity-50 flex items-center justify-center min-w-[120px]"
                         style={{ backgroundColor: "var(--brand-primary)" }}
                     >

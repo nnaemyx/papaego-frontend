@@ -50,6 +50,7 @@ export interface CustomerTradeDetail extends CustomerTrade {
     paymentBankName: string | null;
     paymentAmount: string | null;
     timeline: { action: string; createdAt: string }[];
+    stages?: { key: string; label: string; description: string; completed: boolean; completedAt: string | null }[];
 }
 
 export interface FxRate {
@@ -64,6 +65,7 @@ export interface CustomerDashboardStats {
     todayTrades: number;
     pendingActions: number;
     kycVerified: boolean;
+    kycStatus: 'NOT_SUBMITTED' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'RESUBMITTED';
 }
 
 export interface CustomerTradeRequest {
@@ -123,6 +125,20 @@ export const customerApi = {
     /** Dashboard stats */
     getDashboardStats: async (): Promise<CustomerDashboardStats> => {
         const response = await api.get("/customer/portal/dashboard/stats");
+        return response.data;
+    },
+
+    /** Get current KYC status with timeline */
+    getKycStatus: async (): Promise<any> => {
+        const response = await api.get("/customer/portal/kyc-status");
+        return response.data;
+    },
+
+    /** Resubmit KYC documents */
+    resubmitKyc: async (formData: FormData): Promise<any> => {
+        const response = await api.patch("/customer/portal/kyc/resubmit", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+        });
         return response.data;
     },
 

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { customerApi, CustomerTradeDetail } from "@/lib/api/customer";
 import { TransactionChat } from "@/components/transactions/TransactionChat";
-import { TradeProgressStepper, TradeStage } from "@/components/transactions/TradeProgressStepper";
+import { TradeTimeline } from "@/components/customer/TradeTimeline";
 import { formatCurrency, formatExchangeRate } from "@/lib/formatters";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -182,7 +182,7 @@ export default function CustomerTradeDetailsPage({
       <main className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
         
         {/* Progress Stepper */}
-        <TradeProgressStepper currentStatus={trade.status as TradeStage} />
+        <TradeTimeline stages={trade.stages || []} />
 
         {/* ── Info Banner ── */}
         <div
