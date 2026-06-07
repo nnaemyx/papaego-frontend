@@ -33,6 +33,10 @@ export interface Customer {
     accountName: string;
     accountType?: string;
   } | null;
+  kycStatus?: 'NOT_SUBMITTED' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'RESUBMITTED';
+  kycRejectionReason?: string | null;
+  kycReviewedAt?: string | null;
+  kycReviewedBy?: string | null;
 }
 
 export interface CustomerStats {
