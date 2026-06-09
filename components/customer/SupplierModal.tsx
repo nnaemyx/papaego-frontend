@@ -100,8 +100,9 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData }: Supplier
     );
 
     const handleSwiftChange = (val: string) => {
-        setFormData({ ...formData, swiftBic: val });
-        validateSwift(val);
+        const upperVal = val.toUpperCase();
+        setFormData({ ...formData, swiftBic: upperVal });
+        validateSwift(upperVal);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -308,7 +309,7 @@ export function SupplierModal({ isOpen, onClose, onSave, initialData }: Supplier
                             !formData.bankName?.trim() || 
                             !formData.accountNumber?.trim() || 
                             isDuplicate || 
-                            !!swiftError
+                            (formData.swiftBic ? !!swiftError : false)
                         }
                         className="px-6 py-2.5 rounded-xl font-bold text-white transition-opacity disabled:opacity-50 flex items-center justify-center min-w-[120px]"
                         style={{ backgroundColor: "var(--brand-primary)" }}

@@ -75,6 +75,7 @@ export interface CustomerTradeRequest {
     receiveCurrency: string;
     status: "PENDING" | "REJECTED" | "PROCESSED" | "POOL" | "ASSIGNED" | "QUOTED";
     createdAt: string;
+    linkedTradeId?: string | null;
 }
 
 export interface CustomerBankDetails {
