@@ -58,6 +58,8 @@ export interface CustomerTradeDetail extends CustomerTrade {
     isRateExpired: boolean;
     timeline: { action: string; createdAt: string }[];
     stages?: { key: string; label: string; description: string; completed: boolean; completedAt: string | null }[];
+    agent?: { id: string; firstName: string; lastName: string; email: string } | null;
+    agentRating?: { id: string; rating: number; feedback: string | null } | null;
 }
 
 export interface FxRate {
@@ -80,7 +82,7 @@ export interface CustomerTradeRequest {
     amount: string;
     sendCurrency: string;
     receiveCurrency: string;
-    status: "PENDING" | "REJECTED" | "PROCESSED" | "POOL" | "ASSIGNED" | "QUOTED";
+    status: "DRAFT" | "PENDING" | "REJECTED" | "PROCESSED" | "POOL" | "ASSIGNED" | "QUOTED" | "CANCELLED";
     createdAt: string;
     linkedTradeId?: string | null;
 }
@@ -205,8 +207,8 @@ export const customerApi = {
     },
 
     /** Suppliers Section */
-    getSuppliers: async (): Promise<any[]> => {
-        const response = await api.get("/suppliers");
+    getSuppliers: async (params?: { includeArchived?: boolean }): Promise<any[]> => {
+        const response = await api.get("/suppliers", { params });
         return response.data;
     },
 
@@ -222,6 +224,31 @@ export const customerApi = {
 
     deleteSupplier: async (id: string): Promise<any> => {
         const response = await api.delete(`/suppliers/${id}`);
+        return response.data;
+    },
+
+    updateTradeRequest: async (id: string, payload: any): Promise<any> => {
+        const response = await api.put(`/customer/portal/trade-requests/${id}`, payload);
+        return response.data;
+    },
+
+    cancelTradeRequest: async (id: string): Promise<any> => {
+        const response = await api.patch(`/customer/portal/trade-requests/${id}/cancel`);
+        return response.data;
+    },
+
+    cancelTrade: async (id: string): Promise<any> => {
+        const response = await api.patch(`/customer/portal/trades/${id}/cancel`);
+        return response.data;
+    },
+
+    rateAgent: async (id: string, rating: number, feedback?: string): Promise<any> => {
+        const response = await api.post(`/customer/portal/trades/${id}/rate`, { rating, feedback });
+        return response.data;
+    },
+
+    submitFeedback: async (category: string, message: string): Promise<any> => {
+        const response = await api.post("/customer/portal/feedback", { category, message });
         return response.data;
     },
 

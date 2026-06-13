@@ -22,6 +22,85 @@ import { useAuthStore } from "@/store/auth-store";
 import { customerApi } from "@/lib/api/customer";
 import { authApi } from "@/lib/api/auth";
 import { BankDetailsModal } from "@/components/customer/BankDetailsModal";
+import { toast } from "sonner";
+
+function FeedbackForm() {
+  const [category, setCategory] = useState("Suggestions");
+  const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim()) {
+      toast.error("Please enter a message");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await customerApi.submitFeedback(category, message.trim());
+      toast.success("Feedback submitted successfully. Thank you!");
+      setMessage("");
+    } catch {
+      toast.error("Failed to submit feedback");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      className="bg-white rounded-2xl border overflow-hidden"
+      style={{ borderColor: "var(--border-custom)" }}
+    >
+      <div
+        className="px-5 py-3.5 border-b"
+        style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-muted)" }}
+      >
+        <h3 className="heading-card">Send Us Feedback</h3>
+      </div>
+      <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
+            Category
+          </label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full h-11 rounded-xl border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 bg-gray-50 focus:bg-white transition-colors"
+          >
+            {["Suggestions", "Platform", "Support", "Rates", "Bug Report", "Other"].map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
+            Message
+          </label>
+          <textarea
+            rows={3}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Help us improve. Share your suggestions, issues or ideas..."
+            className="w-full rounded-xl border border-gray-300 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 bg-gray-50 focus:bg-white transition-colors"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className="w-full py-2.5 rounded-lg text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50 animate-pulse-once"
+          style={{ backgroundColor: "var(--brand-primary)" }}
+        >
+          {submitting ? "Submitting..." : "Submit Feedback"}
+        </button>
+      </form>
+    </div>
+  );
+}
 
 export default function CustomerProfilePage() {
   const router = useRouter();
@@ -302,6 +381,9 @@ export default function CustomerProfilePage() {
             </a>
           ))}
         </div>
+
+        {/* ── Submit General Feedback ── */}
+        <FeedbackForm />
 
         {/* ── Logout ── */}
         <button

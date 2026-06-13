@@ -7,6 +7,7 @@ import { NIGERIAN_SECTORS } from "@/lib/api/customer";
 
 interface NewTransactionModalProps {
     onClose: () => void;
+    draftToEdit?: any | null;
 }
 
 const CURRENCIES = ["USD", "GBP", "EUR", "NGN", "CAD", "AED"];
@@ -29,22 +30,29 @@ const EMPTY_SUPPLIER: SupplierDetails = {
     address: "",
 };
 
-export function NewTransactionModal({ onClose }: NewTransactionModalProps) {
+export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModalProps) {
     // Step 1 fields
-    const [amount, setAmount] = useState("");
-    const [fromCurrency, setFromCurrency] = useState("USD");
-    const [toCurrency, setToCurrency] = useState("NGN");
-    const [purpose, setPurpose] = useState("");
+    const [amount, setAmount] = useState(draftToEdit ? draftToEdit.amount.toString() : "");
+    const [fromCurrency, setFromCurrency] = useState(draftToEdit ? draftToEdit.sendCurrency : "USD");
+    const [toCurrency, setToCurrency] = useState(draftToEdit ? draftToEdit.receiveCurrency : "NGN");
+    const [purpose, setPurpose] = useState(draftToEdit ? draftToEdit.purpose || "" : "");
 
     // Step 2 fields
-    const [supplier, setSupplier] = useState<SupplierDetails>(EMPTY_SUPPLIER);
+    const [supplier, setSupplier] = useState<SupplierDetails>({
+        businessName: draftToEdit?.supplierBusinessName || "",
+        bankName: draftToEdit?.supplierBankName || "",
+        accountNumber: draftToEdit?.supplierAccountNumber || "",
+        sector: draftToEdit?.supplierSector || "",
+        address: draftToEdit?.supplierAddress || "",
+    });
     const [savedSuppliers, setSavedSuppliers] = useState<any[]>([]);
-    const [useNewSupplier, setUseNewSupplier] = useState(false);
+    const [useNewSupplier, setUseNewSupplier] = useState(draftToEdit ? !draftToEdit.supplierId : false);
 
     // UI state
     const [step, setStep] = useState<Step>(1);
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const [successMessage, setSuccessMessage] = useState("Request Submitted!");
     const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
 
     useEffect(() => {
@@ -63,17 +71,17 @@ export function NewTransactionModal({ onClose }: NewTransactionModalProps) {
         setStep(2);
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async (e: React.FormEvent, isDraft: boolean = false) => {
+        if (e) e.preventDefault();
         setSubmitting(true);
         try {
-            let invoiceUrl = undefined;
+            let invoiceUrl = draftToEdit?.invoiceUrl || undefined;
             if (invoiceFile) {
                 const uploadRes = await customerApi.uploadDocument(invoiceFile);
                 invoiceUrl = uploadRes.url;
             }
 
-            await customerApi.createTradeRequest({
+            const payload: any = {
                 amount,
                 sendCurrency: fromCurrency,
                 receiveCurrency: toCurrency,
@@ -86,12 +94,21 @@ export function NewTransactionModal({ onClose }: NewTransactionModalProps) {
                 sector: supplier.sector || undefined,
                 address: supplier.address || undefined,
                 invoiceUrl,
-            });
+                status: isDraft ? "DRAFT" : "PENDING",
+            };
+
+            if (draftToEdit) {
+                await customerApi.updateTradeRequest(draftToEdit.id, payload);
+            } else {
+                await customerApi.createTradeRequest(payload);
+            }
+
+            setSuccessMessage(isDraft ? "Draft Saved!" : "Request Submitted!");
             setSubmitted(true);
             setTimeout(() => {
                 onClose();
                 window.location.reload();
-            }, 2500);
+            }, 2000);
         } catch (err) {
             console.error("Trade initiation error:", err);
             alert("Failed to initiate trade. Please try again.");
@@ -123,7 +140,7 @@ export function NewTransactionModal({ onClose }: NewTransactionModalProps) {
                             className="text-xl font-bold mb-2"
                             style={{ color: "#012333" }}
                         >
-                            Request Submitted!
+                            {successMessage}
                         </h3>
                         <p className="body-secondary">
                             Admin will review and process your trade shortly.
@@ -147,7 +164,7 @@ export function NewTransactionModal({ onClose }: NewTransactionModalProps) {
                                         className="text-xl font-bold"
                                         style={{ color: "var(--text-primary)" }}
                                     >
-                                        {step === 1 ? "New Trade Request" : "Supplier Details"}
+                                        {step === 1 ? (draftToEdit ? "Edit Trade Request" : "New Trade Request") : "Supplier Details"}
                                     </h3>
                                     <p
                                         className="caption mt-0.5"
@@ -517,22 +534,36 @@ export function NewTransactionModal({ onClose }: NewTransactionModalProps) {
                                     )}
                                 </div>
 
-                                <div className="flex gap-3 pt-4">
-                                    <button
-                                        type="button"
-                                        onClick={() => setStep(1)}
-                                        className="flex-1 h-12 rounded-xl font-semibold border-2 transition-opacity"
-                                        style={{
-                                            borderColor: "var(--brand-primary)",
-                                            color: "var(--brand-primary)",
-                                        }}
-                                    >
-                                        Back
-                                    </button>
+                                <div className="flex flex-col gap-2 pt-4">
+                                    <div className="flex gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setStep(1)}
+                                            className="flex-1 h-12 rounded-xl font-semibold border-2 transition-opacity"
+                                            style={{
+                                                borderColor: "var(--brand-primary)",
+                                                color: "var(--brand-primary)",
+                                            }}
+                                        >
+                                            Back
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={submitting}
+                                            onClick={(e) => handleSubmit(e as any, true)}
+                                            className="flex-1 h-12 rounded-xl font-semibold border transition-opacity hover:bg-gray-50 bg-white"
+                                            style={{
+                                                borderColor: "var(--border-custom)",
+                                                color: "var(--text-primary)",
+                                            }}
+                                        >
+                                            Save as Draft
+                                        </button>
+                                    </div>
                                     <button
                                         type="submit"
                                         disabled={submitting}
-                                        className="flex-1 h-12 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-opacity"
+                                        className="w-full h-12 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-opacity"
                                         style={{
                                             backgroundColor: "var(--brand-primary)",
                                             opacity: submitting ? 0.7 : 1,
@@ -541,7 +572,7 @@ export function NewTransactionModal({ onClose }: NewTransactionModalProps) {
                                         {submitting && (
                                             <RefreshCw className="w-4 h-4 animate-spin" />
                                         )}
-                                        {submitting ? "Processing..." : "Submit Request"}
+                                        {submitting ? "Processing..." : draftToEdit ? "Publish & Submit" : "Submit Request"}
                                     </button>
                                 </div>
                             </form>

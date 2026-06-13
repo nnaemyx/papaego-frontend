@@ -30,6 +30,8 @@ export interface Agent {
     activeTrades: number;
     completedTrades: number;
     flaggedTransactions: number;
+    averageRating?: number | null;
+    totalRatings?: number;
   };
   agentProfile?: {
     onboardingStatus: string;

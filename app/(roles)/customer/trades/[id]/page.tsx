@@ -28,6 +28,88 @@ interface CustomerTradeDetailsPageProps {
   params: Promise<{ id: string }>;
 }
 
+function RatingForm({ tradeId, onSubmitted }: { tradeId: string; onSubmitted: () => void }) {
+  const [rating, setRating] = useState(5);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [feedback, setFeedback] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (rating < 1 || rating > 5) {
+      toast.error("Please select a rating between 1 and 5");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await customerApi.rateAgent(tradeId, rating, feedback.trim() || undefined);
+      toast.success("Thank you for your feedback!");
+      onSubmitted();
+    } catch {
+      toast.error("Failed to submit rating");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-1">
+          Select Rating
+        </label>
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((star) => {
+            const active = hoverRating ? star <= hoverRating : star <= rating;
+            return (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setRating(star)}
+                onMouseEnter={() => setHoverRating(star)}
+                onMouseLeave={() => setHoverRating(0)}
+                className="p-1 focus:outline-none transition-transform hover:scale-110"
+              >
+                <svg
+                  className={`w-8 h-8 ${
+                    active ? "text-amber-500 fill-amber-500" : "text-gray-300"
+                  }`}
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-1">
+          Comments (Optional)
+        </label>
+        <textarea
+          rows={3}
+          value={feedback}
+          onChange={(e) => setFeedback(e.target.value)}
+          placeholder="Share your experience working with this agent..."
+          className="w-full rounded-xl border border-gray-300 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 bg-gray-50 focus:bg-white transition-colors"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={submitting}
+        className="px-5 py-2.5 rounded-lg text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+        style={{ backgroundColor: "var(--brand-primary)" }}
+      >
+        {submitting ? "Submitting..." : "Submit Rating"}
+      </button>
+    </form>
+  );
+}
+
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   AWAITING_PAYMENT:   { label: "Awaiting Payment",  color: "#F59E0B", bg: "#FFF8E1" },
   PAYMENT_CONFIRMED:  { label: "Payment Confirmed", color: "#3B82F6", bg: "#EFF6FF" },
@@ -286,6 +368,23 @@ export default function CustomerTradeDetailsPage({
                 Rate: {formatExchangeRate(Number(trade.fxRate), trade.sendCurrency, trade.receiveCurrency)}
               </p>
             )}
+            {!["COMPLETED", "CANCELLED", "EXPIRED"].includes(trade.status) && (
+              <button
+                onClick={async () => {
+                  if (!confirm("Are you sure you want to cancel this trade?")) return;
+                  try {
+                    await customerApi.cancelTrade(trade.id);
+                    toast.success("Trade cancelled successfully");
+                    fetchTrade();
+                  } catch (error) {
+                    toast.error("Failed to cancel trade");
+                  }
+                }}
+                className="mt-2 px-4 py-2 border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs font-bold transition-colors"
+              >
+                Cancel Trade
+              </button>
+            )}
           </div>
         </div>
 
@@ -390,6 +489,56 @@ export default function CustomerTradeDetailsPage({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ── Left: Details ── */}
           <div className="lg:col-span-2 space-y-6">
+
+            {/* Agent Rating Section (shown only when COMPLETED) */}
+            {trade.status === "COMPLETED" && (
+              <div
+                className="bg-white rounded-2xl border p-5 md:p-6"
+                style={{ borderColor: "var(--border-custom)" }}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Agent Feedback</h2>
+                    <p className="text-xs text-gray-500">
+                      Rate your experience with agent {trade.agent ? `${(trade.agent as any).firstName} ${(trade.agent as any).lastName}` : "assigned to this trade"}
+                    </p>
+                  </div>
+                </div>
+
+                {trade.agentRating ? (
+                  <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-4">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <svg
+                          key={star}
+                          className={`w-5 h-5 ${
+                            star <= (trade.agentRating?.rating || 0)
+                              ? "text-amber-500 fill-amber-500"
+                              : "text-gray-300"
+                          }`}
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      ))}
+                    </div>
+                    {trade.agentRating?.feedback ? (
+                      <p className="text-sm text-gray-700 italic">
+                        "{trade.agentRating.feedback}"
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500 italic">No written feedback provided.</p>
+                    )}
+                  </div>
+                ) : (
+                  <RatingForm tradeId={trade.id} onSubmitted={fetchTrade} />
+                )}
+              </div>
+            )}
 
             {/* Trade Details */}
             <div
