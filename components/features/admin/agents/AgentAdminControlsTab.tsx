@@ -12,6 +12,9 @@ import {
 import { Shield, UserX, UserCheck, AlertOctagon, Edit } from "lucide-react";
 import type { Agent } from "@/lib/types/agent";
 import { getStatusColor } from "@/lib/formatters";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { agentsApi } from "@/lib/api/agents";
+import { toast } from "sonner";
 
 interface AgentAdminControlsTabProps {
     agent: Agent;
@@ -28,8 +31,24 @@ export function AgentAdminControlsTab({
     onVerify,
     onDelete,
 }: AgentAdminControlsTabProps) {
-    const [newRole, setNewRole] = useState(agent.role);
+    const queryClient = useQueryClient();
     const [newRegion, setNewRegion] = useState(agent.region);
+    const [newAgentType, setNewAgentType] = useState(agent.agentType || "FIELD");
+
+    const updateMutation = useMutation({
+        mutationFn: () =>
+            agentsApi.updateAgent(agent.id, {
+                region: newRegion,
+                agentType: newAgentType,
+            } as any),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["agent", agent.id] });
+            toast.success("Agent settings updated successfully!");
+        },
+        onError: () => {
+            toast.error("Failed to update agent settings.");
+        },
+    });
 
     return (
         <div className="space-y-6">
@@ -140,24 +159,25 @@ export function AgentAdminControlsTab({
                 style={{ backgroundColor: "white", borderColor: "#e1e3e6" }}
             >
                 <h3 className="font-semibold text-base mb-4" style={{ color: "#2b2f33" }}>
-                    Update Role & Region
+                    Update Classification & Region
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    
                     <div className="space-y-2">
                         <label className="text-sm" style={{ color: "#6b7078" }}>
-                            Role
+                            Agent Classification
                         </label>
-                        <Select value={newRole} onValueChange={setNewRole}>
+                        <Select value={newAgentType} onValueChange={setNewAgentType}>
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Agent">Agent</SelectItem>
-                                <SelectItem value="Senior Agent">Senior Agent</SelectItem>
-                                <SelectItem value="Supervisor">Supervisor</SelectItem>
+                                <SelectItem value="FIELD">Field Agent</SelectItem>
+                                <SelectItem value="CORPORATE">Corporate Agent</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
+
                     <div className="space-y-2">
                         <label className="text-sm" style={{ color: "#6b7078" }}>
                             Region
@@ -177,11 +197,13 @@ export function AgentAdminControlsTab({
                     </div>
                 </div>
                 <Button
+                    onClick={() => updateMutation.mutate()}
+                    disabled={updateMutation.isPending}
                     className="gap-2"
                     style={{ backgroundColor: "#c9a227", color: "white" }}
                 >
                     <Edit className="h-4 w-4" />
-                    Save Changes
+                    {updateMutation.isPending ? "Saving..." : "Save Changes"}
                 </Button>
             </div>
 

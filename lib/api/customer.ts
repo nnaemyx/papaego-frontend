@@ -151,7 +151,7 @@ export const customerApi = {
     },
 
     /** List trades with optional status filter */
-    getTrades: async (params?: { status?: string; page?: number; limit?: number }) => {
+    getTrades: async (params?: { status?: string; page?: number; limit?: number; search?: string }) => {
         const response = await api.get("/customer/portal/trades", { params });
         return response.data as { trades: CustomerTrade[]; total: number; page: number; limit: number };
     },
@@ -183,7 +183,7 @@ export const customerApi = {
         return response.data;
     },
 
-    getTradeRequests: async (params?: { page?: number; limit?: number }): Promise<{ requests: CustomerTradeRequest[]; total: number; page: number; limit: number }> => {
+    getTradeRequests: async (params?: { page?: number; limit?: number; search?: string }): Promise<{ requests: CustomerTradeRequest[]; total: number; page: number; limit: number }> => {
         const response = await api.get("/customer/portal/trade-requests", { params });
         return response.data;
     },

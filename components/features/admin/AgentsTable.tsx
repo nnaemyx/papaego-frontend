@@ -79,7 +79,7 @@ export function AgentsTable({
               <TableHead className="font-medium text-xs">Agent ID</TableHead>
               <TableHead className="font-medium text-xs">Agent Name</TableHead>
               <TableHead className="font-medium text-xs">Phone</TableHead>
-              <TableHead className="font-medium text-xs">Role</TableHead>
+              <TableHead className="font-medium text-xs">Classification</TableHead>
               <TableHead className="font-medium text-xs">Region</TableHead>
               <TableHead className="font-medium text-xs">
                 Active Trades
@@ -107,7 +107,16 @@ export function AgentsTable({
                   {agent.phone || "—"}
                 </TableCell>
                 <TableCell className="text-xs font-normal">
-                  {agent.role}
+                  <span 
+                    className="inline-block px-2 py-0.5 rounded text-[10px] font-bold"
+                    style={
+                      agent.agentType === 'CORPORATE' 
+                        ? { backgroundColor: '#EDE9FE', color: '#7C3AED' } 
+                        : { backgroundColor: '#E2F0FD', color: '#1D4ED8' }
+                    }
+                  >
+                    {agent.agentType === 'CORPORATE' ? 'Corporate' : 'Field'}
+                  </span>
                 </TableCell>
                 <TableCell className="text-xs font-normal">
                   {agent.region}

@@ -115,7 +115,7 @@ export function AgentOverviewTab({ agent }: AgentOverviewTabProps) {
                             { label: "Email", value: agent.email },
                             { label: "Phone", value: agent.phone || "—" },
                             { label: "Region", value: agent.region },
-                            { label: "Role", value: agent.role },
+                            { label: "Classification", value: agent.agentType === "CORPORATE" ? "Corporate Agent" : "Field Agent" },
                             {
                                 label: "Status",
                                 value: (

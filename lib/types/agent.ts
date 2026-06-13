@@ -24,6 +24,7 @@ export interface Agent {
   performance?: string;
   createdAt: string;
   updatedAt?: string;
+  agentType?: string;
   statistics?: {
     totalTrades: number;
     activeTrades: number;
@@ -33,6 +34,7 @@ export interface Agent {
   agentProfile?: {
     onboardingStatus: string;
     licenseId: string;
+    agentType?: string;
     governmentIdUrl?: string;
     proofOfAddressUrl?: string;
     homeAddress?: string;
@@ -55,8 +57,9 @@ export interface InviteAgentFormData {
   firstName: string;
   lastName: string;
   email: string;
-  role: string;
+  role?: string;
   region: string;
+  agentType?: string;
   notes?: string;
 }
 

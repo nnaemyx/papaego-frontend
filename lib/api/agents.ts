@@ -43,6 +43,7 @@ export const agentsApi = {
       firstName: data.firstName,
       lastName: data.lastName,
       region: data.region,
+      agentType: data.agentType || "FIELD",
       notes: data.notes,
     });
     return response.data;

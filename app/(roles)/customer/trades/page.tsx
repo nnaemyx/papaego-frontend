@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, TrendingUp, Plus, ArrowRight, RefreshCw } from "lucide-react";
+import { Clock, TrendingUp, Plus, ArrowRight, RefreshCw, Search } from "lucide-react";
 import { customerApi, CustomerTrade, CustomerTradeRequest } from "@/lib/api/customer";
 import { formatCurrency } from "@/lib/formatters";
 import { CustomerTradeItem } from "@/components/customer/CustomerTradeItem";
 import { NewTransactionModal } from "@/components/customer/NewTransactionModal";
 import Link from "next/link";
+import { Input } from "@/components/ui/input";
 
 const TABS = ["All", "Requests", "Pending", "Completed", "Flagged"] as const;
 type Tab = (typeof TABS)[number];
@@ -105,25 +106,26 @@ export default function CustomerTradesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [search, setSearch] = useState("");
   const limit = 10;
 
   useEffect(() => {
-    setCurrentPage(1); // Reset page on tab change
-  }, [activeTab]);
+    setCurrentPage(1); // Reset page on tab or search change
+  }, [activeTab, search]);
 
   useEffect(() => {
     fetchAll();
-  }, [activeTab, currentPage]);
+  }, [activeTab, currentPage, search]);
 
   const fetchAll = async () => {
     setLoading(true);
     try {
       const promises: Promise<any>[] = [
-        customerApi.getTrades({ status: STATUS_MAP[activeTab], page: currentPage, limit }),
+        customerApi.getTrades({ status: STATUS_MAP[activeTab], page: currentPage, limit, search: search || undefined }),
       ];
       // Always fetch requests for "All" and "Requests" tabs
       if (activeTab === "All" || activeTab === "Requests") {
-        promises.push(customerApi.getTradeRequests({ page: currentPage, limit }));
+        promises.push(customerApi.getTradeRequests({ page: currentPage, limit, search: search || undefined }));
       }
 
       const [tradeResult, requestResult] = await Promise.all(promises);
@@ -202,6 +204,17 @@ export default function CustomerTradesPage() {
             {tab}
           </button>
         ))}
+      </div>
+
+      {/* ── Search Bar ── */}
+      <div className="relative w-full sm:w-80">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          placeholder="Search by trade ID, supplier, or currency"
+          className="pl-10"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
 
       {/* ── Trade List ── */}
