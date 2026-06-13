@@ -92,10 +92,27 @@ function CustomerSignupPageInner() {
     }
   };
 
+  // ── Password Strength Checks ───────────────────────────────────────────────
+  const hasMinLength = form.password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(form.password);
+  const hasLowercase = /[a-z]/.test(form.password);
+  const hasNumber = /[0-9]/.test(form.password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(form.password);
+
+  const passwordStrength = [
+    hasMinLength,
+    hasUppercase,
+    hasLowercase,
+    hasNumber,
+    hasSpecial
+  ].filter(Boolean).length;
+
+  const isPasswordValid = hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSpecial;
+
   // ── Step 1 validation ────────────────────────────────────────────────────────
   const step1Valid =
     form.firstName && form.lastName && form.email && form.phone &&
-    form.password.length >= 8 && form.password === form.confirmPassword;
+    isPasswordValid && form.password === form.confirmPassword;
 
   const step2Valid = form.gender && form.dateOfBirth && form.homeAddress && form.bvn;
   const step3Valid = govIdFile && proofFile && agreedToTerms;
@@ -392,7 +409,63 @@ function CustomerSignupPageInner() {
                     </button>
                   </div>
                 </div>
-                <InfoBox text="Use at least 8 characters with a mix of letters, numbers, and symbols" />
+                {form.password && (
+                  <div className="mt-3 bg-white p-4 rounded-xl border w-full text-left" style={{ borderColor: "#E1E3E6" }}>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs font-semibold" style={{ color: "#6B7078" }}>Password Strength:</span>
+                      <span className="text-xs font-bold font-mono" style={{
+                        color: passwordStrength <= 2 ? "#EB5757" : passwordStrength === 3 ? "#F2994A" : passwordStrength === 4 ? "#2F80ED" : "#27AE60"
+                      }}>
+                        {passwordStrength <= 2 ? "Weak" : passwordStrength === 3 ? "Fair" : passwordStrength === 4 ? "Good" : "Strong"}
+                      </span>
+                    </div>
+                    
+                    {/* Visual strength bar */}
+                    <div className="grid grid-cols-5 gap-1.5 mb-3">
+                      {[1, 2, 3, 4, 5].map((level) => (
+                        <div
+                          key={level}
+                          className="h-1.5 rounded-full transition-all"
+                          style={{
+                            backgroundColor: level <= passwordStrength
+                              ? passwordStrength <= 2 ? "#EB5757" : passwordStrength === 3 ? "#F2994A" : passwordStrength === 4 ? "#2F80ED" : "#27AE60"
+                              : "#E1E3E6"
+                          }}
+                        />
+                      ))}
+                    </div>
+                    
+                    {/* Checklist */}
+                    <div className="space-y-1.5">
+                      {[
+                        { label: "At least 8 characters", met: hasMinLength },
+                        { label: "At least one uppercase letter (A-Z)", met: hasUppercase },
+                        { label: "At least one lowercase letter (a-z)", met: hasLowercase },
+                        { label: "At least one number (0-9)", met: hasNumber },
+                        { label: "At least one special character (e.g. @$!%*?&)", met: hasSpecial },
+                      ].map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-xs">
+                          <div className="w-4 h-4 rounded-full flex items-center justify-center border transition-colors shrink-0"
+                            style={{
+                              borderColor: item.met ? "#27AE60" : "#E1E3E6",
+                              backgroundColor: item.met ? "#E2FDED" : "transparent"
+                            }}
+                          >
+                            {item.met ? (
+                              <span className="text-[10px] font-bold" style={{ color: "#27AE60" }}>✓</span>
+                            ) : (
+                              <span className="w-1 h-1 rounded-full bg-gray-300" />
+                            )}
+                          </div>
+                          <span style={{ color: item.met ? "#27AE60" : "#9AA0A6" }}>{item.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {!form.password && (
+                  <InfoBox text="Use at least 8 characters with a mix of letters, numbers, and symbols" />
+                )}
 
                 {/* ── Referral Section ── */}
                 <div className="mt-5 pt-5 border-t" style={{ borderColor: "#E1E3E6" }}>

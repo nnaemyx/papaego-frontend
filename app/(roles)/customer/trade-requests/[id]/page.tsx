@@ -2,6 +2,7 @@
 
 import React, { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
   Loader2,
@@ -32,6 +33,7 @@ export default function CustomerTradeRequestDetailsPage({
   params,
 }: CustomerTradeRequestDetailsPageProps) {
   const { id: tradeRequestId } = use(params);
+  const router = useRouter();
 
   const [request, setRequest] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -50,6 +52,12 @@ export default function CustomerTradeRequestDetailsPage({
   useEffect(() => {
     fetchRequest();
   }, [tradeRequestId]);
+
+  useEffect(() => {
+    if (request && request.status === "PROCESSED" && request.linkedTradeId) {
+      router.push(`/customer/trades/${request.linkedTradeId}`);
+    }
+  }, [request, router]);
 
   if (loading) {
     return (

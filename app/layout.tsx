@@ -3,6 +3,7 @@ import { Public_Sans, Bricolage_Grotesque } from "next/font/google";
 import { Geist_Mono } from "next/font/google";
 import "./globals.css";
 import QueryProvider from "@/components/providers/query-provider";
+import { Toaster } from "sonner";
 
 const publicSans = Public_Sans({
   variable: "--font-public-sans",
@@ -38,7 +39,10 @@ export default function RootLayout({
       <body
         className={`${publicSans.variable} ${bricolageGrotesque.variable} ${geistMono.variable} antialiased`}
       >
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          {children}
+          <Toaster position="top-right" richColors closeButton />
+        </QueryProvider>
       </body>
     </html>
   );

@@ -109,4 +109,22 @@ export const adminCustomersApi = {
     const response = await api.post(`/admin/customers/${id}/message`, payload);
     return response.data;
   },
+
+  // Start KYC review
+  startKycReview: async (id: string) => {
+    const response = await api.patch(`/admin/customers/${id}/kyc/review`);
+    return response.data;
+  },
+
+  // Approve KYC
+  approveKyc: async (id: string) => {
+    const response = await api.patch(`/admin/customers/${id}/kyc/approve`);
+    return response.data;
+  },
+
+  // Reject KYC with reason
+  rejectKyc: async (id: string, reason: string) => {
+    const response = await api.patch(`/admin/customers/${id}/kyc/reject`, { reason });
+    return response.data;
+  },
 };

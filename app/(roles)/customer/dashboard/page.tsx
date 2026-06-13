@@ -25,6 +25,7 @@ import { ExchangeRateCarousel } from "@/components/customer/ExchangeRateCarousel
 import { CustomerQuickActions } from "@/components/customer/CustomerQuickActions";
 import { CustomerTradeItem } from "@/components/customer/CustomerTradeItem";
 import { NewTransactionModal } from "@/components/customer/NewTransactionModal";
+import { KycStatusCard } from "@/components/customer/KycStatusCard";
 
 type GradientKey = "green" | "blue" | "yellow" | "pink";
 
@@ -80,7 +81,7 @@ export default function CustomerDashboardPage() {
       setRates(r.rates);
       setTradeRequests(reqs.requests ? reqs.requests.filter((req: any) => req.status === "PENDING") : []);
     } catch {
-      setStats({ totalTrades: 0, todayTrades: 0, pendingActions: 0, kycVerified: false });
+      setStats({ totalTrades: 0, todayTrades: 0, pendingActions: 0, kycVerified: false, kycStatus: "NOT_SUBMITTED" });
       setTrades([]);
       setTradeRequests([]);
       setRates([
@@ -119,24 +120,32 @@ export default function CustomerDashboardPage() {
             <span
               className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
               style={{
-                backgroundColor: stats?.kycVerified ? "#E2FDED" : "#FFF8E1",
-                color: stats?.kycVerified ? "#27AE60" : "#F59E0B",
+                backgroundColor: stats?.kycStatus === "APPROVED" ? "#E2FDED" : stats?.kycStatus === "REJECTED" ? "#FEE2E2" : stats?.kycStatus === "UNDER_REVIEW" ? "#FFF8E1" : stats?.kycStatus === "SUBMITTED" || stats?.kycStatus === "RESUBMITTED" ? "#EFF6FF" : "#F3F4F6",
+                color: stats?.kycStatus === "APPROVED" ? "#27AE60" : stats?.kycStatus === "REJECTED" ? "#EF4444" : stats?.kycStatus === "UNDER_REVIEW" ? "#F59E0B" : stats?.kycStatus === "SUBMITTED" || stats?.kycStatus === "RESUBMITTED" ? "#3B82F6" : "#6B7078",
               }}
             >
-              {stats?.kycVerified ? (
+              {stats?.kycStatus === "APPROVED" ? (
                 <CheckCircle className="w-3 h-3" />
               ) : (
                 <Clock className="w-3 h-3" />
               )}
               {loading
                 ? "Checking KYC..."
-                : stats?.kycVerified
-                ? "KYC Verified"
-                : "KYC Pending"}
+                : stats?.kycStatus
+                ? stats.kycStatus.replace("_", " ")
+                : "NOT SUBMITTED"}
             </span>
           </div>
         </div>
       </div>
+
+      {/* ── KYC Status Tracking Card ── */}
+      {stats && stats.kycStatus !== "APPROVED" && (
+        <KycStatusCard 
+          initialStatus={stats.kycStatus} 
+          onStatusUpdate={fetchAll} 
+        />
+      )}
 
       {/* ── Stat Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

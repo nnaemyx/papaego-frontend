@@ -28,12 +28,36 @@ export const PENDING_STATUSES = [
   "CUSTOMER_CONFIRMED",
 ];
 
+function getCustomerFriendlyStage(status: string): { label: string; stageNumber: number; color: string; bg: string } {
+  switch (status) {
+    case "REQUESTED":
+    case "INITIATED":
+    case "CUSTOMER_VERIFIED":
+    case "UNDER_REVIEW":
+    case "FLAGGED":
+      return { label: "Under Review", stageNumber: 1, color: "#3B82F6", bg: "#EFF6FF" };
+    case "QUOTED":
+    case "SENT_TO_CUSTOMER":
+    case "CUSTOMER_CONFIRMED":
+      return { label: "Rate Assigned", stageNumber: 2, color: "#8B5CF6", bg: "#EDE9FE" };
+    case "AWAITING_PAYMENT":
+    case "PAYMENT_UPLOADED":
+      return { label: "Payment Submitted", stageNumber: 3, color: "#F59E0B", bg: "#FFF8E1" };
+    case "PAYMENT_CONFIRMED":
+      return { label: "Payment Verified", stageNumber: 4, color: "#3B82F6", bg: "#EFF6FF" };
+    case "COMPLETED":
+      return { label: "Completed", stageNumber: 5, color: "#27AE60", bg: "#E2FDED" };
+    case "CANCELLED":
+      return { label: "Cancelled", stageNumber: 0, color: "#E05555", bg: "#FFE5E5" };
+    case "EXPIRED":
+      return { label: "Expired", stageNumber: 0, color: "#9AA0A6", bg: "#F6F6F6" };
+    default:
+      return { label: status, stageNumber: 0, color: "#6B7078", bg: "#F6F6F6" };
+  }
+}
+
 export function CustomerTradeItem({ trade }: { trade: CustomerTrade }) {
-  const cfg = STATUS_CONFIG[trade.status] || {
-    label: trade.status,
-    color: "#6B7078",
-    bg: "#F6F6F6",
-  };
+  const stageInfo = getCustomerFriendlyStage(trade.status);
   const isPending = PENDING_STATUSES.includes(trade.status);
 
   return (
@@ -45,9 +69,9 @@ export function CustomerTradeItem({ trade }: { trade: CustomerTrade }) {
         <div className="flex items-center gap-3">
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: cfg.bg }}
+            style={{ backgroundColor: stageInfo.bg }}
           >
-            <ArrowUpRight className="w-5 h-5" style={{ color: cfg.color }} />
+            <ArrowUpRight className="w-5 h-5" style={{ color: stageInfo.color }} />
           </div>
           <div>
             <p className="caption font-semibold" style={{ color: "var(--text-tertiary)" }}>
@@ -56,22 +80,38 @@ export function CustomerTradeItem({ trade }: { trade: CustomerTrade }) {
             <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
               {formatCurrency(trade.amount, trade.sendCurrency)} → {trade.receiveCurrency}
             </p>
-            <p className="caption" style={{ color: "var(--text-tertiary)" }}>
-              {new Date(trade.createdAt).toLocaleDateString("en-NG", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
-            </p>
+            <div className="flex items-center gap-4 flex-wrap">
+              <p className="caption" style={{ color: "var(--text-tertiary)" }}>
+                {new Date(trade.createdAt).toLocaleDateString("en-NG", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </p>
+              
+              {stageInfo.stageNumber > 0 && (
+                <div className="flex items-center gap-1 w-20" title={`Stage ${stageInfo.stageNumber} of 5: ${stageInfo.label}`}>
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <div
+                      key={s}
+                      className="h-1 rounded-full flex-1 transition-all"
+                      style={{
+                        backgroundColor: s <= stageInfo.stageNumber ? stageInfo.color : "#E1E3E6",
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="flex flex-col items-end gap-2 flex-shrink-0 ml-3">
           <span
             className="px-2.5 py-1 rounded-full caption font-semibold whitespace-nowrap"
-            style={{ backgroundColor: cfg.bg, color: cfg.color }}
+            style={{ backgroundColor: stageInfo.bg, color: stageInfo.color }}
           >
-            {cfg.label}
+            {stageInfo.label}
           </span>
           <span className="caption font-semibold" style={{ color: "var(--brand-primary)" }}>
             {isPending ? "Action needed →" : "View Details →"}
