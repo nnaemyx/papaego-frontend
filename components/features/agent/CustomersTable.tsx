@@ -31,6 +31,19 @@ const getStatusBadgeStyles = (status: Customer['verificationStatus']) => {
   }
 };
 
+const getActivityBadgeStyles = (status: Customer['activityStatus']) => {
+  switch (status) {
+    case 'Active':
+      return { backgroundColor: '#e2fded', color: '#27ae60' };
+    case 'Inactive':
+      return { backgroundColor: '#fff4e5', color: '#f39c12' };
+    case 'Dormant':
+      return { backgroundColor: '#f1f3f4', color: '#5f6368' };
+    default:
+      return { backgroundColor: '#f1f3f4', color: '#5f6368' };
+  }
+};
+
 export function CustomersTable({ customers, onViewCustomer }: CustomersTableProps) {
   return (
     <div className="rounded-xl border border-(--border-custom) overflow-hidden bg-white">
@@ -47,13 +60,16 @@ export function CustomersTable({ customers, onViewCustomer }: CustomersTableProp
               Contact
             </TableHead>
             <TableHead className="font-bold" style={{ color: 'var(--text-primary)' }}>
-              Total Transactions
+              Total Trades
             </TableHead>
             <TableHead className="font-bold" style={{ color: 'var(--text-primary)' }}>
-              Last Trade
+              Last Active
             </TableHead>
             <TableHead className="font-bold" style={{ color: 'var(--text-primary)' }}>
-              Status
+              Activity Status
+            </TableHead>
+            <TableHead className="font-bold" style={{ color: 'var(--text-primary)' }}>
+              Verification
             </TableHead>
             <TableHead className="font-bold text-right" style={{ color: 'var(--text-primary)' }}>
               Actions
@@ -97,10 +113,18 @@ export function CustomersTable({ customers, onViewCustomer }: CustomersTableProp
                 </div>
               </TableCell>
               <TableCell className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {customer.totalTransactions}
+                {customer.totalTrades ?? customer.totalTransactions}
               </TableCell>
-              <TableCell className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                {formatDate(customer.lastTrade)}
+              <TableCell className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                {customer.lastActive || 'Never'}
+              </TableCell>
+              <TableCell>
+                <Badge
+                  className="font-medium px-3 py-1"
+                  style={getActivityBadgeStyles(customer.activityStatus)}
+                >
+                  {customer.activityStatus || 'Dormant'}
+                </Badge>
               </TableCell>
               <TableCell>
                 <Badge

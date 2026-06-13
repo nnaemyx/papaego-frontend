@@ -8,6 +8,10 @@ export interface Customer {
   totalTransactions: number;
   verificationStatus: 'Verified' | 'Pending' | 'Failed';
   activityLevel?: 'High' | 'Medium' | 'Low';
+  activityStatus?: 'Active' | 'Inactive' | 'Dormant';
+  lastActive?: string;
+  lastTransactionAt?: string | null;
+  totalTrades?: number;
   customerType?: 'Individual' | 'Business';
   companyName?: string | null;
   companySector?: string | null;

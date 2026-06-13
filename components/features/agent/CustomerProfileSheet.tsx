@@ -129,42 +129,57 @@ export function CustomerProfileSheet({ customer, open, onClose }: CustomerProfil
 
         {/* Statistics */}
         {isLoadingFull && !fullCustomer ? (
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <Skeleton className="h-24 rounded-xl" />
             <Skeleton className="h-24 rounded-xl" />
             <Skeleton className="h-24 rounded-xl" />
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="p-4 rounded-xl border border-(--border-custom) bg-white">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp size={20} style={{ color: 'var(--brand-primary)' }} />
-                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                  Total Transactions
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="p-3.5 rounded-xl border border-(--border-custom) bg-white flex flex-col justify-between min-h-[90px]">
+              <div className="flex items-center gap-1.5 mb-1">
+                <TrendingUp size={16} style={{ color: 'var(--brand-primary)' }} />
+                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                  Total Trades
                 </p>
               </div>
-              <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                {data.totalTransactions ?? 0}
+              <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                {data.totalTrades ?? data.totalTransactions ?? 0}
               </p>
             </div>
-            <div className="p-4 rounded-xl border border-(--border-custom) bg-white">
-              <div className="flex items-center gap-2 mb-2">
-                <FileText size={20} style={{ color: 'var(--status-success)' }} />
-                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                  Activity Level
+            
+            <div className="p-3.5 rounded-xl border border-(--border-custom) bg-white flex flex-col justify-between min-h-[90px]">
+              <div className="flex items-center gap-1.5 mb-1">
+                <FileText size={16} style={{ color: 'var(--status-success)' }} />
+                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                  Activity
                 </p>
               </div>
-              <p
-                className="text-2xl font-bold"
-                style={{
-                  color:
-                    data.activityLevel === 'High'
-                      ? 'var(--status-success)'
-                      : data.activityLevel === 'Medium'
-                      ? 'var(--brand-primary)'
-                      : 'var(--text-primary)',
-                }}
-              >
-                {data.activityLevel || 'N/A'}
+              <div>
+                <span
+                  className="inline-block px-2 py-0.5 rounded text-xs font-bold"
+                  style={
+                    data.activityStatus === 'Active'
+                      ? { backgroundColor: '#e2fded', color: '#27ae60' }
+                      : data.activityStatus === 'Inactive'
+                      ? { backgroundColor: '#fff4e5', color: '#f39c12' }
+                      : { backgroundColor: '#f1f3f4', color: '#5f6368' }
+                  }
+                >
+                  {data.activityStatus || 'Dormant'}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl border border-(--border-custom) bg-white flex flex-col justify-between min-h-[90px]">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Calendar size={16} style={{ color: 'var(--text-secondary)' }} />
+                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                  Last Active
+                </p>
+              </div>
+              <p className="text-xs font-bold truncate" style={{ color: 'var(--text-primary)' }}>
+                {data.lastActive || 'Never'}
               </p>
             </div>
           </div>
@@ -199,7 +214,7 @@ export function CustomerProfileSheet({ customer, open, onClose }: CustomerProfil
                       </div>
                       <div>
                         <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                          {trade.amount} {trade.sendCurrency} → {trade.receiveCurrency}
+                          {trade.amount ? `${trade.amount} ` : ''}{trade.sendCurrency} → {trade.receiveCurrency}
                         </p>
                         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
                           {trade.createdAt ? new Date(trade.createdAt).toLocaleDateString('en-NG', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}

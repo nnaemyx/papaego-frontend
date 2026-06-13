@@ -49,6 +49,13 @@ export interface CustomerTradeDetail extends CustomerTrade {
     paymentAccountNumber: string | null;
     paymentBankName: string | null;
     paymentAmount: string | null;
+    // Negotiation fields
+    negotiationUsed: boolean;
+    originalFxRate: string | null;
+    negotiatedRate: string | null;
+    // Rate expiry
+    rateExpiresIn: number | null;
+    isRateExpired: boolean;
     timeline: { action: string; createdAt: string }[];
 }
 
@@ -241,6 +248,35 @@ export const customerApi = {
     /** Confirm supplier account and rate for a trade */
     confirmTrade: async (tradeId: string) => {
         const response = await api.patch(`/customer/portal/trades/${tradeId}/confirm`);
+        return response.data;
+    },
+
+    /** Check if negotiation is globally available */
+    getNegotiationStatus: async (): Promise<{ negotiationAvailable: boolean }> => {
+        const response = await api.get("/customer/portal/negotiation-status");
+        return response.data;
+    },
+
+    /** Check if a specific trade can be negotiated */
+    checkNegotiationEligibility: async (tradeId: string): Promise<{
+        eligible: boolean;
+        reason: string;
+        turnoverMet: boolean;
+        featureEnabled: boolean;
+    }> => {
+        const response = await api.get(`/customer/portal/trades/${tradeId}/negotiation-eligibility`);
+        return response.data;
+    },
+
+    /** Apply one-time 0.05% negotiation discount to a trade */
+    negotiateTrade: async (tradeId: string): Promise<{
+        success: boolean;
+        originalRate: number;
+        negotiatedRate: number;
+        discountApplied: number;
+        message: string;
+    }> => {
+        const response = await api.post(`/customer/portal/trades/${tradeId}/negotiate`);
         return response.data;
     },
 };

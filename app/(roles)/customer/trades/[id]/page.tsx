@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useEffect, useState } from "react";
+import React, { use, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -12,6 +12,10 @@ import {
   MessageCircle,
   FileText,
   ExternalLink,
+  TrendingDown,
+  Timer,
+  AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 import { customerApi, CustomerTradeDetail } from "@/lib/api/customer";
 import { TransactionChat } from "@/components/transactions/TransactionChat";
@@ -59,20 +63,84 @@ export default function CustomerTradeDetailsPage({
   const [uploadingProof, setUploadingProof] = useState(false);
   const [proofSuccess, setProofSuccess] = useState(false);
 
-  const fetchTrade = async () => {
+  // ── Negotiation state ──
+  const [negotiationEligible, setNegotiationEligible] = useState(false);
+  const [negotiationChecking, setNegotiationChecking] = useState(false);
+  const [negotiating, setNegotiating] = useState(false);
+
+  // ── Rate expiry countdown ──
+  const [rateCountdown, setRateCountdown] = useState<number | null>(null);
+
+  const fetchTrade = useCallback(async () => {
     try {
       const data = await customerApi.getTrade(transactionId);
       setTrade(data);
+
+      // Set initial countdown from server
+      if (data.rateExpiresIn && data.rateExpiresIn > 0 && !data.isRateExpired) {
+        setRateCountdown(data.rateExpiresIn);
+      } else {
+        setRateCountdown(null);
+      }
+
+      // Check negotiation eligibility if trade has a rate and isn't negotiated yet
+      if (data.fxRate && !data.negotiationUsed && !data.isRateExpired) {
+        setNegotiationChecking(true);
+        try {
+          const eligibility = await customerApi.checkNegotiationEligibility(data.id);
+          setNegotiationEligible(eligibility.eligible);
+        } catch {
+          setNegotiationEligible(false);
+        } finally {
+          setNegotiationChecking(false);
+        }
+      }
     } catch {
       toast.error("Failed to load trade details");
     } finally {
       setLoading(false);
     }
-  };
+  }, [transactionId]);
 
   useEffect(() => {
     fetchTrade();
-  }, [transactionId]);
+  }, [fetchTrade]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (rateCountdown === null || rateCountdown <= 0) return;
+    const interval = setInterval(() => {
+      setRateCountdown((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [rateCountdown]);
+
+  const formatCountdown = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const handleNegotiate = async () => {
+    if (!trade) return;
+    setNegotiating(true);
+    try {
+      const result = await customerApi.negotiateTrade(trade.id);
+      toast.success(result.message);
+      setNegotiationEligible(false);
+      fetchTrade();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to negotiate rate");
+    } finally {
+      setNegotiating(false);
+    }
+  };
 
   const handleProofUpload = async (file: File) => {
     if (!trade) return;
@@ -220,6 +288,104 @@ export default function CustomerTradeDetailsPage({
             )}
           </div>
         </div>
+
+        {/* Rate Expiry & Negotiation Panel */}
+        {trade.fxRate && (
+          <div
+            className="bg-white rounded-2xl border p-5 md:p-6 overflow-hidden relative"
+            style={{ borderColor: "var(--border-custom)" }}
+          >
+            {/* Visual indicator bar */}
+            <div 
+              className="absolute top-0 left-0 w-2 h-full" 
+              style={{ 
+                backgroundColor: trade.isRateExpired 
+                  ? "#E05555" 
+                  : trade.negotiationUsed 
+                  ? "#8B5CF6" 
+                  : "var(--brand-primary)" 
+              }} 
+            />
+            
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pl-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Timer className="w-5 h-5 text-amber-500 animate-pulse" />
+                  <span className="font-bold text-gray-900 text-lg">Rate Protection Status</span>
+                </div>
+                <p className="text-sm text-gray-500">
+                  {trade.isRateExpired 
+                    ? "This quoted exchange rate has expired. Please contact support or request a new quote."
+                    : `Your rate is locked. Complete your payment before the timer expires.`}
+                </p>
+              </div>
+              
+              <div className="flex flex-col items-start md:items-end gap-1 flex-shrink-0">
+                {trade.isRateExpired ? (
+                  <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-50 text-red-600 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5" /> Expired
+                  </span>
+                ) : rateCountdown !== null ? (
+                  <div className="flex items-center gap-2 bg-amber-50 px-4 py-2 rounded-xl border border-amber-200">
+                    <span className="text-xs font-semibold text-amber-800 uppercase tracking-wider">Expires In</span>
+                    <span className="font-mono text-lg font-bold text-amber-600">
+                      {formatCountdown(rateCountdown)}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-green-50 text-green-700 flex items-center gap-1">
+                    <CheckCircle className="w-3.5 h-3.5" /> Locked
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Negotiation result */}
+            {trade.negotiationUsed && (
+              <div className="mt-4 p-4 rounded-xl bg-purple-50 border border-purple-100 flex items-start gap-3 pl-3">
+                <Sparkles className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-bold text-purple-900">✨ Preferred Rate Applied!</h4>
+                  <p className="text-xs text-purple-700 mt-0.5">
+                    A volume-based customer discount of 0.05% has been applied to this trade. 
+                    Original rate: <span className="font-semibold">{Number(trade.originalFxRate || trade.fxRate).toFixed(4)}</span> → 
+                    Negotiated rate: <span className="font-bold">{Number(trade.negotiatedRate || trade.fxRate).toFixed(4)}</span>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Negotiation offer */}
+            {negotiationEligible && !trade.negotiationUsed && !trade.isRateExpired && (
+              <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 flex flex-col md:flex-row md:items-center justify-between gap-4 pl-3">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5 animate-bounce" />
+                  <div>
+                    <h4 className="text-sm font-bold text-purple-950">✨ Preferred FX Discount Available!</h4>
+                    <p className="text-xs text-purple-800 mt-0.5">
+                      Because of your high activity and turnover, you are eligible for an instant 0.05% discount.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleNegotiate}
+                  disabled={negotiating}
+                  className="px-4 py-2.5 rounded-lg text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 flex items-center gap-1.5 transition-colors self-start md:self-auto disabled:opacity-50 shadow-sm"
+                >
+                  {negotiating ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Negotiating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5" /> Negotiate Rate
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ── Left: Details ── */}
