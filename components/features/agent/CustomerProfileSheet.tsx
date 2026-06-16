@@ -199,7 +199,7 @@ export function CustomerProfileSheet({ customer, open, onClose }: CustomerProfil
                       </div>
                       <div>
                         <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                          {trade.amount} {trade.sendCurrency} → {trade.receiveCurrency}
+                          {trade.sendCurrency} → {trade.receiveCurrency}
                         </p>
                         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
                           {trade.createdAt ? new Date(trade.createdAt).toLocaleDateString('en-NG', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}

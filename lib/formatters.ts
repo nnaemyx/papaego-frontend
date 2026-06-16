@@ -57,7 +57,8 @@ export function formatExchangeRate(rate: number | string, sendCurrency: string, 
 }
 
 // Format date
-export function formatDate(date: string | Date): string {
+export function formatDate(date?: string | Date | null): string {
+  if (!date) return "—";
   return new Date(date).toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "2-digit",

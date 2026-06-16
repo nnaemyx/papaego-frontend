@@ -96,11 +96,18 @@ export default function AdminTradeRequestDetailPage({
     });
 
     // Auto-prefill the fx rate if it hasn't been set by admin yet
-    if (request && !request.fxRate && !adminFxRate && adminRates.length > 0) {
+    if (request && !request.fxRate && !adminFxRate) {
         const pairName = request.sendCurrency === 'NGN' 
             ? `${request.receiveCurrency}/NGN` 
             : `${request.sendCurrency}/NGN`;
-        const matchingRate = adminRates.find(r => r.pair === pairName);
+        const activeRates = adminRates.length > 0 ? adminRates : [
+            { pair: "USD/NGN", buy: 1580, sell: 1600 },
+            { pair: "GBP/NGN", buy: 1990, sell: 2020 },
+            { pair: "EUR/NGN", buy: 1720, sell: 1745 },
+            { pair: "CAD/NGN", buy: 1150, sell: 1170 },
+            { pair: "AED/NGN", buy: 430, sell: 445 },
+        ];
+        const matchingRate = activeRates.find(r => r.pair === pairName);
         if (matchingRate) {
             // For sending NGN to foreign currency, we use sell rate; else buy rate (or default rate if custom logic needed)
             const defaultRate = request.sendCurrency === 'NGN' ? matchingRate.sell : matchingRate.buy;
@@ -140,6 +147,47 @@ export default function AdminTradeRequestDetailPage({
         },
         onError: () => toast.error("Failed to set rate"),
     });
+
+    const handleFetchLiveRate = async () => {
+        if (!request) {
+            toast.error("Trade request details not loaded yet");
+            return;
+        }
+        try {
+            const rates = await adminRatesApi.getRates();
+            const pairName = request.sendCurrency === 'NGN' 
+                ? `${request.receiveCurrency}/NGN` 
+                : `${request.sendCurrency}/NGN`;
+            
+            const activeRates = rates.length > 0 ? rates : [
+                { pair: "USD/NGN", buy: 1580, sell: 1600 },
+                { pair: "GBP/NGN", buy: 1990, sell: 2020 },
+                { pair: "EUR/NGN", buy: 1720, sell: 1745 },
+                { pair: "CAD/NGN", buy: 1150, sell: 1170 },
+                { pair: "AED/NGN", buy: 430, sell: 445 },
+            ];
+
+            const matchingRate = activeRates.find((r: any) => r.pair === pairName);
+            if (!matchingRate) {
+                toast.error(`Live rate for ${pairName} not found`);
+                return;
+            }
+            
+            const rateVal = request.sendCurrency === 'NGN' ? matchingRate.sell : matchingRate.buy;
+            setAdminFxRate(String(rateVal));
+            
+            const a = parseFloat(String(request.amount));
+            const r = parseFloat(String(rateVal));
+            if (!isNaN(r) && !isNaN(a) && r > 0) {
+                const payout = request.sendCurrency === 'NGN' ? (a / r).toFixed(2) : (a * r).toFixed(2);
+                setAdminPayoutAmount(payout);
+            }
+            const isFallback = rates.length === 0;
+            toast.success(`${isFallback ? "Estimated" : "Fetched latest"} live rate for ${pairName}: ${rateVal}`);
+        } catch {
+            toast.error("Failed to fetch live rates from server");
+        }
+    };
 
     const rejectMutation = useMutation({
         mutationFn: (reason?: string) =>
@@ -585,23 +633,33 @@ export default function AdminTradeRequestDetailPage({
                                     Set the exchange rate for this trade. The customer will be emailed their rate immediately.
                                 </p>
                                 <div className="space-y-2">
-                                    <div className="relative">
-                                        <Calculator className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#9AA0A6" }} />
-                                        <Input
-                                            type="number"
-                                            step="0.0001"
-                                            placeholder={`FX Rate (1 ${request.sendCurrency === 'NGN' ? request.receiveCurrency : request.sendCurrency} = ? NGN)`}
-                                            value={adminFxRate}
-                                            onChange={(e) => {
-                                                setAdminFxRate(e.target.value);
-                                                const r = parseFloat(e.target.value);
-                                                const a = parseFloat(String(request.amount));
-                                                if (!isNaN(r) && !isNaN(a) && r > 0) {
-                                                    setAdminPayoutAmount(request.sendCurrency === 'NGN' ? (a / r).toFixed(2) : (a * r).toFixed(2));
-                                                }
-                                            }}
-                                            className="pl-9 h-10"
-                                        />
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <Calculator className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#9AA0A6" }} />
+                                            <Input
+                                                type="number"
+                                                step="0.0001"
+                                                placeholder={`FX Rate (1 ${request.sendCurrency === 'NGN' ? request.receiveCurrency : request.sendCurrency} = ? NGN)`}
+                                                value={adminFxRate}
+                                                onChange={(e) => {
+                                                    setAdminFxRate(e.target.value);
+                                                    const r = parseFloat(e.target.value);
+                                                    const a = parseFloat(String(request.amount));
+                                                    if (!isNaN(r) && !isNaN(a) && r > 0) {
+                                                        setAdminPayoutAmount(request.sendCurrency === 'NGN' ? (a / r).toFixed(2) : (a * r).toFixed(2));
+                                                    }
+                                                }}
+                                                className="pl-9 h-10"
+                                            />
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={handleFetchLiveRate}
+                                            className="h-10 text-xs shrink-0"
+                                        >
+                                            Fetch Live Rate
+                                        </Button>
                                     </div>
                                     {adminPayoutAmount && (
                                         <p className="text-xs" style={{ color: "#27AE60" }}>

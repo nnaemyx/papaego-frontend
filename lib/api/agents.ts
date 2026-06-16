@@ -44,6 +44,7 @@ export const agentsApi = {
       lastName: data.lastName,
       region: data.region,
       notes: data.notes,
+      role: data.role,
     });
     return response.data;
   },

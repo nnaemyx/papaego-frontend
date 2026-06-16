@@ -19,6 +19,8 @@ interface AgentAdminControlsTabProps {
     onActivate: () => void;
     onVerify: () => void;
     onDelete: () => void;
+    onUpdate: (data: { role?: string; region?: string }) => void;
+    isUpdating?: boolean;
 }
 
 export function AgentAdminControlsTab({
@@ -27,6 +29,8 @@ export function AgentAdminControlsTab({
     onActivate,
     onVerify,
     onDelete,
+    onUpdate,
+    isUpdating = false,
 }: AgentAdminControlsTabProps) {
     const [newRole, setNewRole] = useState(agent.role);
     const [newRegion, setNewRegion] = useState(agent.region);
@@ -152,9 +156,8 @@ export function AgentAdminControlsTab({
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="Agent">Agent</SelectItem>
-                                <SelectItem value="Senior Agent">Senior Agent</SelectItem>
-                                <SelectItem value="Supervisor">Supervisor</SelectItem>
+                                <SelectItem value="Field Agent">Field Agent</SelectItem>
+                                <SelectItem value="Corporate Agent">Corporate Agent</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -177,11 +180,13 @@ export function AgentAdminControlsTab({
                     </div>
                 </div>
                 <Button
+                    onClick={() => onUpdate({ role: newRole, region: newRegion })}
+                    disabled={isUpdating || (newRole === agent.role && newRegion === agent.region)}
                     className="gap-2"
                     style={{ backgroundColor: "#c9a227", color: "white" }}
                 >
                     <Edit className="h-4 w-4" />
-                    Save Changes
+                    {isUpdating ? "Saving..." : "Save Changes"}
                 </Button>
             </div>
 

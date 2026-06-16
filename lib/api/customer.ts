@@ -51,6 +51,11 @@ export interface CustomerTradeDetail extends CustomerTrade {
     paymentAmount: string | null;
     timeline: { action: string; createdAt: string }[];
     stages?: { key: string; label: string; description: string; completed: boolean; completedAt: string | null }[];
+    // Negotiation fields (Sprint 2)
+    rateExpiresIn: number | null;  // seconds remaining
+    originalFxRate: string | null;
+    negotiatedRate: string | null;
+    negotiationUsed: boolean;
 }
 
 export interface FxRate {
@@ -258,6 +263,30 @@ export const customerApi = {
     /** Confirm supplier account and rate for a trade */
     confirmTrade: async (tradeId: string) => {
         const response = await api.patch(`/customer/portal/trades/${tradeId}/confirm`);
+        return response.data;
+    },
+
+    /** Check if customer is eligible to negotiate the rate on a trade */
+    getNegotiationEligibility: async (tradeId: string): Promise<{
+        eligible: boolean;
+        turnover: number;
+        turnoverThreshold: number;
+        maxDiscountPct: number;
+        reason?: string;
+    }> => {
+        const response = await api.get(`/customer/portal/trades/${tradeId}/negotiate/eligibility`);
+        return response.data;
+    },
+
+    /** Submit a negotiation request for a trade */
+    requestNegotiation: async (tradeId: string, requestedRate: number): Promise<{
+        success: boolean;
+        message: string;
+        originalRate: number;
+        requestedRate: number;
+        discountPct: string;
+    }> => {
+        const response = await api.post(`/customer/portal/trades/${tradeId}/negotiate`, { requestedRate });
         return response.data;
     },
 };

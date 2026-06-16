@@ -70,6 +70,13 @@ export default function AgentDetailPage({
         },
     });
 
+    const updateMutation = useMutation({
+        mutationFn: (data: { role?: string; region?: string }) => agentsApi.updateAgent(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["agent", id] });
+        },
+    });
+
     if (isLoading) {
         return (
             <div className="p-6 space-y-4" style={{ backgroundColor: "#f7f8f9", minHeight: "100%" }}>
@@ -207,6 +214,8 @@ export default function AgentDetailPage({
                         onActivate={() => activateMutation.mutate()}
                         onVerify={() => verifyMutation.mutate()}
                         onDelete={() => setDeleteOpen(true)}
+                        onUpdate={(data) => updateMutation.mutate(data)}
+                        isUpdating={updateMutation.isPending}
                     />
                 )}
             </div>

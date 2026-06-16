@@ -1,5 +1,5 @@
 // Agent role types
-export type AgentRole = "Agent" | "Senior Agent" | "Supervisor";
+export type AgentRole = "Field Agent" | "Corporate Agent";
 export type AgentStatus =
   | "Active"
   | "Inactive"

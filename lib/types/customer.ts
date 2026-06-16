@@ -6,6 +6,7 @@ export interface Customer {
   phone: string;
   lastTrade: string; // ISO date string
   totalTransactions: number;
+  totalTrades?: number;
   verificationStatus: 'Verified' | 'Pending' | 'Failed';
   activityLevel?: 'High' | 'Medium' | 'Low';
   customerType?: 'Individual' | 'Business';
@@ -15,9 +16,11 @@ export interface Customer {
   referralType?: 'AGENT' | 'CORPORATE' | 'DIRECT';
   /** Name of the agent who referred this customer (if referralType === 'AGENT') */
   referredByAgent?: string | null;
+  referredByThisAgent?: boolean;
   governmentIdUrl?: string | null;
   proofOfAddressUrl?: string | null;
-  dateJoined: string; // ISO date string
+  joinDate?: string; // human formatted date (e.g. 01/01/2025)
+  dateJoined?: string; // ISO date string
   address?: string;
   avatar?: string;
   recentTrades?: any[];
@@ -37,13 +40,21 @@ export interface Customer {
   kycRejectionReason?: string | null;
   kycReviewedAt?: string | null;
   kycReviewedBy?: string | null;
+  // Sprint 2 — Activity tracking
+  lastTransactionAt?: string | null;
+  lastTransactionAgo?: string;
+  activityStatus?: 'Active' | 'Inactive' | 'Dormant';
 }
 
 export interface CustomerStats {
   totalCustomers: number;
   verifiedCustomers: number;
-  highValueCustomers: number;
-  activeCustomersToday: number;
+  highValueCustomers?: number;
+  activeCustomersToday?: number;
+  // Sprint 2 — activity buckets
+  activeCustomers?: number;
+  inactiveCustomers?: number;
+  dormantCustomers?: number;
 }
 
 export interface CustomerFilters {
@@ -51,7 +62,7 @@ export interface CustomerFilters {
   status?: 'All' | 'Verified' | 'Pending' | 'Failed';
   customerType?: 'All' | 'Individual' | 'Business';
   sector?: string;
-  activityLevel?: 'All' | 'High' | 'Medium' | 'Low';
+  activityLevel?: 'All' | 'Active' | 'Inactive' | 'Dormant';
   dateJoined?: string;
 }
 

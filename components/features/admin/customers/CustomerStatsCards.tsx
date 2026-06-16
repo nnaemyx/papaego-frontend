@@ -36,13 +36,13 @@ export function CustomerStatsCards({ stats, isLoading }: CustomerStatsCardsProps
         },
         {
             label: "High-Value Customers",
-            value: stats.highValueCustomers.toLocaleString(),
+            value: (stats.highValueCustomers ?? 0).toLocaleString(),
             color: "#c9a227",
             bg: "#fff8ce",
         },
         {
             label: "Active Today",
-            value: stats.activeCustomersToday.toLocaleString(),
+            value: (stats.activeCustomersToday ?? 0).toLocaleString(),
             color: "#9333ea",
             bg: "#f3e8ff",
         },

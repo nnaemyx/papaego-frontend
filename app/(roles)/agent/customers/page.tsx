@@ -22,10 +22,11 @@ export default function CustomersPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Verified' | 'Pending' | 'Failed'>('All');
+  const [activityFilter, setActivityFilter] = useState<'All' | 'Active' | 'Inactive' | 'Dormant'>('All');
 
   const { data: customers = [], isLoading: isLoadingCustomers } = useQuery({
-    queryKey: ['agent-customers', { search: searchQuery, status: statusFilter }],
-    queryFn: () => customersApi.getCustomers({ search: searchQuery, status: statusFilter }),
+    queryKey: ['agent-customers', { search: searchQuery, status: statusFilter, activity: activityFilter }],
+    queryFn: () => customersApi.getCustomers({ search: searchQuery, status: statusFilter, activityLevel: activityFilter }),
   });
 
   const { data: stats, isLoading: isLoadingStats } = useQuery({
@@ -65,18 +66,18 @@ export default function CustomersPage() {
         </Card>
         <Card className="p-6 border border-(--border-custom) bg-white rounded-xl">
           <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
-            High Value Customers
+            Active Customers
           </p>
           <p className="text-3xl font-bold" style={{ color: 'var(--brand-primary)' }}>
-            {isLoadingStats ? '...' : stats?.highValueCustomers || 0}
+            {isLoadingStats ? '...' : stats?.activeCustomers || 0}
           </p>
         </Card>
         <Card className="p-6 border border-(--border-custom) bg-white rounded-xl">
           <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
-            Active Today
+            Inactive / Dormant
           </p>
           <p className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            {isLoadingStats ? '...' : stats?.activeCustomersToday || 0}
+            {isLoadingStats ? '...' : (stats?.inactiveCustomers ?? 0) + (stats?.dormantCustomers ?? 0)}
           </p>
         </Card>
       </div>
@@ -114,6 +115,23 @@ export default function CustomersPage() {
                 <SelectItem value="Verified">Verified</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>
                 <SelectItem value="Failed">Failed</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={activityFilter} onValueChange={(val) => setActivityFilter(val as any)}>
+              <SelectTrigger className="w-full sm:w-[160px] h-12">
+                <div className="text-left">
+                  <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                    Activity
+                  </div>
+                  <SelectValue />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All</SelectItem>
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Inactive">Inactive</SelectItem>
+                <SelectItem value="Dormant">Dormant</SelectItem>
               </SelectContent>
             </Select>
           </div>

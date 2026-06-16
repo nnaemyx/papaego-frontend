@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useEffect, useState } from "react";
+import React, { use, useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -12,6 +12,10 @@ import {
   MessageCircle,
   FileText,
   ExternalLink,
+  TrendingDown,
+  AlertCircle,
+  X,
+  Timer,
 } from "lucide-react";
 import { customerApi, CustomerTradeDetail } from "@/lib/api/customer";
 import { TransactionChat } from "@/components/transactions/TransactionChat";
@@ -49,6 +53,257 @@ const ACTION_STATUSES = [
   "PAYMENT_UPLOADED",
 ];
 
+// ── Rate Countdown component ──────────────────────────────────────────────────
+function RateCountdown({ seconds: initialSeconds, onExpire }: { seconds: number; onExpire?: () => void }) {
+  const [remaining, setRemaining] = useState(initialSeconds);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setRemaining(initialSeconds);
+  }, [initialSeconds]);
+
+  useEffect(() => {
+    if (remaining <= 0) {
+      if (onExpire) onExpire();
+      return;
+    }
+    intervalRef.current = setInterval(() => {
+      setRemaining((s) => (s <= 1 ? 0 : s - 1));
+    }, 1000);
+    return () => clearInterval(intervalRef.current!);
+  }, [remaining <= 0]);
+
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+  const isUrgent = remaining <= 60;
+  const expired = remaining === 0;
+
+  if (expired) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
+        style={{ backgroundColor: "#FFE5E5", color: "#E05555" }}>
+        <AlertCircle className="w-3 h-3" />
+        Rate Expired
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold tabular-nums"
+      style={{
+        backgroundColor: isUrgent ? "#FFE5E5" : "#FFF8E1",
+        color: isUrgent ? "#E05555" : "#92400E",
+        animation: isUrgent ? "pulse 1s infinite" : undefined,
+      }}
+    >
+      <Timer className="w-3 h-3" />
+      {`${mins}m ${secs.toString().padStart(2, "0")}s`}
+    </span>
+  );
+}
+
+// ── Negotiate Rate Modal ──────────────────────────────────────────────────────
+function NegotiateModal({
+  trade,
+  onClose,
+  onSuccess,
+}: {
+  trade: CustomerTradeDetail;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const originalRate = Number(trade.fxRate || 0);
+  const maxDiscount = 0.05; // default; overridden by eligibility response
+  const minRate = originalRate * (1 - maxDiscount);
+
+  const [eligibility, setEligibility] = useState<{
+    eligible: boolean;
+    turnover: number;
+    turnoverThreshold: number;
+    maxDiscountPct: number;
+    reason?: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [requestedRate, setRequestedRate] = useState(originalRate.toFixed(2));
+
+  useEffect(() => {
+    customerApi
+      .getNegotiationEligibility(trade.id)
+      .then(setEligibility)
+      .catch(() => toast.error("Failed to check eligibility"))
+      .finally(() => setLoading(false));
+  }, [trade.id]);
+
+  const effMinRate = eligibility
+    ? originalRate * (1 - eligibility.maxDiscountPct)
+    : minRate;
+  const effMaxDiscountPct = eligibility?.maxDiscountPct ?? maxDiscount;
+
+  const handleSubmit = async () => {
+    const val = parseFloat(requestedRate);
+    if (isNaN(val) || val <= 0) {
+      toast.error("Enter a valid rate");
+      return;
+    }
+    if (val < effMinRate) {
+      toast.error(`Rate too low. Minimum is ${effMinRate.toFixed(2)}`);
+      return;
+    }
+    if (val >= originalRate) {
+      toast.error("Requested rate must be lower than the quoted rate");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const result = await customerApi.requestNegotiation(trade.id, val);
+      toast.success(result.message || "Negotiation submitted! Admin will review shortly.");
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || "Failed to submit negotiation";
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center justify-between px-6 py-4 border-b"
+          style={{ borderColor: "var(--border-custom)" }}
+        >
+          <div className="flex items-center gap-2">
+            <TrendingDown className="w-5 h-5" style={{ color: "var(--brand-primary)" }} />
+            <h2 className="font-bold text-lg" style={{ color: "var(--text-primary)" }}>
+              Request Rate Negotiation
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <X className="w-5 h-5" style={{ color: "var(--text-secondary)" }} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 space-y-5">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin" style={{ color: "var(--brand-primary)" }} />
+            </div>
+          ) : !eligibility?.eligible ? (
+            <div
+              className="rounded-xl p-4 flex gap-3"
+              style={{ backgroundColor: "#FFE5E5" }}
+            >
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#E05555" }} />
+              <div>
+                <p className="font-bold text-sm" style={{ color: "#B91C1C" }}>
+                  Not Eligible for Negotiation
+                </p>
+                <p className="text-sm mt-1" style={{ color: "#7F1D1D" }}>
+                  {eligibility?.reason}
+                </p>
+                {eligibility && (
+                  <div className="mt-3 text-xs space-y-1" style={{ color: "#991B1B" }}>
+                    <p>Your 30-day volume: <strong>₦{eligibility.turnover.toLocaleString()}</strong></p>
+                    <p>Required: <strong>₦{eligibility.turnoverThreshold.toLocaleString()}</strong></p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Rate info */}
+              <div
+                className="rounded-xl p-4 space-y-3"
+                style={{ backgroundColor: "#F8FAFF", border: "1px solid #DBEAFE" }}
+              >
+                <div className="flex justify-between text-sm">
+                  <span style={{ color: "var(--text-secondary)" }}>Current quoted rate</span>
+                  <span className="font-bold" style={{ color: "var(--text-primary)" }}>
+                    1 {trade.sendCurrency} = {originalRate.toLocaleString()} {trade.receiveCurrency}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span style={{ color: "var(--text-secondary)" }}>Max discount allowed</span>
+                  <span className="font-bold" style={{ color: "#8B5CF6" }}>
+                    {(effMaxDiscountPct * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span style={{ color: "var(--text-secondary)" }}>Minimum allowable rate</span>
+                  <span className="font-bold" style={{ color: "#27AE60" }}>
+                    {effMinRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Input */}
+              <div className="space-y-1.5">
+                <label
+                  className="text-sm font-semibold block"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  Your requested rate (1 {trade.sendCurrency} = ? {trade.receiveCurrency})
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={requestedRate}
+                  onChange={(e) => setRequestedRate(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2"
+                  style={{
+                    borderColor: "var(--border-custom)",
+                    color: "var(--text-primary)",
+                  }}
+                  placeholder={`Min: ${effMinRate.toFixed(2)}`}
+                />
+                <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+                  Your 30-day volume: ₦{eligibility.turnover.toLocaleString()} — you qualify for up to {(effMaxDiscountPct * 100).toFixed(1)}% discount
+                </p>
+              </div>
+
+              {/* Action */}
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="w-full py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-60"
+                style={{ backgroundColor: "var(--brand-primary)" }}
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Submitting…
+                  </>
+                ) : (
+                  <>
+                    <TrendingDown className="w-4 h-4" />
+                    Submit Negotiation Request
+                  </>
+                )}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function CustomerTradeDetailsPage({
   params,
 }: CustomerTradeDetailsPageProps) {
@@ -58,8 +313,9 @@ export default function CustomerTradeDetailsPage({
   const [loading, setLoading] = useState(true);
   const [uploadingProof, setUploadingProof] = useState(false);
   const [proofSuccess, setProofSuccess] = useState(false);
+  const [showNegotiate, setShowNegotiate] = useState(false);
 
-  const fetchTrade = async () => {
+  const fetchTrade = useCallback(async () => {
     try {
       const data = await customerApi.getTrade(transactionId);
       setTrade(data);
@@ -68,11 +324,11 @@ export default function CustomerTradeDetailsPage({
     } finally {
       setLoading(false);
     }
-  };
+  }, [transactionId]);
 
   useEffect(() => {
     fetchTrade();
-  }, [transactionId]);
+  }, [fetchTrade]);
 
   const handleProofUpload = async (file: File) => {
     if (!trade) return;
@@ -135,7 +391,7 @@ export default function CustomerTradeDetailsPage({
           Trade Not Found
         </h1>
         <p className="body-secondary mb-6">
-          This trade may have been removed or you don't have access to it.
+          This trade may have been removed or you don&apos;t have access to it.
         </p>
         <Link
           href="/customer/trades"
@@ -154,10 +410,24 @@ export default function CustomerTradeDetailsPage({
     bg: "#F6F6F6",
   };
   const needsAction = ACTION_STATUSES.includes(trade.status);
+  const canNegotiate =
+    !trade.negotiationUsed &&
+    (trade.status === "QUOTED" || trade.status === "SENT_TO_CUSTOMER") &&
+    !!trade.fxRate;
+  const rateIsExpired = trade.rateExpiresIn !== null && trade.rateExpiresIn === 0;
 
   /* ── Page ────────────────────────────────────────────────────────────────── */
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#f7f8f9" }}>
+      {/* Negotiate Rate Modal */}
+      {showNegotiate && (
+        <NegotiateModal
+          trade={trade}
+          onClose={() => setShowNegotiate(false)}
+          onSuccess={fetchTrade}
+        />
+      )}
+
       {/* Sub-header / Breadcrumb */}
       <div
         className="h-14 flex items-center px-4 md:px-8 border-b bg-white"
@@ -214,12 +484,55 @@ export default function CustomerTradeDetailsPage({
               {cfg.label}
             </span>
             {trade.fxRate && (
-              <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-                Rate: {formatExchangeRate(Number(trade.fxRate), trade.sendCurrency, trade.receiveCurrency)}
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
+                  Rate: {formatExchangeRate(Number(trade.fxRate), trade.sendCurrency, trade.receiveCurrency)}
+                </p>
+                {/* Rate countdown timer */}
+                {trade.rateExpiresIn !== null && (trade.status === "QUOTED" || trade.status === "SENT_TO_CUSTOMER" || trade.status === "AWAITING_PAYMENT") && (
+                  <RateCountdown seconds={trade.rateExpiresIn} onExpire={fetchTrade} />
+                )}
+              </div>
+            )}
+            {/* Negotiate rate button */}
+            {canNegotiate && !rateIsExpired && (
+              <button
+                onClick={() => setShowNegotiate(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors hover:opacity-90"
+                style={{
+                  borderColor: "#8B5CF6",
+                  color: "#8B5CF6",
+                  backgroundColor: "#F5F3FF",
+                }}
+              >
+                <TrendingDown className="w-3.5 h-3.5" />
+                Negotiate Rate
+              </button>
+            )}
+            {trade.negotiationUsed && (
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full"
+                style={{ backgroundColor: "#EDE9FE", color: "#7C3AED" }}>
+                Negotiation Used
+              </span>
             )}
           </div>
         </div>
+
+        {/* Rate Expired Banner */}
+        {rateIsExpired && (
+          <div
+            className="rounded-2xl border p-4 flex items-start gap-3"
+            style={{ backgroundColor: "#FFE5E5", borderColor: "#FECACA" }}
+          >
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#E05555" }} />
+            <div>
+              <p className="font-bold text-sm" style={{ color: "#B91C1C" }}>Rate Expired</p>
+              <p className="text-sm mt-0.5" style={{ color: "#7F1D1D" }}>
+                The quoted rate has expired. Please contact your agent to request a new quote.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ── Left: Details ── */}
@@ -249,6 +562,9 @@ export default function CustomerTradeDetailsPage({
                       ? `1 ${trade.sendCurrency} = ${Number(trade.fxRate).toLocaleString()} ${trade.receiveCurrency}`
                       : "Not finalized",
                   },
+                  ...(trade.negotiationUsed && trade.originalFxRate
+                    ? [{ label: "Original Rate", val: `1 ${trade.sendCurrency} = ${Number(trade.originalFxRate).toLocaleString()} ${trade.receiveCurrency}` }]
+                    : []),
                   {
                     label: "Total Payout",
                     val: trade.payoutAmount
@@ -409,30 +725,59 @@ export default function CustomerTradeDetailsPage({
                     className="mb-5 p-4 rounded-xl border"
                     style={{ borderColor: "#C9A22750", backgroundColor: "#FFF8E1" }}
                   >
-                    <p className="text-sm font-bold mb-1" style={{ color: "#92400E" }}>
-                      Confirm the agent's quote
-                    </p>
+                    <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                      <p className="text-sm font-bold" style={{ color: "#92400E" }}>
+                        Confirm the agent&apos;s quote
+                      </p>
+                      {trade.rateExpiresIn !== null && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold" style={{ color: "#92400E" }}>Rate expires in:</span>
+                          <RateCountdown seconds={trade.rateExpiresIn} onExpire={fetchTrade} />
+                        </div>
+                      )}
+                    </div>
                     <p className="body-secondary mb-4">
                       Your agent has prepared this quote. Review the locked rate and
                       confirm to proceed.
                     </p>
-                    <button
-                      onClick={async () => {
-                        if (confirm("Accept quote and lock this exchange rate?")) {
-                          try {
-                            await customerApi.confirmTrade(trade.id);
-                            toast.success(`Quote for ${formatCurrency(trade.amount, trade.sendCurrency)} accepted!`);
-                            fetchTrade();
-                          } catch {
-                            toast.error("Failed to accept quote");
+                    
+                    <div className="flex gap-2 p-3 rounded-lg text-xs mb-4" style={{ backgroundColor: "#FEF3C7", border: "1px solid #FDE68A", color: "#92400E" }}>
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold">Rate Lock Validity</p>
+                        <p className="mt-0.5">Please review and confirm this rate before the 10-minute timer expires. Upon expiry, the rate will refresh to follow the latest live market rate.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={async () => {
+                          if (rateIsExpired) {
+                            toast.error("Rate has expired. Request a new quote from your agent.");
+                            return;
                           }
-                        }
-                      }}
-                      className="px-5 py-2.5 text-sm font-bold rounded-lg text-white transition-colors hover:opacity-90"
-                      style={{ backgroundColor: "var(--brand-primary)" }}
-                    >
-                      Accept &amp; Confirm Quote
-                    </button>
+                          if (confirm("Accept quote and lock this exchange rate?")) {
+                            try {
+                              await customerApi.confirmTrade(trade.id);
+                              toast.success(`Quote for ${formatCurrency(trade.amount, trade.sendCurrency)} accepted!`);
+                              fetchTrade();
+                            } catch (err: any) {
+                              const code = err?.response?.data?.code;
+                              if (code === "RATE_EXPIRED") {
+                                toast.error("Rate has expired. Please request a new quote.");
+                              } else {
+                                toast.error("Failed to accept quote");
+                              }
+                            }
+                          }
+                        }}
+                        disabled={rateIsExpired}
+                        className="px-5 py-2.5 text-sm font-bold rounded-lg text-white transition-colors hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{ backgroundColor: "var(--brand-primary)" }}
+                      >
+                        Accept &amp; Confirm Quote
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -442,13 +787,21 @@ export default function CustomerTradeDetailsPage({
                     className="p-4 rounded-xl border mb-5"
                     style={{ borderColor: "#C9A22750", backgroundColor: "#FFF8E1" }}
                   >
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-6 h-6 rounded-full bg-brand-primary flex items-center justify-center text-white text-xs font-black">
-                        !
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-brand-primary flex items-center justify-center text-white text-xs font-black">
+                          !
+                        </div>
+                        <p className="text-sm font-bold" style={{ color: "#92400E" }}>
+                          Payment Required
+                        </p>
                       </div>
-                      <p className="text-sm font-bold" style={{ color: "#92400E" }}>
-                        Payment Required
-                      </p>
+                      {trade.rateExpiresIn !== null && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold" style={{ color: "#92400E" }}>Rate expires in:</span>
+                          <RateCountdown seconds={trade.rateExpiresIn} onExpire={fetchTrade} />
+                        </div>
+                      )}
                     </div>
 
                     <div className="bg-white/50 backdrop-blur-sm border rounded-lg p-3 mb-4 space-y-2">
@@ -461,6 +814,14 @@ export default function CustomerTradeDetailsPage({
                             <span className="text-gray-500">Name:</span>
                             <span className="font-bold">{trade.paymentAccountName}</span>
                         </div>
+                    </div>
+
+                    <div className="flex gap-2 p-3 rounded-lg text-xs mb-4" style={{ backgroundColor: "#FEF3C7", border: "1px solid #FDE68A", color: "#92400E" }}>
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold">Rate Lock Warning</p>
+                        <p className="mt-0.5">Please make your payment and upload the receipt before the 10-minute timer expires. If the timer runs out, the rate will automatically refresh to the latest live market rate.</p>
+                      </div>
                     </div>
 
                     <label className="cursor-pointer">

@@ -182,9 +182,8 @@ export function InviteAgentSheet({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Agent">Agent</SelectItem>
-                      <SelectItem value="Senior Agent">Senior Agent</SelectItem>
-                      <SelectItem value="Supervisor">Supervisor</SelectItem>
+                      <SelectItem value="Field Agent">Field Agent</SelectItem>
+                      <SelectItem value="Corporate Agent">Corporate Agent</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

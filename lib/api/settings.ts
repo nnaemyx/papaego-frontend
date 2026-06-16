@@ -14,5 +14,15 @@ export const settingsApi = {
     setFxMargin: async (countryId: string, margin: number): Promise<{ updated: boolean }> => {
         const response = await api.post("/admin/fx-margins", { countryId, margin });
         return response.data;
+    },
+
+    getNegotiationConfig: async (): Promise<{ turnoverThreshold: number; maxDiscountPct: number; enabled: boolean }> => {
+        const response = await api.get("/admin/negotiation/config");
+        return response.data;
+    },
+
+    updateNegotiationConfig: async (config: { turnoverThreshold: number; maxDiscountPct: number; enabled: boolean }): Promise<{ success: boolean; config: any }> => {
+        const response = await api.patch("/admin/negotiation/config", config);
+        return response.data;
     }
 };

@@ -31,6 +31,19 @@ const getStatusBadgeStyles = (status: Customer['verificationStatus']) => {
   }
 };
 
+const getActivityBadgeStyles = (activityStatus: Customer['activityStatus']) => {
+  switch (activityStatus) {
+    case 'Active':
+      return { backgroundColor: '#e2fded', color: '#27ae60' };
+    case 'Inactive':
+      return { backgroundColor: '#fff4e5', color: '#f39c12' };
+    case 'Dormant':
+      return { backgroundColor: '#ffe5e5', color: '#e05555' };
+    default:
+      return { backgroundColor: '#f1f2f6', color: '#57606f' };
+  }
+};
+
 export function CustomersTable({ customers, onViewCustomer }: CustomersTableProps) {
   return (
     <div className="rounded-xl border border-(--border-custom) overflow-hidden bg-white">
@@ -51,6 +64,9 @@ export function CustomersTable({ customers, onViewCustomer }: CustomersTableProp
             </TableHead>
             <TableHead className="font-bold" style={{ color: 'var(--text-primary)' }}>
               Last Trade
+            </TableHead>
+            <TableHead className="font-bold" style={{ color: 'var(--text-primary)' }}>
+              Activity
             </TableHead>
             <TableHead className="font-bold" style={{ color: 'var(--text-primary)' }}>
               Status
@@ -100,7 +116,15 @@ export function CustomersTable({ customers, onViewCustomer }: CustomersTableProp
                 {customer.totalTransactions}
               </TableCell>
               <TableCell className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                {formatDate(customer.lastTrade)}
+                {customer.lastTransactionAgo || 'Never'}
+              </TableCell>
+              <TableCell>
+                <Badge
+                  className="font-medium px-3 py-1"
+                  style={getActivityBadgeStyles(customer.activityStatus)}
+                >
+                  {customer.activityStatus || 'Dormant'}
+                </Badge>
               </TableCell>
               <TableCell>
                 <Badge

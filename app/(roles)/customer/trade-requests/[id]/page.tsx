@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useEffect, useState } from "react";
+import React, { use, useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -8,6 +8,8 @@ import {
   Loader2,
   ArrowUpRight,
   Clock,
+  Timer,
+  AlertCircle,
 } from "lucide-react";
 import { customerApi } from "@/lib/api/customer";
 import { TransactionChat } from "@/components/transactions/TransactionChat";
@@ -28,6 +30,56 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   PROCESSED: { label: "Processing", color: "#8B5CF6", bg: "#EDE9FE" },
   REJECTED:  { label: "Rejected",   color: "#E05555", bg: "#FFE5E5" },
 };
+
+// ── Rate Countdown component ──────────────────────────────────────────────────
+function RateCountdown({ seconds: initialSeconds, onExpire }: { seconds: number; onExpire?: () => void }) {
+  const [remaining, setRemaining] = useState(initialSeconds);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setRemaining(initialSeconds);
+  }, [initialSeconds]);
+
+  useEffect(() => {
+    if (remaining <= 0) {
+      if (onExpire) onExpire();
+      return;
+    }
+    intervalRef.current = setInterval(() => {
+      setRemaining((s) => (s <= 1 ? 0 : s - 1));
+    }, 1000);
+    return () => clearInterval(intervalRef.current!);
+  }, [remaining <= 0]);
+
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+  const isUrgent = remaining <= 60;
+  const expired = remaining === 0;
+
+  if (expired) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
+        style={{ backgroundColor: "#FFE5E5", color: "#E05555" }}>
+        <AlertCircle className="w-3 h-3" />
+        Rate Expired
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold tabular-nums"
+      style={{
+        backgroundColor: isUrgent ? "#FFE5E5" : "#FFF8E1",
+        color: isUrgent ? "#E05555" : "#92400E",
+        animation: isUrgent ? "pulse 1s infinite" : undefined,
+      }}
+    >
+      <Timer className="w-3 h-3" />
+      {`${mins}m ${secs.toString().padStart(2, "0")}s`}
+    </span>
+  );
+}
 
 export default function CustomerTradeRequestDetailsPage({
   params,
@@ -155,13 +207,16 @@ export default function CustomerTradeRequestDetailsPage({
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 md:flex-col md:items-end">
+          <div className="flex items-center gap-3 flex-wrap md:flex-col md:items-end">
             <span
               className="px-3 py-1 rounded-full text-sm font-bold"
               style={{ backgroundColor: cfg.bg, color: cfg.color }}
             >
               {cfg.label}
             </span>
+            {request.rateExpiresIn !== null && request.status === "QUOTED" && (
+              <RateCountdown seconds={request.rateExpiresIn} onExpire={fetchRequest} />
+            )}
           </div>
         </div>
 
@@ -202,9 +257,14 @@ export default function CustomerTradeRequestDetailsPage({
                 {request.fxRate && (
                   <div className="px-5 py-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1.5">
                     <span className="body-secondary">Exchange Rate</span>
-                    <span className="font-bold text-right" style={{ color: "#27AE60" }}>
-                      {formatExchangeRate(request.fxRate.toString(), request.sendCurrency, request.receiveCurrency)}
-                    </span>
+                    <div className="flex items-center gap-2 flex-wrap sm:justify-end">
+                      <span className="font-bold text-right" style={{ color: "#27AE60" }}>
+                        {formatExchangeRate(request.fxRate.toString(), request.sendCurrency, request.receiveCurrency)}
+                      </span>
+                      {request.rateExpiresIn !== null && request.status === "QUOTED" && (
+                        <RateCountdown seconds={request.rateExpiresIn} onExpire={fetchRequest} />
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -234,6 +294,9 @@ export default function CustomerTradeRequestDetailsPage({
                       Your agent has set an exchange rate of{" "}
                       <strong>{formatExchangeRate(request.fxRate.toString(), request.sendCurrency, request.receiveCurrency)}</strong>.
                       An email has been sent to you with full details. Please review and proceed.
+                    </p>
+                    <p className="text-xs mt-1.5 font-bold" style={{ color: "#065F46" }}>
+                      ⚠️ Please proceed before the 10-minute timer expires, or else the exchange rate will automatically update to follow the latest live rate.
                     </p>
                   </div>
                 </div>
