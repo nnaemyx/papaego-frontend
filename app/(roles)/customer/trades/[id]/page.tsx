@@ -302,8 +302,8 @@ function NegotiateModal({
                 </p>
                 {eligibility && (
                   <div className="mt-3 text-xs space-y-1" style={{ color: "#991B1B" }}>
-                    <p>Your 30-day volume: <strong>₦{eligibility.turnover.toLocaleString()}</strong></p>
-                    <p>Required: <strong>₦{eligibility.turnoverThreshold.toLocaleString()}</strong></p>
+                    <p>Your 30-day volume: <strong>${eligibility.turnover.toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong></p>
+                    <p>Required: <strong>${eligibility.turnoverThreshold.toLocaleString()}</strong></p>
                   </div>
                 )}
               </div>
@@ -356,7 +356,7 @@ function NegotiateModal({
                   placeholder={`Min: ${effMinRate.toFixed(2)}`}
                 />
                 <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
-                  Your 30-day volume: ₦{eligibility.turnover.toLocaleString()} — you qualify for up to {(effMaxDiscountPct * 100).toFixed(1)}% discount
+                  Your 30-day volume: ${eligibility.turnover.toLocaleString(undefined, { maximumFractionDigits: 2 })} — you qualify for up to {(effMaxDiscountPct * 100).toFixed(1)}% discount
                 </p>
               </div>
 

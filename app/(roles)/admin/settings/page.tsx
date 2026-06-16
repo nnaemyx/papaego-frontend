@@ -237,9 +237,9 @@ export default function AdminSettingsPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500">30-Day Turnover Threshold (₦)</label>
+                                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500">30-Day Turnover Threshold (USD)</label>
                                     <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₦</span>
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
                                         <Input
                                             type="number"
                                             className="pl-8 font-semibold"
