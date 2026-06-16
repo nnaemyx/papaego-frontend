@@ -49,13 +49,17 @@ export interface CustomerTradeDetail extends CustomerTrade {
     paymentAccountNumber: string | null;
     paymentBankName: string | null;
     paymentAmount: string | null;
-    timeline: { action: string; createdAt: string }[];
-    stages?: { key: string; label: string; description: string; completed: boolean; completedAt: string | null }[];
-    // Negotiation fields (Sprint 2)
-    rateExpiresIn: number | null;  // seconds remaining
+    // Negotiation fields
+    negotiationUsed: boolean;
     originalFxRate: string | null;
     negotiatedRate: string | null;
-    negotiationUsed: boolean;
+    // Rate expiry
+    rateExpiresIn: number | null;
+    isRateExpired: boolean;
+    timeline: { action: string; createdAt: string }[];
+    stages?: { key: string; label: string; description: string; completed: boolean; completedAt: string | null }[];
+    agent?: { id: string; firstName: string; lastName: string; email: string } | null;
+    agentRating?: { id: string; rating: number; feedback: string | null } | null;
 }
 
 export interface FxRate {
@@ -78,7 +82,7 @@ export interface CustomerTradeRequest {
     amount: string;
     sendCurrency: string;
     receiveCurrency: string;
-    status: "PENDING" | "REJECTED" | "PROCESSED" | "POOL" | "ASSIGNED" | "QUOTED";
+    status: "DRAFT" | "PENDING" | "REJECTED" | "PROCESSED" | "POOL" | "ASSIGNED" | "QUOTED" | "CANCELLED";
     createdAt: string;
     linkedTradeId?: string | null;
 }
@@ -149,7 +153,7 @@ export const customerApi = {
     },
 
     /** List trades with optional status filter */
-    getTrades: async (params?: { status?: string; page?: number; limit?: number }) => {
+    getTrades: async (params?: { status?: string; page?: number; limit?: number; search?: string }) => {
         const response = await api.get("/customer/portal/trades", { params });
         return response.data as { trades: CustomerTrade[]; total: number; page: number; limit: number };
     },
@@ -181,7 +185,7 @@ export const customerApi = {
         return response.data;
     },
 
-    getTradeRequests: async (params?: { page?: number; limit?: number }): Promise<{ requests: CustomerTradeRequest[]; total: number; page: number; limit: number }> => {
+    getTradeRequests: async (params?: { page?: number; limit?: number; search?: string }): Promise<{ requests: CustomerTradeRequest[]; total: number; page: number; limit: number }> => {
         const response = await api.get("/customer/portal/trade-requests", { params });
         return response.data;
     },
@@ -203,8 +207,8 @@ export const customerApi = {
     },
 
     /** Suppliers Section */
-    getSuppliers: async (): Promise<any[]> => {
-        const response = await api.get("/suppliers");
+    getSuppliers: async (params?: { includeArchived?: boolean }): Promise<any[]> => {
+        const response = await api.get("/suppliers", { params });
         return response.data;
     },
 
@@ -220,6 +224,31 @@ export const customerApi = {
 
     deleteSupplier: async (id: string): Promise<any> => {
         const response = await api.delete(`/suppliers/${id}`);
+        return response.data;
+    },
+
+    updateTradeRequest: async (id: string, payload: any): Promise<any> => {
+        const response = await api.put(`/customer/portal/trade-requests/${id}`, payload);
+        return response.data;
+    },
+
+    cancelTradeRequest: async (id: string): Promise<any> => {
+        const response = await api.patch(`/customer/portal/trade-requests/${id}/cancel`);
+        return response.data;
+    },
+
+    cancelTrade: async (id: string): Promise<any> => {
+        const response = await api.patch(`/customer/portal/trades/${id}/cancel`);
+        return response.data;
+    },
+
+    rateAgent: async (id: string, rating: number, feedback?: string): Promise<any> => {
+        const response = await api.post(`/customer/portal/trades/${id}/rate`, { rating, feedback });
+        return response.data;
+    },
+
+    submitFeedback: async (category: string, message: string): Promise<any> => {
+        const response = await api.post("/customer/portal/feedback", { category, message });
         return response.data;
     },
 
@@ -287,6 +316,35 @@ export const customerApi = {
         discountPct: string;
     }> => {
         const response = await api.post(`/customer/portal/trades/${tradeId}/negotiate`, { requestedRate });
+        return response.data;
+    },
+
+    /** Check if negotiation is globally available */
+    getNegotiationStatus: async (): Promise<{ negotiationAvailable: boolean }> => {
+        const response = await api.get("/customer/portal/negotiation-status");
+        return response.data;
+    },
+
+    /** Check if a specific trade can be negotiated */
+    checkNegotiationEligibility: async (tradeId: string): Promise<{
+        eligible: boolean;
+        reason: string;
+        turnoverMet: boolean;
+        featureEnabled: boolean;
+    }> => {
+        const response = await api.get(`/customer/portal/trades/${tradeId}/negotiation-eligibility`);
+        return response.data;
+    },
+
+    /** Apply one-time 0.05% negotiation discount to a trade */
+    negotiateTrade: async (tradeId: string): Promise<{
+        success: boolean;
+        originalRate: number;
+        negotiatedRate: number;
+        discountApplied: number;
+        message: string;
+    }> => {
+        const response = await api.post(`/customer/portal/trades/${tradeId}/negotiate`);
         return response.data;
     },
 };

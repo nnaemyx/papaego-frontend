@@ -46,4 +46,28 @@ export const auditLogsApi = {
     const response = await api.get("/admin/audit-logs/export", { responseType: "blob" });
     return response.data;
   },
+
+  // Get negotiation audit logs
+  getNegotiationLogs: async (params?: { page?: number; limit?: number; tradeId?: string }): Promise<{ logs: any[]; total: number }> => {
+    const response = await api.get("/admin/audit-logs/negotiations", { params });
+    return response.data;
+  },
+
+  // Get rate change logs
+  getRateChangeLogs: async (params?: { page?: number; limit?: number; pair?: string }): Promise<{ logs: any[]; total: number }> => {
+    const response = await api.get("/admin/audit-logs/rate-changes", { params });
+    return response.data;
+  },
+
+  // Get payment logs
+  getPaymentLogs: async (params?: { page?: number; limit?: number }): Promise<{ logs: any[]; total: number }> => {
+    const response = await api.get("/admin/audit-logs/payments", { params });
+    return response.data;
+  },
+
+  // Get trade audit logs
+  getTradeAuditLogs: async (params?: { page?: number; limit?: number; tradeId?: string }): Promise<{ logs: any[]; total: number }> => {
+    const response = await api.get("/admin/audit-logs/trades", { params });
+    return response.data;
+  },
 };

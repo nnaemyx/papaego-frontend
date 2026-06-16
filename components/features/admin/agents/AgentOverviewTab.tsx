@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Activity, Clock } from "lucide-react";
+import { TrendingUp, TrendingDown, Activity, Clock, Star } from "lucide-react";
 import type { Agent } from "@/lib/types/agent";
 import { getStatusColor } from "@/lib/formatters";
 
@@ -46,6 +46,15 @@ const statCards = (agent: Agent) => [
         iconBg: "#dbeafe",
         iconColor: "#1890ff",
     },
+    {
+        label: `Average Rating (${agent.statistics?.totalRatings || 0})`,
+        value: agent.statistics?.averageRating != null ? `${agent.statistics.averageRating} / 5` : "No ratings",
+        change: "Feedback",
+        isPositive: true,
+        icon: Star,
+        iconBg: "#fffbeb",
+        iconColor: "#d97706",
+    },
 ];
 
 export function AgentOverviewTab({ agent }: AgentOverviewTabProps) {
@@ -60,7 +69,7 @@ export function AgentOverviewTab({ agent }: AgentOverviewTabProps) {
     return (
         <div className="space-y-6">
             {/* Stats Row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 {cards.map((stat) => {
                     const Icon = stat.icon;
                     return (
@@ -115,7 +124,7 @@ export function AgentOverviewTab({ agent }: AgentOverviewTabProps) {
                             { label: "Email", value: agent.email },
                             { label: "Phone", value: agent.phone || "—" },
                             { label: "Region", value: agent.region },
-                            { label: "Role", value: agent.role },
+                            { label: "Classification", value: agent.agentType === "CORPORATE" ? "Corporate Agent" : "Field Agent" },
                             {
                                 label: "Status",
                                 value: (

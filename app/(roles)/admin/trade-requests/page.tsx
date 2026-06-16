@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     adminTradeRequestsApi,
@@ -32,10 +32,12 @@ import {
     TrendingUp,
     Clock,
     Trash2,
+    Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatExchangeRate } from "@/lib/formatters";
 import Link from "next/link";
+import { Input } from "@/components/ui/input";
 
 const STATUS_TABS = ["ALL", "PENDING", "QUOTED", "PROCESSED", "REJECTED"] as const;
 
@@ -52,10 +54,15 @@ export default function AdminTradeRequestsPage() {
     const queryClient = useQueryClient();
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
     const [page, setPage] = useState<number>(1);
+    const [search, setSearch] = useState<string>("");
+
+    useEffect(() => {
+        setPage(1);
+    }, [statusFilter, search]);
 
     const { data, isLoading, error } = useQuery({
-        queryKey: ["admin-trade-requests", statusFilter, page],
-        queryFn: () => adminTradeRequestsApi.getTradeRequests(statusFilter, page, 20),
+        queryKey: ["admin-trade-requests", statusFilter, page, search],
+        queryFn: () => adminTradeRequestsApi.getTradeRequests(statusFilter, page, 20, search),
         refetchInterval: 15_000, // Auto-refresh every 15s to catch new customer requests
         staleTime: 0,
     });
@@ -138,6 +145,17 @@ export default function AdminTradeRequestsPage() {
                         {status}
                     </button>
                 ))}
+            </div>
+
+            {/* Search Bar */}
+            <div className="relative w-full sm:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                    placeholder="Search by ID, customer, agent, or currency"
+                    className="pl-10 rounded-xl"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                />
             </div>
 
 

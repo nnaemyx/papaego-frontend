@@ -68,8 +68,8 @@ export function InviteAgentSheet({
       firstName: data.firstName,
       lastName: data.lastName,
       email: data.email,
-      role: data.role,
       region: `${data.state} - ${data.market}`,
+      agentType: data.agentType || "FIELD",
       notes: data.notes,
     };
     inviteMutation.mutate(formattedData);
@@ -168,22 +168,23 @@ export function InviteAgentSheet({
               )}
             />
 
+
             <FormField
               control={form.control}
-              name="role"
-              rules={{ required: "Role is required" }}
+              name="agentType"
+              rules={{ required: "Agent type is required" }}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-500">Select Role</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <FormLabel className="text-gray-500">Agent Classification</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || "FIELD"}>
                     <FormControl>
                       <SelectTrigger className="border-gray-300">
-                        <SelectValue placeholder="Select role" />
+                        <SelectValue placeholder="Select classification" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Field Agent">Field Agent</SelectItem>
-                      <SelectItem value="Corporate Agent">Corporate Agent</SelectItem>
+                      <SelectItem value="FIELD">Field Agent</SelectItem>
+                      <SelectItem value="CORPORATE">Corporate Agent</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

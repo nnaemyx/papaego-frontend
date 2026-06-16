@@ -60,10 +60,13 @@ export interface AdminTradeRequestsResponse {
 }
 
 export const adminTradeRequestsApi = {
-    getTradeRequests: async (status?: string, page: number = 1, limit: number = 20): Promise<AdminTradeRequestsResponse> => {
+    getTradeRequests: async (status?: string, page: number = 1, limit: number = 20, search?: string): Promise<AdminTradeRequestsResponse> => {
         const params: any = { page, limit };
         if (status && status !== "ALL") {
             params.status = status;
+        }
+        if (search) {
+            params.search = search;
         }
         const response = await api.get("/admin/trade-requests", { params });
         return response.data;

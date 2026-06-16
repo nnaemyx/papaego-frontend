@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, TrendingUp, Plus, ArrowRight, RefreshCw } from "lucide-react";
+import { Clock, TrendingUp, Plus, ArrowRight, RefreshCw, Search } from "lucide-react";
 import { customerApi, CustomerTrade, CustomerTradeRequest } from "@/lib/api/customer";
 import { formatCurrency } from "@/lib/formatters";
 import { CustomerTradeItem } from "@/components/customer/CustomerTradeItem";
 import { NewTransactionModal } from "@/components/customer/NewTransactionModal";
 import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 const TABS = ["All", "Requests", "Pending", "Completed", "Flagged"] as const;
 type Tab = (typeof TABS)[number];
@@ -28,25 +30,45 @@ const TAB_DESCRIPTIONS: Record<Tab, string> = {
 };
 
 const REQUEST_STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
+  DRAFT:     { label: "Draft",     bg: "#F3F4F6", color: "#4B5563" },
   PENDING:   { label: "Submitted", bg: "#FFF8E1", color: "#F59E0B" },
   POOL:      { label: "Submitted", bg: "#FFF8E1", color: "#F59E0B" },
   ASSIGNED:  { label: "Rate Pending", bg: "#EFF6FF", color: "#3B82F6" },
   QUOTED:    { label: "Rate Ready", bg: "#E2FDED", color: "#27AE60" },
   PROCESSED: { label: "Processing", bg: "#EDE9FE", color: "#8B5CF6" },
   REJECTED:  { label: "Rejected",   bg: "#FFE5E5", color: "#E05555" },
+  CANCELLED: { label: "Cancelled",  bg: "#F3F4F6", color: "#9AA0A6" },
 };
 
-function TradeRequestItem({ req }: { req: CustomerTradeRequest }) {
+function TradeRequestItem({ 
+  req,
+  onEdit,
+  onCancel,
+}: { 
+  req: CustomerTradeRequest;
+  onEdit?: (req: CustomerTradeRequest) => void;
+  onCancel?: (req: CustomerTradeRequest) => void;
+}) {
   const cfg = REQUEST_STATUS_STYLE[req.status] || REQUEST_STATUS_STYLE.PENDING;
-  const href = req.status === "PROCESSED" && req.linkedTradeId
+  // If it's a draft, don't allow navigating to a detail page since there's no real detail view for drafts
+  const href = req.status === "DRAFT" 
+    ? "#" 
+    : req.status === "PROCESSED" && req.linkedTradeId
     ? `/customer/trades/${req.linkedTradeId}`
     : `/customer/trade-requests/${req.id}`;
 
   return (
     <Link
       href={href}
-      className="bg-white rounded-xl border p-4 flex items-center justify-between hover:bg-gray-50 transition-colors group"
+      className={`bg-white rounded-xl border p-4 flex items-center justify-between transition-colors group ${
+        req.status === "DRAFT" ? "cursor-default" : "hover:bg-gray-50"
+      }`}
       style={{ borderColor: "var(--border-custom)", borderLeftWidth: "3px", borderLeftColor: cfg.color }}
+      onClick={(e) => {
+        if (req.status === "DRAFT") {
+          e.preventDefault();
+        }
+      }}
     >
       <div className="flex items-center gap-3">
         <div
@@ -80,7 +102,7 @@ function TradeRequestItem({ req }: { req: CustomerTradeRequest }) {
         >
           {cfg.label}
         </span>
-        <span className="caption" style={{ color: "var(--text-tertiary)" }}>
+        <span className="caption mb-1" style={{ color: "var(--text-tertiary)" }}>
           {req.status === "PENDING" || req.status === "POOL"
             ? "Awaiting admin review"
             : req.status === "ASSIGNED"
@@ -89,8 +111,40 @@ function TradeRequestItem({ req }: { req: CustomerTradeRequest }) {
             ? "Admin processing rate…"
             : req.status === "PROCESSED"
             ? "Trade in progress"
+            : req.status === "DRAFT"
+            ? "Saved as draft"
+            : req.status === "CANCELLED"
+            ? "Request cancelled"
             : ""}
         </span>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
+          {["DRAFT", "PENDING", "POOL"].includes(req.status) && onEdit && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onEdit(req);
+              }}
+              className="px-2.5 py-1 rounded bg-amber-50 border border-amber-200 text-xs font-bold text-amber-700 hover:bg-amber-100 transition-colors"
+            >
+              {req.status === "DRAFT" ? "Edit Draft" : "Edit Request"}
+            </button>
+          )}
+          {["DRAFT", "PENDING", "POOL", "ASSIGNED", "QUOTED"].includes(req.status) && onCancel && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onCancel(req);
+              }}
+              className="px-2.5 py-1 rounded bg-red-50 border border-red-200 text-xs font-bold text-red-600 hover:bg-red-100 transition-colors"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
     </Link>
   );
@@ -102,28 +156,30 @@ export default function CustomerTradesPage() {
   const [tradeRequests, setTradeRequests] = useState<CustomerTradeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewTrade, setShowNewTrade] = useState(false);
+  const [draftToEdit, setDraftToEdit] = useState<any | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [search, setSearch] = useState("");
   const limit = 10;
 
   useEffect(() => {
-    setCurrentPage(1); // Reset page on tab change
-  }, [activeTab]);
+    setCurrentPage(1); // Reset page on tab or search change
+  }, [activeTab, search]);
 
   useEffect(() => {
     fetchAll();
-  }, [activeTab, currentPage]);
+  }, [activeTab, currentPage, search]);
 
   const fetchAll = async () => {
     setLoading(true);
     try {
       const promises: Promise<any>[] = [
-        customerApi.getTrades({ status: STATUS_MAP[activeTab], page: currentPage, limit }),
+        customerApi.getTrades({ status: STATUS_MAP[activeTab], page: currentPage, limit, search: search || undefined }),
       ];
       // Always fetch requests for "All" and "Requests" tabs
       if (activeTab === "All" || activeTab === "Requests") {
-        promises.push(customerApi.getTradeRequests({ page: currentPage, limit }));
+        promises.push(customerApi.getTradeRequests({ page: currentPage, limit, search: search || undefined }));
       }
 
       const [tradeResult, requestResult] = await Promise.all(promises);
@@ -156,6 +212,33 @@ export default function CustomerTradesPage() {
     }
   };
 
+  const handleEditDraft = (req: CustomerTradeRequest) => {
+    setDraftToEdit(req);
+    setShowNewTrade(true);
+  };
+
+  const handleCancelRequest = async (req: CustomerTradeRequest) => {
+    if (!confirm("Are you sure you want to cancel this trade request?")) return;
+    try {
+      await customerApi.cancelTradeRequest(req.id);
+      toast.success("Trade request cancelled successfully");
+      fetchAll();
+    } catch (error) {
+      toast.error("Failed to cancel trade request");
+    }
+  };
+
+  const handleCancelTrade = async (trade: CustomerTrade) => {
+    if (!confirm("Are you sure you want to cancel this trade?")) return;
+    try {
+      await customerApi.cancelTrade(trade.id);
+      toast.success("Trade cancelled successfully");
+      fetchAll();
+    } catch (error) {
+      toast.error("Failed to cancel trade");
+    }
+  };
+
   // On "Requests" tab, only show trade requests
   const showOnlyRequests = activeTab === "Requests";
   const isEmpty = showOnlyRequests
@@ -178,7 +261,10 @@ export default function CustomerTradesPage() {
           </p>
         </div>
         <button
-          onClick={() => setShowNewTrade(true)}
+          onClick={() => {
+            setDraftToEdit(null);
+            setShowNewTrade(true);
+          }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white flex-shrink-0 transition-opacity hover:opacity-90"
           style={{ backgroundColor: "var(--brand-primary)" }}
         >
@@ -202,6 +288,17 @@ export default function CustomerTradesPage() {
             {tab}
           </button>
         ))}
+      </div>
+
+      {/* ── Search Bar ── */}
+      <div className="relative w-full sm:w-80">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          placeholder="Search by trade ID, supplier, or currency"
+          className="pl-10"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
 
       {/* ── Trade List ── */}
@@ -237,7 +334,10 @@ export default function CustomerTradesPage() {
             </p>
             {(activeTab === "All" || activeTab === "Requests") && (
               <button
-                onClick={() => setShowNewTrade(true)}
+                onClick={() => {
+                  setDraftToEdit(null);
+                  setShowNewTrade(true);
+                }}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white"
                 style={{ backgroundColor: "var(--brand-primary)" }}
               >
@@ -257,7 +357,12 @@ export default function CustomerTradesPage() {
                   </p>
                 )}
                 {tradeRequests.map((req) => (
-                  <TradeRequestItem key={req.id} req={req} />
+                  <TradeRequestItem 
+                    key={req.id} 
+                    req={req} 
+                    onEdit={handleEditDraft}
+                    onCancel={handleCancelRequest}
+                  />
                 ))}
                 {activeTab === "All" && trades.length > 0 && (
                   <p className="text-xs font-bold uppercase tracking-wider px-1 pt-2" style={{ color: "#9AA0A6" }}>
@@ -270,7 +375,11 @@ export default function CustomerTradesPage() {
             {/* Actual Trades */}
             {!showOnlyRequests &&
               trades.map((trade) => (
-                <CustomerTradeItem key={trade.id} trade={trade} />
+                <CustomerTradeItem 
+                  key={trade.id} 
+                  trade={trade} 
+                  onCancel={handleCancelTrade}
+                />
               ))}
 
             {/* Pagination UI */}
@@ -306,8 +415,10 @@ export default function CustomerTradesPage() {
       {/* ── New Trade Modal ── */}
       {showNewTrade && (
         <NewTransactionModal
+          draftToEdit={draftToEdit}
           onClose={() => {
             setShowNewTrade(false);
+            setDraftToEdit(null);
             fetchAll(); // refresh list after submitting
           }}
         />

@@ -56,7 +56,13 @@ function getCustomerFriendlyStage(status: string): { label: string; stageNumber:
   }
 }
 
-export function CustomerTradeItem({ trade }: { trade: CustomerTrade }) {
+export function CustomerTradeItem({ 
+  trade,
+  onCancel,
+}: { 
+  trade: CustomerTrade;
+  onCancel?: (trade: CustomerTrade) => void;
+}) {
   const stageInfo = getCustomerFriendlyStage(trade.status);
   const isPending = PENDING_STATUSES.includes(trade.status);
 
@@ -113,9 +119,23 @@ export function CustomerTradeItem({ trade }: { trade: CustomerTrade }) {
           >
             {stageInfo.label}
           </span>
-          <span className="caption font-semibold" style={{ color: "var(--brand-primary)" }}>
-            {isPending ? "Action needed →" : "View Details →"}
-          </span>
+          <div className="flex items-center gap-3">
+            {!["COMPLETED", "CANCELLED", "EXPIRED"].includes(trade.status) && onCancel && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onCancel(trade);
+                }}
+                className="text-xs font-bold text-red-500 hover:text-red-700 transition-colors"
+              >
+                Cancel Trade
+              </button>
+            )}
+            <span className="caption font-semibold" style={{ color: "var(--brand-primary)" }}>
+              {isPending ? "Action needed →" : "View Details →"}
+            </span>
+          </div>
         </div>
       </div>
     </Link>

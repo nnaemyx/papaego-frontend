@@ -9,6 +9,9 @@ export interface Customer {
   totalTrades?: number;
   verificationStatus: 'Verified' | 'Pending' | 'Failed';
   activityLevel?: 'High' | 'Medium' | 'Low';
+  activityStatus?: 'Active' | 'Inactive' | 'Dormant';
+  lastActive?: string;
+  lastTransactionAt?: string | null;
   customerType?: 'Individual' | 'Business';
   companyName?: string | null;
   companySector?: string | null;
@@ -41,9 +44,7 @@ export interface Customer {
   kycReviewedAt?: string | null;
   kycReviewedBy?: string | null;
   // Sprint 2 — Activity tracking
-  lastTransactionAt?: string | null;
   lastTransactionAgo?: string;
-  activityStatus?: 'Active' | 'Inactive' | 'Dormant';
 }
 
 export interface CustomerStats {

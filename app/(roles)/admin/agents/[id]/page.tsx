@@ -141,7 +141,7 @@ export default function AgentDetailPage({
                                 </span>
                                 <span style={{ color: "#e1e3e6" }}>·</span>
                                 <span className="text-sm" style={{ color: "#6b7078" }}>
-                                    {agent.role}
+                                    {agent.agentType === "CORPORATE" ? "Corporate Agent" : "Field Agent"}
                                 </span>
                                 <span style={{ color: "#e1e3e6" }}>·</span>
                                 <span className="text-sm" style={{ color: "#6b7078" }}>

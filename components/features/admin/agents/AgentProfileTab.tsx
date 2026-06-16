@@ -69,17 +69,17 @@ export function AgentProfileTab({ agent }: AgentProfileTabProps) {
                 </div>
             </div>
 
-            {/* Role & Region */}
+            {/* Classification & Region */}
             <div
                 className="rounded-xl p-5 border"
                 style={{ backgroundColor: "white", borderColor: "#e1e3e6" }}
             >
                 <h3 className="font-semibold text-base mb-4" style={{ color: "#2b2f33" }}>
-                    Role & Region
+                    Classification & Region
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
                     {[
-                        { label: "Assigned Role", value: agent.role },
+                        { label: "Classification", value: agent.agentType === "CORPORATE" ? "Corporate Agent" : "Field Agent" },
                         { label: "State", value: state },
                         { label: "Market", value: market },
                         { label: "Date Joined", value: new Date(agent.createdAt).toLocaleDateString("en-GB") },

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, Users, Search, MoreVertical, Edit2, Trash2, Link as LinkIcon, Loader2 } from "lucide-react";
+import { Plus, Users, Search, MoreVertical, Edit2, Trash2, Link as LinkIcon, Loader2, Archive, ArchiveRestore } from "lucide-react";
 import { customerApi } from "@/lib/api/customer";
 import { SupplierModal } from "@/components/customer/SupplierModal";
 import { toast } from "sonner";
@@ -11,13 +11,14 @@ export default function CustomerSuppliersPage() {
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [showArchived, setShowArchived] = useState(false);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedSupplier, setSelectedSupplier] = useState<any | null>(null);
 
     const fetchSuppliers = async () => {
         try {
-            const data = await customerApi.getSuppliers();
+            const data = await customerApi.getSuppliers({ includeArchived: showArchived });
             setSuppliers(data);
         } catch (error) {
             toast.error("Failed to load suppliers");
@@ -28,7 +29,7 @@ export default function CustomerSuppliersPage() {
 
     useEffect(() => {
         fetchSuppliers();
-    }, []);
+    }, [showArchived]);
 
     const handleSaveSupplier = async (data: any) => {
         try {
@@ -43,6 +44,18 @@ export default function CustomerSuppliersPage() {
         } catch (error) {
             toast.error("Failed to save supplier");
             throw error;
+        }
+    };
+
+    const handleToggleArchive = async (supplier: any) => {
+        const action = supplier.isArchived ? "unarchive" : "archive";
+        if (!confirm(`Are you sure you want to ${action} this supplier?`)) return;
+        try {
+            await customerApi.updateSupplier(supplier.id, { isArchived: !supplier.isArchived });
+            toast.success(`Supplier ${action}d successfully`);
+            fetchSuppliers();
+        } catch (error) {
+            toast.error(`Failed to ${action} supplier`);
         }
     };
 
@@ -102,8 +115,8 @@ export default function CustomerSuppliersPage() {
                     style={{ borderColor: "var(--border-custom)" }}
                 >
                     {/* Controls */}
-                    <div className="p-5 border-b" style={{ borderColor: "#E1E3E6" }}>
-                        <div className="relative max-w-md">
+                    <div className="p-5 border-b flex flex-col md:flex-row md:items-center justify-between gap-4" style={{ borderColor: "#E1E3E6" }}>
+                        <div className="relative max-w-md w-full">
                             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                             <input
                                 type="text"
@@ -113,6 +126,17 @@ export default function CustomerSuppliersPage() {
                                 className="w-full h-11 pl-11 pr-4 rounded-xl border bg-gray-50 focus:bg-white outline-none focus:ring-2"
                                 style={{ borderColor: "#E1E3E6" }}
                             />
+                        </div>
+                        <div className="flex items-center">
+                            <label className="flex items-center gap-2 text-sm font-semibold text-gray-600 cursor-pointer select-none">
+                                <input
+                                    type="checkbox"
+                                    checked={showArchived}
+                                    onChange={e => setShowArchived(e.target.checked)}
+                                    className="w-4 h-4 rounded border-gray-300 text-amber-500 focus:ring-amber-500"
+                                />
+                                Show Archived Suppliers
+                            </label>
                         </div>
                     </div>
 
@@ -160,7 +184,14 @@ export default function CustomerSuppliersPage() {
                                     {filteredSuppliers.map(supplier => (
                                         <tr key={supplier.id} className="hover:bg-gray-50/50 transition-colors">
                                             <td className="px-6 py-4">
-                                                <div className="font-bold text-[#012333]">{supplier.beneficiaryName}</div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="font-bold text-[#012333]">{supplier.beneficiaryName}</div>
+                                                    {supplier.isArchived && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                                            Archived
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 {supplier.address && (
                                                     <div className="text-sm text-gray-500 mt-0.5 max-w-[200px] truncate">{supplier.address}</div>
                                                 )}
@@ -191,6 +222,17 @@ export default function CustomerSuppliersPage() {
                                                         title="Edit Supplier"
                                                     >
                                                         <Edit2 className="w-4 h-4" />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleToggleArchive(supplier)}
+                                                        className="p-2 hover:bg-gray-200 rounded-lg text-amber-600 transition-colors"
+                                                        title={supplier.isArchived ? "Restore/Unarchive Supplier" : "Archive Supplier"}
+                                                    >
+                                                        {supplier.isArchived ? (
+                                                            <ArchiveRestore className="w-4 h-4" />
+                                                        ) : (
+                                                            <Archive className="w-4 h-4" />
+                                                        )}
                                                     </button>
                                                     <button 
                                                         onClick={() => handleDelete(supplier.id)}
