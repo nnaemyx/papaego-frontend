@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, CircleDot, CheckCircle, Clock, XCircle, Building2, Hash, MapPin, Upload, Paperclip, X, Loader2, Link2 } from "lucide-react";
+import { ChevronLeft, CircleDot, CheckCircle, Clock, XCircle, Building2, Hash, MapPin, Upload, Paperclip, X, Loader2, Link2, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { transactionsApi } from "@/lib/api/transactions";
@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import { TransactionChat } from "@/components/transactions/TransactionChat";
 import { toast } from "sonner";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
+import { formatExchangeRate } from "@/lib/formatters";
 
 export default function TransactionDetailPage({
   params,
@@ -71,6 +72,24 @@ export default function TransactionDetailPage({
         queryClient.invalidateQueries({ queryKey: ["admin-transaction", id] });
     },
     onError: () => toast.error("Failed to unfreeze commission")
+  });
+
+  const approveNegotiationMutation = useMutation({
+    mutationFn: () => transactionsApi.approveNegotiation(id),
+    onSuccess: () => {
+        toast.success("Negotiation approved successfully!");
+        queryClient.invalidateQueries({ queryKey: ["admin-transaction", id] });
+    },
+    onError: () => toast.error("Failed to approve negotiation")
+  });
+
+  const rejectNegotiationMutation = useMutation({
+    mutationFn: () => transactionsApi.rejectNegotiation(id),
+    onSuccess: () => {
+        toast.success("Negotiation rejected successfully!");
+        queryClient.invalidateQueries({ queryKey: ["admin-transaction", id] });
+    },
+    onError: () => toast.error("Failed to reject negotiation")
   });
 
   if (isLoading) {
@@ -193,6 +212,70 @@ export default function TransactionDetailPage({
           {transaction.customer.name} - {transaction.tradeId}
         </p>
       </div>
+
+      {/* Pending Negotiation Banner */}
+      {rawTransaction.negotiatedRate && !rawTransaction.negotiationUsed && (
+        <div
+          className="rounded-2xl border p-5 space-y-4 bg-purple-50 border-purple-200"
+          style={{
+            borderLeftWidth: "4px",
+            borderLeftColor: "#8B5CF6",
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5 text-purple-600 animate-pulse" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-bold text-purple-950">Pending Rate Negotiation</h4>
+              <p className="text-xs text-purple-800 mt-1 leading-relaxed">
+                The customer is requesting a custom counter-rate for this transaction. Review the counter-rate below and approve or reject it.
+              </p>
+              
+              <div className="mt-3 grid grid-cols-2 gap-3 bg-white/70 p-3 rounded-xl border border-purple-100/50">
+                <div>
+                  <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">Original Rate</span>
+                  <span className="font-bold text-sm text-purple-950">
+                    {formatExchangeRate(Number(rawTransaction.originalFxRate || rawTransaction.fxRate), rawTransaction.sendCurrency, rawTransaction.receiveCurrency)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">Requested Rate</span>
+                  <span className="font-black text-sm text-purple-950">
+                    {formatExchangeRate(Number(rawTransaction.negotiatedRate), rawTransaction.sendCurrency, rawTransaction.receiveCurrency)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex gap-2.5 pt-1">
+            <Button
+              onClick={() => {
+                if (confirm("Approve the requested counter-rate?")) {
+                  approveNegotiationMutation.mutate();
+                }
+              }}
+              disabled={approveNegotiationMutation.isPending}
+              className="font-bold text-white bg-purple-600 hover:bg-purple-700 h-9 rounded-xl text-xs px-6"
+            >
+              {approveNegotiationMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Approve Rate"}
+            </Button>
+            <Button
+              onClick={() => {
+                if (confirm("Reject the requested counter-rate?")) {
+                  rejectNegotiationMutation.mutate();
+                }
+              }}
+              disabled={rejectNegotiationMutation.isPending}
+              variant="outline"
+              className="font-bold border-purple-200 text-purple-700 hover:bg-purple-50 h-9 rounded-xl text-xs px-6"
+            >
+              {rejectNegotiationMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Reject Request"}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Transaction Overview - Always Visible */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">

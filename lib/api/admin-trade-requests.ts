@@ -37,6 +37,9 @@ export interface AdminTradeRequest {
     /** Populated by backend when the linked trade has a rate set */
     linkedTradeStatus?: string;
     linkedTradeFxRate?: string | null;
+    negotiatedRate?: string | null;
+    originalFxRate?: string | null;
+    negotiationUsed?: boolean;
 }
 
 export interface AdminTradeRequestDetail extends AdminTradeRequest {

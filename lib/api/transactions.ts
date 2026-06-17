@@ -111,4 +111,14 @@ export const transactionsApi = {
         );
         return response.data;
     },
+
+    approveNegotiation: async (id: string): Promise<any> => {
+        const response = await api.post(`/admin/transactions/${id}/negotiate/approve`, {});
+        return response.data;
+    },
+
+    rejectNegotiation: async (id: string): Promise<any> => {
+        const response = await api.post(`/admin/transactions/${id}/negotiate/reject`, {});
+        return response.data;
+    },
 };

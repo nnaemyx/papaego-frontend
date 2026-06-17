@@ -55,6 +55,8 @@ function TradeRequestItem({
     ? "#" 
     : req.status === "PROCESSED" && req.linkedTradeId
     ? `/customer/trades/${req.linkedTradeId}`
+    : req.status === "QUOTED"
+    ? `/customer/trades/${req.id}`
     : `/customer/trade-requests/${req.id}`;
 
   return (

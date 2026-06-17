@@ -34,6 +34,7 @@ import {
     Receipt,
     ExternalLink,
     Calculator,
+    Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -199,6 +200,26 @@ export default function AdminTradeRequestDetailPage({
             router.push("/admin/trade-requests");
         },
         onError: () => toast.error("Failed to reject request"),
+    });
+
+    const approveNegotiationMutation = useMutation({
+        mutationFn: () => transactionsApi.approveNegotiation(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["admin-trade-request", id] });
+            queryClient.invalidateQueries({ queryKey: ["admin-trade-requests"] });
+            toast.success("Negotiation approved successfully!");
+        },
+        onError: () => toast.error("Failed to approve negotiation"),
+    });
+
+    const rejectNegotiationMutation = useMutation({
+        mutationFn: () => transactionsApi.rejectNegotiation(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["admin-trade-request", id] });
+            queryClient.invalidateQueries({ queryKey: ["admin-trade-requests"] });
+            toast.success("Negotiation rejected successfully!");
+        },
+        onError: () => toast.error("Failed to reject negotiation"),
     });
 
     const handleReject = () => {
@@ -586,6 +607,72 @@ export default function AdminTradeRequestDetailPage({
 
                 {/* Right Column — Actions */}
                 <div className="space-y-5">
+
+                    {/* Pending Negotiation Banner */}
+                    {request.negotiatedRate && !request.negotiationUsed && (
+                        <div
+                            className="rounded-2xl border p-5 space-y-4"
+                            style={{
+                                backgroundColor: "#FAF5FF",
+                                borderColor: "#E9D5FF",
+                                borderLeftWidth: "4px",
+                                borderLeftColor: "#8B5CF6",
+                            }}
+                        >
+                            <div className="flex items-start gap-3">
+                                <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                                    <Sparkles className="w-5 h-5 text-purple-600 animate-pulse" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="text-sm font-bold text-purple-950">Pending Rate Negotiation</h4>
+                                    <p className="text-xs text-purple-800 mt-1 leading-relaxed">
+                                        The customer is requesting a custom counter-rate. Review the counter-rate below and approve or reject it.
+                                    </p>
+                                    
+                                    <div className="mt-3 grid grid-cols-2 gap-3 bg-white/70 p-3 rounded-xl border border-purple-100/50">
+                                        <div>
+                                            <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">Original Rate</span>
+                                            <span className="font-bold text-sm text-purple-950">
+                                                {formatExchangeRate(Number(request.originalFxRate || request.fxRate), request.sendCurrency, request.receiveCurrency)}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">Requested Rate</span>
+                                            <span className="font-black text-sm text-purple-950">
+                                                {formatExchangeRate(Number(request.negotiatedRate), request.sendCurrency, request.receiveCurrency)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="flex gap-2.5 pt-1">
+                                <Button
+                                    onClick={() => {
+                                        if (confirm("Approve the requested counter-rate?")) {
+                                            approveNegotiationMutation.mutate();
+                                        }
+                                    }}
+                                    disabled={approveNegotiationMutation.isPending}
+                                    className="flex-1 font-bold text-white bg-purple-600 hover:bg-purple-700 h-9 rounded-xl text-xs"
+                                >
+                                    {approveNegotiationMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Approve Rate"}
+                                </Button>
+                                <Button
+                                    onClick={() => {
+                                        if (confirm("Reject the requested counter-rate?")) {
+                                            rejectNegotiationMutation.mutate();
+                                        }
+                                    }}
+                                    disabled={rejectNegotiationMutation.isPending}
+                                    variant="outline"
+                                    className="flex-1 font-bold border-purple-200 text-purple-700 hover:bg-purple-50 h-9 rounded-xl text-xs"
+                                >
+                                    {rejectNegotiationMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Reject Request"}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Step 1: Assign Agent */}
                     <div
