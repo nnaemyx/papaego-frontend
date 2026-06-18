@@ -135,7 +135,7 @@ export function LandingFooter({ onContactUs }: LandingFooterProps) {
           {/* Navigation Links */}
           <div className="flex flex-wrap items-center justify-center gap-4 lg:gap-8">
             <button
-              onClick={() => window.location.href = '/customer-auth/login'}
+              onClick={() => window.location.href = '/customer-auth/signin'}
               className="landing-button transition-colors hover:opacity-80"
               style={{ color: 'var(--primary-gold)', fontFamily: 'var(--font-bricolage-grotesque)', fontWeight: 600 }}
             >

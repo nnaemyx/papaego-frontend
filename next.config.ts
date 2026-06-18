@@ -33,6 +33,20 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/customer-auth/register',
+        destination: '/customer-auth/signup',
+        permanent: true,
+      },
+      {
+        source: '/customer-auth/login',
+        destination: '/customer-auth/signin',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
