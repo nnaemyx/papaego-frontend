@@ -7,11 +7,13 @@ import { customerApi } from '@/lib/api/customer';
 import { useAuthStore } from '@/store/auth-store';
 import { commissionsApi } from '@/lib/api/commissions';
 import {
-  Users, TrendingUp, Wallet, Activity,
-  RefreshCw, ArrowRight, CheckCircle, Clock, AlertCircle,
+  Users, TrendingUp, Wallet, Activity, UserCheck,
+  RefreshCw, ArrowRight, CheckCircle, Clock,
+  Link2, BarChart3, UserPlus,
 } from 'lucide-react';
 import Link from 'next/link';
 
+// ─── KPI Card ───────────────────────────────────────────────────────────────
 function KpiCard({
   title, value, subtitle, icon: Icon, color,
 }: {
@@ -32,6 +34,31 @@ function KpiCard({
   );
 }
 
+// ─── Activity Pill ───────────────────────────────────────────────────────────
+function ActivityPill({
+  label, count, total, color, bg,
+}: {
+  label: string; count: number; total: number; color: string; bg: string;
+}) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return (
+    <div className="flex flex-col gap-2 p-4 rounded-xl" style={{ backgroundColor: bg }}>
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold uppercase tracking-wider" style={{ color }}>{label}</span>
+        <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{count}</span>
+      </div>
+      <div className="w-full h-1.5 rounded-full bg-white/60">
+        <div
+          className="h-1.5 rounded-full transition-all duration-500"
+          style={{ width: `${pct}%`, backgroundColor: color }}
+        />
+      </div>
+      <span className="text-[10px] font-medium" style={{ color }}>{pct}% of customers</span>
+    </div>
+  );
+}
+
+// ─── Status badge map ────────────────────────────────────────────────────────
 const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
   'Completed':   { bg: '#E2FDED', text: '#27AE60' },
   'In Progress': { bg: '#EFF6FF', text: '#3B82F6' },
@@ -39,9 +66,20 @@ const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
   'Cancelled':   { bg: '#FEE2E2', text: '#EB5757' },
 };
 
+// ─── Dashboard ───────────────────────────────────────────────────────────────
 export default function AgentDashboard() {
   const user = useAuthStore((s) => s.user);
   const agentName = user?.firstName || user?.email?.split('@')[0] || 'Agent';
+
+  const { data: dashboardStats, isLoading: statsLoading } = useQuery({
+    queryKey: ['agent-dashboard-stats'],
+    queryFn: agentApi.getDashboardStats,
+  });
+
+  const { data: customerMetrics, isLoading: metricsLoading } = useQuery({
+    queryKey: ['agent-customer-metrics'],
+    queryFn: agentApi.getCustomerMetrics,
+  });
 
   const { data: tradesData, isLoading: tradesLoading } = useQuery({
     queryKey: ['agent-recent-trades'],
@@ -53,18 +91,13 @@ export default function AgentDashboard() {
     queryFn: agentApi.getCommissions,
   });
 
-  const { data: fxRatesData, isLoading: ratesLoading, refetch: refetchRates } = useQuery({
-    queryKey: ['fx-rates'],
-    queryFn: customerApi.getFxRates,
+  const { data: ratesData, isLoading: ratesLoading, refetch: refetchRates } = useQuery({
+    queryKey: ['agent-fx-rates'],
+    queryFn: agentApi.getFxRates,
     staleTime: 60_000,
   });
 
   const trades = tradesData?.trades || [];
-  const txnCount = trades.length;
-  const txnVolume = trades.reduce((sum: number, t: any) => {
-    const raw = String(t.amount || '0').replace(/[₦$£€,]/g, '');
-    return sum + (parseFloat(raw) || 0);
-  }, 0);
 
   const parseAmt = (v: any) =>
     parseFloat(String(v || '0').replace(/[₦,]/g, '')) || 0;
@@ -85,7 +118,14 @@ export default function AgentDashboard() {
     .filter((c) => c.status === 'PENDING')
     .reduce((s, c) => s + parseAmt(c.amount), 0);
 
-  const rates = fxRatesData?.rates || [];
+  const rates = ratesData || [];
+
+  // Customer metrics
+  const totalCustomers = dashboardStats?.totalCustomers ?? customerMetrics?.totalCustomers ?? 0;
+  const activeCustomers = dashboardStats?.activeCustomers ?? customerMetrics?.activeCustomers ?? 0;
+  const referredCustomers = dashboardStats?.referredCustomers ?? customerMetrics?.referredCustomers ?? 0;
+  const inactiveCustomers = customerMetrics?.inactiveCustomers ?? 0;
+  const dormantCustomers = customerMetrics?.dormantCustomers ?? 0;
 
   return (
     <div className="p-4 md:p-6 lg:pl-7 lg:pr-6 space-y-8" style={{ backgroundColor: '#f7f8f9', minHeight: '100%' }}>
@@ -95,25 +135,25 @@ export default function AgentDashboard() {
           Hello, {agentName}!
         </h1>
         <p className="text-sm md:text-base" style={{ color: 'var(--text-secondary)' }}>
-          Here&apos;s your dashboard — customer transactions, commissions, and live rates
+          Here&apos;s your performance overview — customers, commissions, and live rates
         </p>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
-          title="Customer Transactions"
-          value={tradesLoading ? '—' : txnCount.toLocaleString()}
-          subtitle="Total trade count"
+          title="Total Customers"
+          value={(statsLoading || metricsLoading) ? '—' : totalCustomers.toLocaleString()}
+          subtitle="Referred &amp; traded customers"
           icon={Users}
           color="#3B82F6"
         />
         <KpiCard
-          title="Transaction Volume"
-          value={tradesLoading ? '—' : `₦${txnVolume.toLocaleString()}`}
-          subtitle="Total amount processed"
+          title="Active Customers"
+          value={(statsLoading || metricsLoading) ? '—' : activeCustomers.toLocaleString()}
+          subtitle="Traded in last 30 days"
           icon={Activity}
-          color="#8B5CF6"
+          color="#27AE60"
         />
         <KpiCard
           title="Commission Earned"
@@ -127,17 +167,130 @@ export default function AgentDashboard() {
           value={commissionsLoading ? '—' : `₦${commissionThisMonth.toLocaleString()}`}
           subtitle={`Commission — ${now.toLocaleString('default', { month: 'long' })}`}
           icon={TrendingUp}
-          color="#27AE60"
+          color="#8B5CF6"
         />
       </div>
 
-      {/* Main grid */}
+      {/* Customer Activity Overview + Referred */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Activity Breakdown */}
+        <div className="lg:col-span-2 bg-white rounded-xl border shadow-sm p-6" style={{ borderColor: 'var(--border-custom)' }}>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>Customer Activity Overview</h2>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>Active (≤30d) · Inactive (31–90d) · Dormant (90d+)</p>
+            </div>
+            <Link href="/agent/customers" className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg" style={{ color: 'var(--brand-primary)', backgroundColor: '#FBF4DC' }}>
+              All Customers <ArrowRight size={12} />
+            </Link>
+          </div>
+
+          {(metricsLoading || statsLoading) ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : totalCustomers === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <Users size={36} className="mb-3 opacity-20" style={{ color: 'var(--text-tertiary)' }} />
+              <p className="font-medium text-sm" style={{ color: 'var(--text-secondary)' }}>No customers yet</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Share your referral link or execute a trade to add customers</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <ActivityPill
+                label="Active"
+                count={activeCustomers}
+                total={totalCustomers}
+                color="#27AE60"
+                bg="#E2FDED"
+              />
+              <ActivityPill
+                label="Inactive"
+                count={inactiveCustomers}
+                total={totalCustomers}
+                color="#F59E0B"
+                bg="#FFF8E1"
+              />
+              <ActivityPill
+                label="Dormant"
+                count={dormantCustomers}
+                total={totalCustomers}
+                color="#9CA3AF"
+                bg="#F1F3F4"
+              />
+            </div>
+          )}
+
+          {/* Total row */}
+          {!metricsLoading && !statsLoading && totalCustomers > 0 && (
+            <div className="mt-4 flex items-center justify-between px-4 py-3 rounded-xl" style={{ backgroundColor: '#F7F8F9' }}>
+              <div className="flex items-center gap-2">
+                <BarChart3 size={16} style={{ color: 'var(--brand-primary)' }} />
+                <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Total Customers</span>
+              </div>
+              <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{totalCustomers}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Referral Stats */}
+        <div className="bg-white rounded-xl border shadow-sm p-6 flex flex-col" style={{ borderColor: 'var(--border-custom)' }}>
+          <div className="mb-5">
+            <h2 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>Referral Performance</h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>Customers from your referral link</p>
+          </div>
+
+          <div className="flex-1 flex flex-col gap-4">
+            {/* Referred count */}
+            <div className="rounded-xl p-4 flex items-center gap-4" style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #F5F8FF 100%)' }}>
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#3B82F6' }}>
+                <UserPlus size={20} className="text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold mb-0.5" style={{ color: '#1D4ED8' }}>Referred Customers</p>
+                <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                  {(statsLoading || metricsLoading) ? '—' : referredCustomers}
+                </p>
+                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>via your referral link</p>
+              </div>
+            </div>
+
+            {/* Verification rate */}
+            {!metricsLoading && totalCustomers > 0 && (
+              <div className="rounded-xl p-4 flex items-center gap-4" style={{ background: 'linear-gradient(135deg, #E2FDED 0%, #F0FDF4 100%)' }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#27AE60' }}>
+                  <UserCheck size={20} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold mb-0.5" style={{ color: '#27AE60' }}>Verified Customers</p>
+                  <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                    {customerMetrics?.verifiedCustomers ?? 0}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>KYC approved</p>
+                </div>
+              </div>
+            )}
+
+            <Link
+              href="/agent/customers"
+              className="mt-auto flex items-center justify-center gap-2 text-sm font-semibold py-2.5 rounded-xl border-2 transition-colors hover:bg-opacity-80"
+              style={{ borderColor: 'var(--brand-primary)', color: 'var(--brand-primary)', backgroundColor: '#FBF4DC' }}
+            >
+              <Link2 size={14} /> View All Customers
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Main grid — Trades + Rates */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Customer Transactions Table */}
         <div className="lg:col-span-2 bg-white rounded-xl border shadow-sm overflow-hidden" style={{ borderColor: 'var(--border-custom)' }}>
           <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border-light)' }}>
             <div>
-              <h2 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>Customer Transactions</h2>
+              <h2 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>Recent Transactions</h2>
               <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>View-only summary of trades under your account</p>
             </div>
             <Link href="/agent/transactions" className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg" style={{ color: 'var(--brand-primary)', backgroundColor: '#FBF4DC' }}>

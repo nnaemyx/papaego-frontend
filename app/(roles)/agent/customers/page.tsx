@@ -53,7 +53,7 @@ export default function CustomersPage() {
             Total Customers
           </p>
           <p className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            {isLoadingStats ? '...' : stats?.totalCustomers || 0}
+            {isLoadingStats ? '...' : stats?.totalCustomers ?? 0}
           </p>
         </Card>
         <Card className="p-6 border border-(--border-custom) bg-white rounded-xl">
@@ -61,7 +61,7 @@ export default function CustomersPage() {
             Verified Customers
           </p>
           <p className="text-3xl font-bold" style={{ color: 'var(--status-success)' }}>
-            {isLoadingStats ? '...' : stats?.verifiedCustomers || 0}
+            {isLoadingStats ? '...' : stats?.verifiedCustomers ?? 0}
           </p>
         </Card>
         <Card className="p-6 border border-(--border-custom) bg-white rounded-xl">
@@ -69,15 +69,19 @@ export default function CustomersPage() {
             Active Customers
           </p>
           <p className="text-3xl font-bold" style={{ color: 'var(--brand-primary)' }}>
-            {isLoadingStats ? '...' : stats?.activeCustomers || 0}
+            {isLoadingStats ? '...' : stats?.activeCustomers ?? 0}
           </p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Traded in last 30 days</p>
         </Card>
         <Card className="p-6 border border-(--border-custom) bg-white rounded-xl">
           <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
             Inactive / Dormant
           </p>
           <p className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            {isLoadingStats ? '...' : (stats?.inactiveCustomers ?? 0) + (stats?.dormantCustomers ?? 0)}
+            {isLoadingStats ? '...' : ((stats?.inactiveCustomers ?? 0) + (stats?.dormantCustomers ?? 0))}
+          </p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+            {isLoadingStats ? '' : `${stats?.inactiveCustomers ?? 0} inactive · ${stats?.dormantCustomers ?? 0} dormant`}
           </p>
         </Card>
       </div>

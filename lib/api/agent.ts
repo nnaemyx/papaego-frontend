@@ -1,10 +1,16 @@
 import { apiClient } from './client';
 import type { AgentDashboardStats, AgentTradesResponse } from '@/lib/types/agent';
+import type { CustomerStats } from '@/lib/types/customer';
 
 export const agentApi = {
     // Get dashboard statistics
     getDashboardStats: async (): Promise<AgentDashboardStats> => {
         return apiClient.get<AgentDashboardStats>('/agent/dashboard/stats');
+    },
+
+    // Get customer activity metrics (total, active, referred, activity breakdown)
+    getCustomerMetrics: async (): Promise<CustomerStats> => {
+        return apiClient.get<CustomerStats>('/agent/customers/stats');
     },
 
     // Get agent's trades
@@ -113,5 +119,10 @@ export const agentApi = {
     // Get agent's commissions
     getCommissions: async (): Promise<any[]> => {
         return apiClient.get<any[]>('/agent/commissions');
+    },
+
+    // Get FX rates
+    getFxRates: async (): Promise<any[]> => {
+        return apiClient.get<any[]>('/agent/fx-rates');
     },
 };

@@ -52,10 +52,17 @@ export interface CustomerStats {
   verifiedCustomers: number;
   highValueCustomers?: number;
   activeCustomersToday?: number;
-  // Sprint 2 — activity buckets
+  totalTrades?: number;
+  referredCustomers?: number;
+  // Activity buckets
   activeCustomers?: number;
   inactiveCustomers?: number;
   dormantCustomers?: number;
+  activityBreakdown?: {
+    active: number;
+    inactive: number;
+    dormant: number;
+  };
 }
 
 export interface CustomerFilters {
