@@ -106,6 +106,9 @@ export interface AgentDashboardStats {
   monthlyCommissions: string;
   pendingDocuments: number;
   totalTrades: number;
+  totalCustomers: number;
+  activeCustomers: number;
+  referredCustomers: number;
 }
 
 export interface AgentTrade {
