@@ -106,6 +106,48 @@ export const customerApi = {
         return response.data;
     },
 
+    /** Step 1 of Customer Signup: Initiate registration and send OTP */
+    initiateSignup: async (payload: {
+        firstName: string;
+        lastName: string;
+        email: string;
+        phone: string;
+        password?: string;
+        referralCode?: string;
+    }) => {
+        const response = await api.post("/customer/portal/signup/initiate", payload);
+        return response.data;
+    },
+
+    /** Step 1.5 of Customer Signup: Verify OTP and return auth tokens */
+    verifySignupOtp: async (payload: { email: string; otp: string }) => {
+        const response = await api.post("/customer/portal/signup/verify", payload);
+        return response.data;
+    },
+
+    /** Resend Customer Signup OTP code */
+    resendSignupOtp: async (payload: { email: string }) => {
+        const response = await api.post("/customer/portal/signup/resend", payload);
+        return response.data;
+    },
+
+    /** Step 2 & 3 of Customer Signup: Submit KYC details for authenticated customer */
+    submitSignupKyc: async (payload: {
+        gender?: string;
+        dateOfBirth?: string;
+        homeAddress?: string;
+        bvn: string;
+        nin?: string;
+        companyName?: string;
+        companySector?: string;
+        governmentIdUrl?: string;
+        proofOfAddressUrl?: string;
+    }) => {
+        const response = await api.post("/customer/portal/signup/submit-kyc", payload);
+        return response.data;
+    },
+
+
     /** Upload customer document during signup (unauthenticated) */
     uploadSignupDocument: async (file: File): Promise<{ url: string }> => {
         const formData = new FormData();

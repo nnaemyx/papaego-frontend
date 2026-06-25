@@ -17,7 +17,7 @@ const STEPS = [
   { id: 3, label: "Identity Upload" },
 ];
 
-type Step = 0 | 1 | 2 | 3 | "success" | "failed";
+type Step = 0 | 1 | "otp" | 2 | 3 | "success" | "failed";
 type ReferralType = 'AGENT' | 'CORPORATE' | 'DIRECT';
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -33,6 +33,14 @@ function CustomerSignupPageInner() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
+  // OTP State
+  const [otp, setOtp] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [otpAttemptsRemaining, setOtpAttemptsRemaining] = useState(5);
+  const [lockoutTime, setLockoutTime] = useState<number | null>(null);
+
   // Form data
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", phone: "",
@@ -41,6 +49,7 @@ function CustomerSignupPageInner() {
     companyName: "", companySector: "",
   });
   const [accountType, setAccountType] = useState<"individual" | "business" | null>(null);
+
 
   // Referral state
   const [referralCode, setReferralCode] = useState("");
@@ -117,6 +126,80 @@ function CustomerSignupPageInner() {
   const step2Valid = form.gender && form.dateOfBirth && form.homeAddress && form.bvn;
   const step3Valid = govIdFile && proofFile && agreedToTerms;
 
+  // OTP countdown timer
+  useEffect(() => {
+    if (otpTimer > 0) {
+      const t = setTimeout(() => setOtpTimer(otpTimer - 1), 1000);
+      return () => clearTimeout(t);
+    }
+  }, [otpTimer]);
+
+  // Initiate registration (Step 1 -> OTP screen)
+  const handleInitiateSignup = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      await customerApi.initiateSignup({
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+        phone: form.phone,
+        password: form.password,
+        referralCode: referralCode || undefined,
+      });
+      setStep("otp");
+      setOtpTimer(60);
+      setOtpAttemptsRemaining(5);
+      setLockoutTime(null);
+      setOtpError("");
+      setOtp("");
+    } catch (err: any) {
+      setError(err?.response?.data?.error || "Failed to initiate registration. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Verify OTP (OTP screen -> Step 2)
+  const handleVerifyOtp = async () => {
+    setOtpLoading(true);
+    setOtpError("");
+    try {
+      const data = await customerApi.verifySignupOtp({
+        email: form.email,
+        otp: otp
+      });
+      // OTP verified successfully! Save auth state and transition to step 2
+      login(data.user, data.token);
+      setStep(2);
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.error || "OTP verification failed.";
+      setOtpError(errMsg);
+      if (errMsg.includes("locked") || err?.response?.status === 403) {
+        setLockoutTime(Date.now() + 15 * 60 * 1000);
+      }
+      setOtpAttemptsRemaining((prev) => Math.max(0, prev - 1));
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  // Resend OTP
+  const handleResendOtp = async () => {
+    setOtpLoading(true);
+    setOtpError("");
+    try {
+      await customerApi.resendSignupOtp({ email: form.email });
+      setOtpTimer(60);
+      setOtp("");
+      alert("Verification code has been resent to your email.");
+    } catch (err: any) {
+      setOtpError(err?.response?.data?.error || "Failed to resend code. Please try again.");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
   // ── Submit ────────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     setLoading(true);
@@ -136,24 +219,27 @@ function CustomerSignupPageInner() {
         proofUrl = uploadRes.url;
       }
 
-      const data = await customerApi.signup({
-        ...form,
+      await customerApi.submitSignupKyc({
+        gender: form.gender,
+        dateOfBirth: form.dateOfBirth,
+        homeAddress: form.homeAddress,
+        bvn: form.bvn,
+        nin: form.nin || undefined,
+        companyName: form.companyName || undefined,
+        companySector: form.companySector || undefined,
         governmentIdUrl: govIdUrl,
         proofOfAddressUrl: proofUrl,
-        ...(referralCode && { referralCode }),
-        ...(referralType !== 'DIRECT' && { referralType }),
       });
 
-      // Save auth state
-      login(data.user, data.token);
       setStep("success");
     } catch (err: any) {
-      setError(err?.response?.data?.error || "Registration failed. Please try again.");
+      setError(err?.response?.data?.error || "KYC submission failed. Please try again.");
       setStep("failed");
     } finally {
       setLoading(false);
     }
   };
+
 
   const stepNumber = typeof step === "number" ? step : null;
 
@@ -337,8 +423,8 @@ function CustomerSignupPageInner() {
         </div>
       )}
 
-      {/* Multistep Form (Steps 1, 2, 3) */}
-      {typeof step === "number" && step > 0 && (
+      {/* Multistep Form (Steps 1, 2, 3, OTP) */}
+      {((typeof step === "number" && step > 0) || step === "otp") && (
         <div className="flex-1 flex flex-col items-center justify-start py-4 px-4">
           <div className="text-center mb-4">
             <h2 className="text-2xl font-bold" style={{ color: "#012333" }}>Welcome to PapaEgo</h2>
@@ -351,28 +437,34 @@ function CustomerSignupPageInner() {
           {/* Stepper */}
           <div className="w-full max-w-3xl bg-white rounded-xl border p-6 mb-6" style={{ borderColor: "#E1E3E6" }}>
             <div className="flex items-center justify-between mb-6">
-              {STEPS.map((s, idx) => (
-                <div key={s.id} className="flex items-center flex-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-                      style={{
-                        backgroundColor: step >= s.id ? "#C9A227" : "#E1E3E6",
-                        color: step >= s.id ? "white" : "#9AA0A6",
-                      }}>
-                      {step > s.id ? <CheckCircle className="w-4 h-4" /> : s.id}
+              {STEPS.map((s, idx) => {
+                const currentStepNum = step === "otp" ? 1.5 : (typeof step === "number" ? step : 0);
+                const isActive = currentStepNum >= s.id;
+                const isCompleted = currentStepNum > s.id;
+                return (
+                  <div key={s.id} className="flex items-center flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+                        style={{
+                          backgroundColor: isActive ? "#C9A227" : "#E1E3E6",
+                          color: isActive ? "white" : "#9AA0A6",
+                        }}>
+                        {isCompleted ? <CheckCircle className="w-4 h-4" /> : s.id}
+                      </div>
+                      <span className="text-sm font-medium hidden sm:block"
+                        style={{ color: isActive ? "#C9A227" : "#9AA0A6" }}>
+                        {s.label}
+                      </span>
                     </div>
-                    <span className="text-sm font-medium hidden sm:block"
-                      style={{ color: step >= s.id ? "#C9A227" : "#9AA0A6" }}>
-                      {s.label}
-                    </span>
+                    {idx < STEPS.length - 1 && (
+                      <div className="flex-1 h-0.5 mx-3"
+                        style={{ backgroundColor: isCompleted ? "#C9A227" : "#E1E3E6" }} />
+                    )}
                   </div>
-                  {idx < STEPS.length - 1 && (
-                    <div className="flex-1 h-0.5 mx-3"
-                      style={{ backgroundColor: step > s.id ? "#C9A227" : "#E1E3E6" }} />
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
+
 
             {/* ── Step 1: Create Account ── */}
             {step === 1 && (
@@ -566,6 +658,99 @@ function CustomerSignupPageInner() {
               </div>
             )}
 
+            {/* ── Step 1.5: OTP Verification ── */}
+            {step === "otp" && (
+              <div>
+                <h3 className="text-lg font-bold mb-1" style={{ color: "#012333" }}>Verify Your Email</h3>
+                <p className="text-sm mb-6" style={{ color: "#6B7078" }}>
+                  We have sent a 6-digit One-Time Password (OTP) to your email <strong style={{ color: "#012333" }}>{form.email}</strong>.
+                </p>
+
+                {otpError && (
+                  <div
+                    className="mb-6 p-4 rounded-xl flex items-center gap-2 text-sm font-semibold border text-left"
+                    style={{
+                      backgroundColor: "#FEE2E2",
+                      color: "#EF4444",
+                      borderColor: "#FCA5A5",
+                    }}
+                  >
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{otpError}</span>
+                  </div>
+                )}
+
+                <div className="max-w-md mx-auto my-8 p-6 border rounded-2xl bg-gray-50/30 space-y-6" style={{ borderColor: "#E1E3E6" }}>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 text-left">
+                      Verification Code
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={otp}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "");
+                        setOtp(val);
+                        setOtpError("");
+                      }}
+                      placeholder="0 0 0 0 0 0"
+                      className="w-full text-center text-2xl font-bold tracking-[16px] h-14 border-2 rounded-xl outline-none focus:border-[#C9A227] transition-all bg-white"
+                      style={{ borderColor: "#E1E3E6" }}
+                      disabled={otpLoading || (lockoutTime !== null && Date.now() < lockoutTime)}
+                    />
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs">
+                    <span style={{ color: "#6B7078" }}>
+                      Attempts remaining: <strong style={{ color: "#012333" }}>{otpAttemptsRemaining} / 5</strong>
+                    </span>
+                    {otpTimer > 0 ? (
+                      <span style={{ color: "#6B7078" }}>
+                        Resend in <strong style={{ color: "#012333" }}>{otpTimer}s</strong>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={otpLoading}
+                        className="font-bold underline transition-opacity hover:opacity-80"
+                        style={{ color: "#C9A227" }}
+                      >
+                        Resend Code
+                      </button>
+                    )}
+                  </div>
+
+                  {lockoutTime !== null && Date.now() < lockoutTime && (
+                    <div
+                      className="p-3 rounded-lg text-xs font-semibold"
+                      style={{ backgroundColor: "#FEF3C7", color: "#D97706" }}
+                    >
+                      Account locked temporarily. Try again in {Math.ceil((lockoutTime - Date.now()) / 1000 / 60)} minute(s).
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    disabled={otp.length !== 6 || otpLoading || (lockoutTime !== null && Date.now() < lockoutTime)}
+                    className="w-full h-12 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-50"
+                    style={{ backgroundColor: "#C9A227" }}
+                  >
+                    {otpLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Verifying Code…
+                      </>
+                    ) : (
+                      "Verify & Continue"
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* ── Step 2: Personal & KYC ── */}
             {step === 2 && (
               <div>
@@ -661,27 +846,49 @@ function CustomerSignupPageInner() {
                 </Link>
               </p>
               <div className="flex gap-3">
-                <button
-                  onClick={() => setStep((s) => (typeof s === "number" ? (s - 1) as Step : 0))}
-                  className="px-6 h-11 rounded-lg border font-medium text-sm transition-colors"
-                  style={{ borderColor: "#C9A227", color: "#C9A227" }}>
-                  Back
-                </button>
-                {step < 3 ? (
+                {(step === 1 || step === "otp") && (
                   <button
-                    onClick={() => setStep((s) => (typeof s === "number" ? (s + 1) as Step : 2))}
-                    disabled={(step === 1 && !step1Valid) || (step === 2 && !step2Valid)}
+                    onClick={() => setStep(step === "otp" ? 1 : 0)}
+                    className="px-6 h-11 rounded-lg border font-medium text-sm transition-colors"
+                    style={{ borderColor: "#C9A227", color: "#C9A227" }}>
+                    Back
+                  </button>
+                )}
+                {step === 1 && (
+                  <button
+                    onClick={handleInitiateSignup}
+                    disabled={!step1Valid || loading}
+                    className="px-6 h-11 rounded-lg font-medium text-sm text-white disabled:opacity-50 flex items-center gap-2"
+                    style={{ backgroundColor: "#C9A227" }}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Processing…
+                      </>
+                    ) : "Next"}
+                  </button>
+                )}
+                {step === 2 && (
+                  <button
+                    onClick={() => setStep(3)}
+                    disabled={!step2Valid}
                     className="px-6 h-11 rounded-lg font-medium text-sm text-white disabled:opacity-50"
                     style={{ backgroundColor: "#C9A227" }}>
                     Next
                   </button>
-                ) : (
+                )}
+                {step === 3 && (
                   <button
                     onClick={handleSubmit}
                     disabled={!step3Valid || loading}
-                    className="px-6 h-11 rounded-lg font-medium text-sm text-white disabled:opacity-50"
+                    className="px-6 h-11 rounded-lg font-medium text-sm text-white disabled:opacity-50 flex items-center gap-2"
                     style={{ backgroundColor: "#C9A227" }}>
-                    {loading ? "Creating account…" : "Create Account"}
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Submitting KYC…
+                      </>
+                    ) : "Complete Profile"}
                   </button>
                 )}
               </div>
