@@ -125,4 +125,13 @@ export const agentApi = {
     getFxRates: async (): Promise<any[]> => {
         return apiClient.get<any[]>('/agent/fx-rates');
     },
+
+    // Cashout Requests
+    requestCashout: async (): Promise<any> => {
+        return apiClient.post('/agent/cashout/request', {});
+    },
+
+    getCashoutStatus: async (): Promise<{ lastRequest: any }> => {
+        return apiClient.get<{ lastRequest: any }>('/agent/cashout/status');
+    },
 };
