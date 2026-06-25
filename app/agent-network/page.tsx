@@ -63,7 +63,6 @@ const STEPS = [
   { step: '03', title: 'Onboarding and training.', desc: 'Successful applicants receive support to get started.' },
   { step: '04', title: 'Start earning commissions.', desc: 'Refer customers and watch your income grow.' },
 ];
-
 const WHY_PAPAEGO = [
   {
     icon: Globe,
