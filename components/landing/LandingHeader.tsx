@@ -15,9 +15,10 @@ interface LandingHeaderProps {
 const navLinks = [
   { label: 'About Us', href: '#currencies' },
   { label: 'Features', href: '#features' },
-  { label: 'Pricing', href: null },
+  { label: 'Become an Agent', href: '/agent-network' },
   { label: 'FAQ', href: '#faq' },
 ];
+
 
 export function LandingHeader({ onContactUs }: LandingHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -36,9 +37,16 @@ export function LandingHeader({ onContactUs }: LandingHeaderProps) {
       onContactUs();
       return;
     }
+    // Full-page route
+    if (href.startsWith('/')) {
+      window.location.href = href;
+      return;
+    }
+    // Hash anchor on current page
     const el = document.querySelector(href);
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
+
 
   return (
     <>

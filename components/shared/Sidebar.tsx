@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Wallet, Users, Settings, LogOut, ShieldAlert, FileText, X, TrendingUp, UserCircle, Building2, BarChart2, User } from 'lucide-react';
+import { Home, Wallet, Users, Settings, LogOut, ShieldAlert, FileText, X, TrendingUp, UserCircle, Building2, BarChart2, User, ClipboardList } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useState, useEffect } from 'react';
+
 
 const roleNavigation = {
   AGENT: [
@@ -30,12 +31,14 @@ const roleNavigation = {
     { name: 'Transactions', href: '/admin/transactions', icon: TrendingUp },
     { name: 'Suppliers', href: '/admin/suppliers', icon: Building2 },
     { name: 'Agents', href: '/admin/agents', icon: Users },
+    { name: 'Agent Applications', href: '/admin/agent-applications', icon: ClipboardList },
     { name: 'Customers', href: '/admin/customers', icon: UserCircle },
     { name: 'Commissions', href: '/admin/commissions', icon: Wallet },
     { name: 'Rates', href: '/admin/rates', icon: BarChart2 },
     { name: 'Audit Logs', href: '/admin/audit-logs', icon: FileText },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ],
+
   COMPLIANCE: [
     { name: 'Dashboard', href: '/compliance/dashboard', icon: Home },
     { name: 'Reports', href: '/compliance/reports', icon: FileText },
