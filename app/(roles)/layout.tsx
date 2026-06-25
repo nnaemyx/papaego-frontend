@@ -39,9 +39,6 @@ export default function RoleLayout({
     if (!mounted) {
         return <LoadingScreen />;
     }
-
-    // Admin and Agent users have their own complete layout in their respective directories
-    // Skip this layout wrapper for them to avoid double sidebars
     if (user?.role === 'ADMIN' || user?.role === 'AGENT') {
         return <>{children}</>;
     }
