@@ -12,8 +12,6 @@ import {
   ChevronDown, CheckCircle2, ArrowRight, Shield, Zap, BarChart3,
 } from 'lucide-react';
 
-// ── Data ─────────────────────────────────────────────────────────────────────
-
 const WHY_BENEFITS = [
   {
     icon: DollarSign,
@@ -97,7 +95,6 @@ const FAQS = [
   { q: 'When will I hear back?', a: 'Shortlisted applicants will be contacted after the review process.' },
 ];
 
-// ── Animation Variants ────────────────────────────────────────────────────────
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -109,7 +106,6 @@ const fadeUp = {
 };
 
 
-// ── Components ────────────────────────────────────────────────────────────────
 
 function SectionWrapper({ id, children, bg = 'white' }: { id?: string; children: React.ReactNode; bg?: string }) {
   const ref = useRef(null);
@@ -257,8 +253,8 @@ export default function AgentNetworkPage() {
                 >
                   {[
                     { icon: DollarSign, label: 'Attractive Commissions' },
-                    { icon: Clock,      label: 'Flexible Work' },
-                    { icon: BookOpen,   label: 'Full Training & Support' },
+                    { icon: Clock, label: 'Flexible Work' },
+                    { icon: BookOpen, label: 'Full Training & Support' },
                     { icon: TrendingUp, label: 'Growth Opportunities' },
                   ].map((b) => {
                     const Icon = b.icon;
@@ -713,9 +709,9 @@ export default function AgentNetworkPage() {
 
                 <div className="space-y-3">
                   {[
-                    { icon: Shield,     text: 'Free to join. No registration fees.' },
-                    { icon: BookOpen,   text: 'Full onboarding & training provided.' },
-                    { icon: Globe,      text: 'Work from anywhere, anytime.' },
+                    { icon: Shield, text: 'Free to join. No registration fees.' },
+                    { icon: BookOpen, text: 'Full onboarding & training provided.' },
+                    { icon: Globe, text: 'Work from anywhere, anytime.' },
                     { icon: DollarSign, text: 'Earn commission on every referral.' },
                   ].map((badge) => {
                     const Icon = badge.icon;
