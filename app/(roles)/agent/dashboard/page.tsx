@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PooledRequests } from '@/components/dashboard/PooledRequests';
 import { agentApi } from '@/lib/api/agent';
@@ -66,6 +67,13 @@ const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
   'Cancelled':   { bg: '#FEE2E2', text: '#EB5757' },
 };
 
+const CASHOUT_STATUS_STYLE: Record<string, { bg: string; text: string }> = {
+  'PENDING':   { bg: '#FFF8E1', text: '#F59E0B' },
+  'APPROVED':  { bg: '#EFF6FF', text: '#3B82F6' },
+  'PAID':      { bg: '#E2FDED', text: '#27AE60' },
+  'REJECTED':  { bg: '#FEE2E2', text: '#EB5757' },
+};
+
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 export default function AgentDashboard() {
   const user = useAuthStore((s) => s.user);
@@ -86,7 +94,7 @@ export default function AgentDashboard() {
     queryFn: () => agentApi.getTrades({ limit: 50, page: 1 }),
   });
 
-  const { data: commissions = [], isLoading: commissionsLoading } = useQuery({
+  const { data: commissions = [], isLoading: commissionsLoading, refetch: refetchCommissions } = useQuery({
     queryKey: ['agent-commissions'],
     queryFn: agentApi.getCommissions,
   });
@@ -96,6 +104,52 @@ export default function AgentDashboard() {
     queryFn: agentApi.getFxRates,
     staleTime: 60_000,
   });
+
+  // Cashout State & Queries
+  const [isSubmittingCashout, setIsSubmittingCashout] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const { data: cashoutStatus, refetch: refetchCashoutStatus } = useQuery({
+    queryKey: ['agent-cashout-status'],
+    queryFn: agentApi.getCashoutStatus,
+  });
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => {
+        setToastMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
+  const isFriday = new Date().getDay() === 5;
+  const bypassFriday = process.env.NEXT_PUBLIC_BYPASS_FRIDAY_CHECK === 'true' || process.env.NODE_ENV === 'development';
+  const canRequest = isFriday || bypassFriday;
+  const activeRequest = cashoutStatus?.lastRequest && ['PENDING', 'APPROVED'].includes(cashoutStatus.lastRequest.status);
+
+  const handleConfirmCashout = async () => {
+    setIsSubmittingCashout(true);
+    try {
+      await agentApi.requestCashout();
+      setToastMessage({
+        type: 'success',
+        text: 'Cashout request submitted successfully. Your request is awaiting review.'
+      });
+      setShowConfirmModal(false);
+      refetchCashoutStatus();
+      refetchCommissions();
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.error || err?.message || 'Failed to submit cashout request';
+      setToastMessage({
+        type: 'error',
+        text: errMsg
+      });
+    } finally {
+      setIsSubmittingCashout(false);
+    }
+  };
 
   const trades = tradesData?.trades || [];
 
@@ -395,61 +449,173 @@ export default function AgentDashboard() {
         </div>
       </div>
 
-      {/* Commission Breakdown */}
-      <div className="bg-white rounded-xl border shadow-sm p-6" style={{ borderColor: 'var(--border-custom)' }}>
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h2 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>Commission Breakdown</h2>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>Your earnings summary and payout status</p>
+      {/* Commission Breakdown & Cashout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Commission Cards */}
+        <div className="lg:col-span-2 bg-white rounded-xl border shadow-sm p-6" style={{ borderColor: 'var(--border-custom)' }}>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>Commission Breakdown</h2>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>Your earnings summary and payout status</p>
+            </div>
+            <Link href="/agent/commissions" className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg" style={{ color: 'var(--brand-primary)', backgroundColor: '#FBF4DC' }}>
+              Full Report <ArrowRight size={12} />
+            </Link>
           </div>
-          <Link href="/agent/commissions" className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg" style={{ color: 'var(--brand-primary)', backgroundColor: '#FBF4DC' }}>
-            Full Report <ArrowRight size={12} />
-          </Link>
+
+          {commissionsLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="rounded-xl p-4 flex items-center gap-4" style={{ background: 'linear-gradient(135deg, #E2FDED 0%, #F0FDF4 100%)' }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#27AE60' }}>
+                  <CheckCircle size={20} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold mb-0.5" style={{ color: '#27AE60' }}>Total Earned (ITD)</p>
+                  <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>₦{commissionITD.toLocaleString()}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Paid commissions</p>
+                </div>
+              </div>
+
+              <div className="rounded-xl p-4 flex items-center gap-4" style={{ background: 'linear-gradient(135deg, #FFF8E1 0%, #FFFDF0 100%)' }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#C9A227' }}>
+                  <TrendingUp size={20} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold mb-0.5" style={{ color: '#A97600' }}>This Month</p>
+                  <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>₦{commissionThisMonth.toLocaleString()}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{now.toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
+                </div>
+              </div>
+
+              <div className="rounded-xl p-4 flex items-center gap-4" style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #F5F8FF 100%)' }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#3B82F6' }}>
+                  <Clock size={20} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold mb-0.5" style={{ color: '#1D4ED8' }}>Pending Payout</p>
+                  <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>₦{commissionPending.toLocaleString()}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Awaiting approval</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {commissionsLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />
-            ))}
+        {/* Cashout Request Widget */}
+        <div className="bg-white rounded-xl border shadow-sm p-6 flex flex-col justify-between" style={{ borderColor: 'var(--border-custom)' }}>
+          <div>
+            <h2 className="font-bold text-base mb-1" style={{ color: 'var(--text-primary)' }}>Request Cashout</h2>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Withdraw your available commission balance</p>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="rounded-xl p-4 flex items-center gap-4" style={{ background: 'linear-gradient(135deg, #E2FDED 0%, #F0FDF4 100%)' }}>
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#27AE60' }}>
-                <CheckCircle size={20} className="text-white" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold mb-0.5" style={{ color: '#27AE60' }}>Total Earned (ITD)</p>
-                <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>₦{commissionITD.toLocaleString()}</p>
-                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Paid commissions</p>
-              </div>
+
+          <div className="my-4 space-y-3">
+            {/* Available Balance display */}
+            <div className="rounded-xl p-4 flex flex-col justify-between" style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #F5F8FF 100%)' }}>
+              <span className="text-xs font-semibold" style={{ color: '#1D4ED8' }}>Available Balance</span>
+              <span className="text-2xl font-bold mt-1" style={{ color: 'var(--text-primary)' }}>₦{commissionPending.toLocaleString()}</span>
             </div>
 
-            <div className="rounded-xl p-4 flex items-center gap-4" style={{ background: 'linear-gradient(135deg, #FFF8E1 0%, #FFFDF0 100%)' }}>
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#C9A227' }}>
-                <TrendingUp size={20} className="text-white" />
+            {/* Last request status if exists */}
+            {cashoutStatus?.lastRequest && (
+              <div className="rounded-xl p-3 border border-gray-100 bg-gray-50/50 space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-semibold text-gray-500">Last Request:</span>
+                  <span className="font-bold text-gray-700">₦{Number(cashoutStatus.lastRequest.amount).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-gray-400">{new Date(cashoutStatus.lastRequest.createdAt).toLocaleDateString('en-GB')}</span>
+                  <span className="px-2 py-0.5 rounded-full font-bold text-[10px]" style={{
+                    backgroundColor: CASHOUT_STATUS_STYLE[cashoutStatus.lastRequest.status]?.bg || '#F3F4F6',
+                    color: CASHOUT_STATUS_STYLE[cashoutStatus.lastRequest.status]?.text || '#374151'
+                  }}>
+                    {cashoutStatus.lastRequest.status}
+                  </span>
+                </div>
+                {cashoutStatus.lastRequest.notes && (
+                  <p className="text-[10px] text-gray-500 italic mt-1 border-t pt-1 border-gray-100">
+                    Note: {cashoutStatus.lastRequest.notes}
+                  </p>
+                )}
               </div>
-              <div>
-                <p className="text-xs font-semibold mb-0.5" style={{ color: '#A97600' }}>This Month</p>
-                <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>₦{commissionThisMonth.toLocaleString()}</p>
-                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{now.toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
-              </div>
-            </div>
+            )}
 
-            <div className="rounded-xl p-4 flex items-center gap-4" style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #F5F8FF 100%)' }}>
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#3B82F6' }}>
-                <Clock size={20} className="text-white" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold mb-0.5" style={{ color: '#1D4ED8' }}>Pending Payout</p>
-                <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>₦{commissionPending.toLocaleString()}</p>
-                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Awaiting approval</p>
-              </div>
-            </div>
+            {/* Alerts / Explanatory notices */}
+            {activeRequest ? (
+              <p className="text-xs text-amber-600 font-medium bg-amber-50 p-2.5 rounded-lg flex items-start gap-1.5">
+                <span>⚠️</span>
+                <span>You already have an active request awaiting review.</span>
+              </p>
+            ) : commissionPending <= 0 ? (
+              <p className="text-xs text-gray-500 font-medium bg-gray-50 p-2.5 rounded-lg flex items-start gap-1.5">
+                <span>💡</span>
+                <span>No pending commission available to cash out.</span>
+              </p>
+            ) : !canRequest ? (
+              <p className="text-xs text-amber-600 font-medium bg-amber-50 p-2.5 rounded-lg flex items-start gap-1.5">
+                <span>📅</span>
+                <span>Cashout requests are only available on Fridays.</span>
+              </p>
+            ) : null}
           </div>
-        )}
+
+          <button
+            onClick={() => setShowConfirmModal(true)}
+            disabled={activeRequest || commissionPending <= 0 || !canRequest || isSubmittingCashout}
+            className="w-full text-center text-sm font-semibold py-2.5 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-white hover:bg-opacity-95"
+            style={{ backgroundColor: 'var(--brand-primary)' }}
+          >
+            {isSubmittingCashout ? 'Submitting...' : 'Request Cashout'}
+          </button>
+        </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-gray-100 animate-in fade-in zoom-in duration-200">
+            <h3 className="text-lg font-bold mb-2 text-gray-900">Confirm Cashout</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              You are about to request withdrawal of your available commission balance. 
+              Amount: <span className="font-bold text-gray-900">₦{commissionPending.toLocaleString()}</span>. 
+              Do you want to continue?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                disabled={isSubmittingCashout}
+                className="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmCashout}
+                disabled={isSubmittingCashout}
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
+                style={{ backgroundColor: 'var(--brand-primary)' }}
+              >
+                {isSubmittingCashout ? 'Processing...' : 'Confirm Request'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Alert */}
+      {toastMessage && (
+        <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg border text-sm font-semibold transition-all duration-300 animate-in fade-in slide-in-from-bottom-5 ${
+          toastMessage.type === 'success'
+            ? 'bg-green-50 text-green-800 border-green-200'
+            : 'bg-red-50 text-red-800 border-red-200'
+        }`}>
+          {toastMessage.text}
+        </div>
+      )}
 
       {/* Pooled Requests */}
       <PooledRequests />
