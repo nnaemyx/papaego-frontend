@@ -7,7 +7,7 @@ interface User {
     firstName?: string;
     lastName?: string;
     phone?: string;
-    role: "AGENT" | "CUSTOMER" | "ADMIN" | "COMPLIANCE";
+    role: "AGENT" | "CUSTOMER" | "ADMIN" | "COMPLIANCE" | "ORG_OWNER" | "ORG_ADMIN";
     isActive: boolean;
 }
 

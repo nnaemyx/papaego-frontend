@@ -97,7 +97,7 @@ export function MobileNav({ open, onOpenChange, onContactUs }: MobileNavProps) {
           <Button
             onClick={() => {
               onOpenChange(false);
-              window.location.href = '/customer-auth/signup';
+              window.location.href = '/business/auth/signup';
             }}
             className="landing-button px-6 h-[52px] rounded-lg transition-transform hover:scale-105 w-full"
             style={{
@@ -107,13 +107,13 @@ export function MobileNav({ open, onOpenChange, onContactUs }: MobileNavProps) {
               fontWeight: 600,
             }}
           >
-            Create Account
+            Register Business
           </Button>
 
           <Button
             onClick={() => {
               onOpenChange(false);
-              window.location.href = '/customer-auth/signin';
+              window.location.href = '/business/auth/signin';
             }}
             variant="outline"
             className="landing-button px-6 h-[52px] rounded-lg transition-transform hover:scale-105 w-full"
@@ -124,7 +124,7 @@ export function MobileNav({ open, onOpenChange, onContactUs }: MobileNavProps) {
               fontWeight: 600,
             }}
           >
-            Login
+            Business Portal
           </Button>
         </div>
 

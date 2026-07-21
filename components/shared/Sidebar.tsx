@@ -46,6 +46,14 @@ const roleNavigation = {
     { name: 'Reports', href: '/compliance/reports', icon: FileText },
     { name: 'Flags', href: '/compliance/flags', icon: ShieldAlert },
   ],
+  ORG_OWNER: [
+    { name: 'Dashboard', href: '/business/dashboard', icon: Home },
+    { name: 'Onboarding', href: '/business/onboarding', icon: Building2 },
+  ],
+  ORG_ADMIN: [
+    { name: 'Dashboard', href: '/business/dashboard', icon: Home },
+    { name: 'Onboarding', href: '/business/onboarding', icon: Building2 },
+  ],
 };
 
 interface SidebarProps {
@@ -60,7 +68,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
   // Get user role from auth store
   const userRole = user?.role || 'AGENT'; // Default to AGENT if not logged in
-  const navigation = roleNavigation[userRole];
+  const navigation = roleNavigation[userRole] || roleNavigation.AGENT;
 
   const handleLogout = () => {
     logout();

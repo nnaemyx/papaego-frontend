@@ -10,7 +10,9 @@ export interface LoginResponse {
   user: {
     id: string;
     email: string;
-    role: "AGENT" | "CUSTOMER" | "ADMIN" | "COMPLIANCE";
+    firstName?: string;
+    lastName?: string;
+    role: "AGENT" | "CUSTOMER" | "ADMIN" | "COMPLIANCE" | "ORG_OWNER" | "ORG_ADMIN";
     isActive: boolean;
   };
   token: string;
@@ -25,11 +27,21 @@ export const authApi = {
   // Login
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
     const response = await api.post("/auth/login", credentials);
-    
-    // Save to auth store
     const { user, token } = response.data;
     useAuthStore.getState().login(user, token);
-    
+    return response.data;
+  },
+
+  // Signup
+  signup: async (data: {
+    email: string;
+    password: string;
+    phone?: string;
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+  }): Promise<LoginResponse> => {
+    const response = await api.post("/auth/signup", data);
     return response.data;
   },
 
@@ -57,6 +69,18 @@ export const authApi = {
   // Reset password – set new password with token
   resetPassword: async (payload: ResetPasswordPayload): Promise<{ message: string }> => {
     const response = await api.post("/auth/reset-password", payload);
+    return response.data;
+  },
+
+  // Verify email OTP
+  verifyEmail: async (email: string, otp: string): Promise<{ message: string }> => {
+    const response = await api.post("/auth/verify-email", { email, otp });
+    return response.data;
+  },
+
+  // Resend OTP
+  resendOtp: async (email: string): Promise<{ message: string }> => {
+    const response = await api.post("/auth/resend-otp", { email });
     return response.data;
   },
 };

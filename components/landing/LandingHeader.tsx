@@ -99,10 +99,10 @@ export function LandingHeader({ onContactUs }: LandingHeaderProps) {
             </nav>
 
             {/* Desktop Auth Buttons */}
-            <div className="hidden md:flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-3">
               <Button
-                onClick={() => (window.location.href = '/customer-auth/signup')}
-                className="landing-button px-6 h-[44px] rounded-lg transition-transform hover:scale-105"
+                onClick={() => (window.location.href = '/business/auth/signup')}
+                className="landing-button px-5 h-[44px] rounded-lg transition-transform hover:scale-105"
                 style={{
                   backgroundColor: 'var(--primary-gold)',
                   color: 'white',
@@ -110,13 +110,13 @@ export function LandingHeader({ onContactUs }: LandingHeaderProps) {
                   fontWeight: 600,
                 }}
               >
-                Create Account
+                Register Business
               </Button>
 
               <Button
-                onClick={() => (window.location.href = '/customer-auth/signin')}
+                onClick={() => (window.location.href = '/business/auth/signin')}
                 variant="outline"
-                className="landing-button px-6 h-[44px] rounded-lg transition-transform hover:scale-105"
+                className="landing-button px-5 h-[44px] rounded-lg transition-transform hover:scale-105"
                 style={{
                   borderColor: 'var(--primary-gold)',
                   color: 'var(--primary-gold)',
@@ -124,7 +124,7 @@ export function LandingHeader({ onContactUs }: LandingHeaderProps) {
                   fontWeight: 600,
                 }}
               >
-                Login
+                Business Portal
               </Button>
             </div>
 

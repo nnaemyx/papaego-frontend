@@ -100,7 +100,7 @@ export function HeroSection({ onContactUs }: HeroSectionProps) {
               transition={{ delay: 0.7 }}
             >
               <Button
-                onClick={() => (window.location.href = '/customer-auth/signup')}
+                onClick={() => (window.location.href = '/business/auth/signup')}
                 className="landing-button px-8 h-[52px] rounded-lg transition-transform hover:scale-105 w-full sm:w-auto"
                 style={{
                   backgroundColor: 'var(--primary-gold)',
@@ -109,7 +109,7 @@ export function HeroSection({ onContactUs }: HeroSectionProps) {
                   fontWeight: 600,
                 }}
               >
-                Create Account
+                Register Business
               </Button>
 
               <Button
