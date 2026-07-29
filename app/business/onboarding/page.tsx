@@ -16,22 +16,32 @@ const STEP_ORDER: OnboardingStep[] = ["org-details", "qualification", "kyc", "ky
 
 export default function OnboardingPage() {
     const router = useRouter();
-    const { user, isAuthenticated } = useAuthStore();
-    const { currentStep, completedSteps, setStep, markStepComplete, savedOrgId } = useOnboardingStore();
+    const { isAuthenticated } = useAuthStore();
+    const { currentStep, completedSteps, setStep, markStepComplete, savedOrgId, setSavedOrg, reset } = useOnboardingStore();
 
-    // Auth guard
+    // Auth guard & User Org Sync
     useEffect(() => {
         if (!isAuthenticated) {
             router.push("/business/auth/signin");
+            return;
         }
-    }, [isAuthenticated, router]);
 
-    // If org already active, redirect to dashboard
-    useEffect(() => {
-        if (savedOrgId && completedSteps.length === STEP_ORDER.length - 1) {
-            // All steps done — redirect to status dashboard
-        }
-    }, [savedOrgId, completedSteps]);
+        // Fetch organization for the currently authenticated user
+        import("@/lib/api/organizations").then(({ organizationsApi }) => {
+            organizationsApi.getMyOrganization()
+                .then((res) => {
+                    if (res?.organization) {
+                        setSavedOrg(res.organization);
+                    } else {
+                        // User has no organization — ensure clean onboarding state
+                        reset();
+                    }
+                })
+                .catch(() => {
+                    reset();
+                });
+        });
+    }, [isAuthenticated, router]);
 
     const goToNext = () => {
         const idx = STEP_ORDER.indexOf(currentStep);

@@ -154,14 +154,12 @@ export default function BusinessDashboardPage() {
                             <div className="bg-white border rounded-2xl p-5 shadow-sm" style={{ borderColor: "#E1E3E6" }}>
                                 <p className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: "#6B7078" }}>Quick Actions</p>
                                 <div className="space-y-2">
-                                    {org.status === "ACTIVE" && (
-                                        <QuickAction
-                                            icon={<Rocket className="w-4 h-4 text-emerald-600" />}
-                                            label="Set Up Managed Account"
-                                            description="Sprint 2 — Coming soon"
-                                            disabled
-                                        />
-                                    )}
+                                    <QuickAction
+                                        icon={<Rocket className="w-4 h-4 text-emerald-600" />}
+                                        label="Managed U.S. Bank Account"
+                                        description="View or setup dedicated account"
+                                        href="/business/banking"
+                                    />
                                     <QuickAction
                                         icon={<FileText className="w-4 h-4 text-[#C9A227]" />}
                                         label="Upload Documents"

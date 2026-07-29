@@ -27,6 +27,7 @@ const roleNavigation = {
   ],
   ADMIN: [
     { name: 'Home', href: '/admin/dashboard', icon: Home },
+    { name: 'Business Onboarding', href: '/admin/organizations', icon: Building2 },
     { name: 'Trade Requests', href: '/admin/trade-requests', icon: FileText },
     { name: 'Transactions', href: '/admin/transactions', icon: TrendingUp },
     { name: 'Suppliers', href: '/admin/suppliers', icon: Building2 },

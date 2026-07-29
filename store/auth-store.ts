@@ -19,14 +19,22 @@ interface AuthState {
     logout: () => void;
 }
 
+import { useOnboardingStore } from "./onboarding-store";
+
 export const useAuthStore = create<AuthState>()(
     persist(
         (set) => ({
             user: null,
             token: null,
             isAuthenticated: false,
-            login: (user, token) => set({ user, token, isAuthenticated: true }),
-            logout: () => set({ user: null, token: null, isAuthenticated: false }),
+            login: (user, token) => {
+                useOnboardingStore.getState().reset();
+                set({ user, token, isAuthenticated: true });
+            },
+            logout: () => {
+                useOnboardingStore.getState().reset();
+                set({ user: null, token: null, isAuthenticated: false });
+            },
         }),
         {
             name: "auth-storage",
