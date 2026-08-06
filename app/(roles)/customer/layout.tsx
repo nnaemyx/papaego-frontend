@@ -7,10 +7,8 @@ export default function CustomerLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // The parent (roles)/layout.tsx already provides Sidebar + Header for CUSTOMER role.
-  // This layout only adds role-specific auth protection.
   return (
-    <RequireAuth requiredRole="CUSTOMER" redirectTo="/customer-auth/signin">
+    <RequireAuth allowedRoles={["CUSTOMER", "ORG_OWNER", "ORG_ADMIN"]} redirectTo="/business/auth/signin">
       {children}
     </RequireAuth>
   );

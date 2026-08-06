@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Wallet, Users, Settings, LogOut, ShieldAlert, FileText, X, TrendingUp, UserCircle, Building2, BarChart2, User, ClipboardList, Database, DollarSign } from 'lucide-react';
+import { Home, Wallet, Users, Settings, LogOut, ShieldAlert, FileText, X, TrendingUp, UserCircle, Building2, BarChart2, User, ClipboardList, Database, DollarSign, ArrowDownToLine } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useState, useEffect } from 'react';
 
@@ -19,10 +19,33 @@ const roleNavigation = {
     { name: 'Profile', href: '/agent/profile', icon: User },
   ],
   CUSTOMER: [
-    { name: 'Home', href: '/customer/dashboard', icon: Home },
-    { name: 'My Trades', href: '/customer/trades', icon: Wallet },
+    { name: 'Dashboard', href: '/customer/dashboard', icon: Home },
+    { name: 'Wallet', href: '/customer/wallet', icon: Wallet },
+    { name: 'My Trades', href: '/customer/trades', icon: TrendingUp },
+    // { name: 'Trade Requests', href: '/customer/trade-requests', icon: FileText },
     { name: 'Suppliers', href: '/customer/suppliers', icon: Building2 },
-    { name: 'Rates', href: '/customer/rates', icon: TrendingUp },
+    { name: 'Exchange Rates', href: '/customer/rates', icon: TrendingUp },
+    { name: 'Managed Banking', href: '/customer/banking', icon: Database },
+    { name: 'Profile', href: '/customer/profile', icon: Users },
+  ],
+  ORG_OWNER: [
+    { name: 'Dashboard', href: '/customer/dashboard', icon: Home },
+    { name: 'Wallet', href: '/customer/wallet', icon: Wallet },
+    { name: 'My Trades', href: '/customer/trades', icon: TrendingUp },
+    // { name: 'Trade Requests', href: '/customer/trade-requests', icon: FileText },
+    { name: 'Suppliers', href: '/customer/suppliers', icon: Building2 },
+    { name: 'Exchange Rates', href: '/customer/rates', icon: TrendingUp },
+    { name: 'Managed Banking', href: '/customer/banking', icon: Database },
+    { name: 'Profile', href: '/customer/profile', icon: Users },
+  ],
+  ORG_ADMIN: [
+    { name: 'Dashboard', href: '/customer/dashboard', icon: Home },
+    { name: 'Wallet', href: '/customer/wallet', icon: Wallet },
+    { name: 'My Trades', href: '/customer/trades', icon: TrendingUp },
+    { name: 'Trade Requests', href: '/customer/trade-requests', icon: FileText },
+    { name: 'Suppliers', href: '/customer/suppliers', icon: Building2 },
+    { name: 'Exchange Rates', href: '/customer/rates', icon: TrendingUp },
+    { name: 'Managed Banking', href: '/customer/banking', icon: Database },
     { name: 'Profile', href: '/customer/profile', icon: Users },
   ],
   ADMIN: [
@@ -34,6 +57,7 @@ const roleNavigation = {
     { name: 'Agents', href: '/admin/agents', icon: Users },
     { name: 'Agent Applications', href: '/admin/agent-applications', icon: ClipboardList },
     { name: 'Customers', href: '/admin/customers', icon: UserCircle },
+    { name: 'Deposits', href: '/admin/deposits', icon: ArrowDownToLine },
     { name: 'Commissions', href: '/admin/commissions', icon: Wallet },
     { name: 'Rates', href: '/admin/rates', icon: BarChart2 },
     { name: 'Treasury', href: '/admin/treasury', icon: Database },
@@ -41,19 +65,10 @@ const roleNavigation = {
     { name: 'Audit Logs', href: '/admin/audit-logs', icon: FileText },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ],
-
   COMPLIANCE: [
     { name: 'Dashboard', href: '/compliance/dashboard', icon: Home },
     { name: 'Reports', href: '/compliance/reports', icon: FileText },
     { name: 'Flags', href: '/compliance/flags', icon: ShieldAlert },
-  ],
-  ORG_OWNER: [
-    { name: 'Dashboard', href: '/business/dashboard', icon: Home },
-    { name: 'Onboarding', href: '/business/onboarding', icon: Building2 },
-  ],
-  ORG_ADMIN: [
-    { name: 'Dashboard', href: '/business/dashboard', icon: Home },
-    { name: 'Onboarding', href: '/business/onboarding', icon: Building2 },
   ],
 };
 

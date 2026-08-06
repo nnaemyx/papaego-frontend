@@ -6,7 +6,8 @@ import { useAuthStore } from "@/store/auth-store";
 
 interface RequireAuthProps {
   children: React.ReactNode;
-  requiredRole?: "ADMIN" | "AGENT" | "CUSTOMER" | "COMPLIANCE";
+  requiredRole?: string;
+  allowedRoles?: string[];
   redirectTo?: string;
 }
 
@@ -14,12 +15,14 @@ interface RequireAuthProps {
 function getDefaultRedirect(requiredRole?: string): string {
   if (requiredRole === "AGENT") return "/agent/login";
   if (requiredRole === "ADMIN") return "/admin/login";
+  if (requiredRole === "BUSINESS" || requiredRole === "ORG_OWNER") return "/business/auth/signin";
   return "/login";
 }
 
 export function RequireAuth({
   children,
   requiredRole,
+  allowedRoles,
   redirectTo,
 }: RequireAuthProps) {
   const router = useRouter();
@@ -32,6 +35,20 @@ export function RequireAuth({
     setMounted(true);
   }, []);
 
+  const hasAccess = (): boolean => {
+    if (!user) return false;
+    if (allowedRoles && allowedRoles.length > 0) {
+      return allowedRoles.includes(user.role);
+    }
+    if (requiredRole) {
+      if (requiredRole === "CUSTOMER") {
+        return ["CUSTOMER", "ORG_OWNER", "ORG_ADMIN"].includes(user.role);
+      }
+      return user.role === requiredRole;
+    }
+    return true;
+  };
+
   useEffect(() => {
     if (!mounted) return;
 
@@ -40,7 +57,7 @@ export function RequireAuth({
       return;
     }
 
-    if (requiredRole && user?.role !== requiredRole) {
+    if (!hasAccess()) {
       router.push("/unauthorized");
     }
   }, [mounted, isAuthenticated, user, requiredRole, finalRedirect, router]);
@@ -56,7 +73,7 @@ export function RequireAuth({
     );
   }
 
-  if (requiredRole && user?.role !== requiredRole) {
+  if (!hasAccess()) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

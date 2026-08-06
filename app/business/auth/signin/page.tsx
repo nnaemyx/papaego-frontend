@@ -44,7 +44,7 @@ export default function BusinessSignInPage() {
 
             login(user, res.token);
             toast.success(`Welcome back, ${user.firstName || user.email}!`);
-            router.push("/business/dashboard");
+            router.push("/customer/dashboard");
         } catch (err: any) {
             const msg = err?.response?.data?.error || "Invalid email or password";
             toast.error(msg);

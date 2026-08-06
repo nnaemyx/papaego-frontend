@@ -43,8 +43,21 @@ export interface Customer {
   kycRejectionReason?: string | null;
   kycReviewedAt?: string | null;
   kycReviewedBy?: string | null;
-  // Sprint 2 — Activity tracking
+  // Sprint 2 — Activity tracking & Organization / FV Bank
   lastTransactionAgo?: string;
+  organization?: {
+    id: string;
+    businessName: string;
+    status: string;
+    kycStatus: string;
+    kybStatus: string;
+    bankAccount?: {
+      accountNumber: string;
+      routingNumber: string;
+      bankName: string;
+      status: string;
+    } | null;
+  } | null;
 }
 
 export interface CustomerStats {

@@ -168,13 +168,11 @@ export function CustomersTable({
                             />
                         </TableHead>
                         <TableHead className="text-xs font-medium">Customer ID</TableHead>
-                        <TableHead className="text-xs font-medium">Name</TableHead>
-                        <TableHead className="text-xs font-medium">Email</TableHead>
-                        <TableHead className="text-xs font-medium">Phone</TableHead>
+                        <TableHead className="text-xs font-medium">Name & Business</TableHead>
+                        <TableHead className="text-xs font-medium">Email / Contact</TableHead>
+                        <TableHead className="text-xs font-medium">Managed U.S. Account</TableHead>
                         <TableHead className="text-xs font-medium">Total Trades</TableHead>
-                        <TableHead className="text-xs font-medium">Last Trade</TableHead>
                         <TableHead className="text-xs font-medium">Verification</TableHead>
-                        <TableHead className="text-xs font-medium">Referred By</TableHead>
                         <TableHead className="text-xs font-medium">Action</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -190,20 +188,33 @@ export function CustomersTable({
                             <TableCell className="text-xs font-medium" style={{ color: "#c9a227" }}>
                                 {customer.customerId}
                             </TableCell>
-                            <TableCell className="text-xs font-medium" style={{ color: "#2b2f33" }}>
-                                {customer.name}
+                            <TableCell className="text-xs font-medium">
+                                <div style={{ color: "#2b2f33" }}>{customer.name}</div>
+                                {customer.companyName || customer.organization?.businessName ? (
+                                    <div className="text-[11px] text-blue-600 font-semibold mt-0.5">
+                                        🏢 {customer.companyName || customer.organization?.businessName}
+                                    </div>
+                                ) : (
+                                    <div className="text-[10px] text-slate-400">Individual</div>
+                                )}
                             </TableCell>
-                            <TableCell className="text-xs" style={{ color: "#6b7078" }}>
-                                {customer.email}
+                            <TableCell className="text-xs">
+                                <div style={{ color: "#6b7078" }}>{customer.email}</div>
+                                <div className="text-[11px] text-slate-400">{customer.phone}</div>
                             </TableCell>
-                            <TableCell className="text-xs" style={{ color: "#6b7078" }}>
-                                {customer.phone}
+                            <TableCell className="text-xs">
+                                {customer.organization?.bankAccount ? (
+                                    <div className="bg-emerald-50 text-emerald-800 p-1.5 rounded border border-emerald-200 text-[10px]">
+                                        <div className="font-bold">FV Bank ({customer.organization.bankAccount.status})</div>
+                                        <div className="font-mono">Acc: {customer.organization.bankAccount.accountNumber}</div>
+                                        <div className="font-mono">Routing: {customer.organization.bankAccount.routingNumber}</div>
+                                    </div>
+                                ) : (
+                                    <span className="text-xs text-slate-400">Not Provisioned</span>
+                                )}
                             </TableCell>
                             <TableCell className="text-xs font-medium" style={{ color: "#2b2f33" }}>
                                 {customer.totalTransactions}
-                            </TableCell>
-                            <TableCell className="text-xs" style={{ color: "#6b7078" }}>
-                                {formatDate(customer.lastTrade)}
                             </TableCell>
                             <TableCell>
                                 <Badge
@@ -214,20 +225,19 @@ export function CustomersTable({
                                 </Badge>
                             </TableCell>
                             <TableCell>
-                                <ReferralBadge
-                                    referralType={customer.referralType}
-                                    agentName={customer.referredByAgent}
-                                />
-                            </TableCell>
-                            <TableCell>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger className="focus:outline-none">
                                         <MoreHorizontal className="h-4 w-4" />
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem onClick={() => onViewDetails?.(customer.id)}>
-                                            View Details
+                                            View Customer Details
                                         </DropdownMenuItem>
+                                        {customer.organization?.id && (
+                                            <DropdownMenuItem onClick={() => window.location.href = `/admin/organizations/${customer.organization?.id}`}>
+                                                View Organization Profile
+                                            </DropdownMenuItem>
+                                        )}
                                         <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => handleActionClick(customer, 'delete')}>
                                             Delete Customer
                                         </DropdownMenuItem>

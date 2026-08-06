@@ -87,13 +87,6 @@ export default function KycForm({ onNext, onBack }: Props) {
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-            <div className="flex gap-3 p-4 rounded-xl text-sm"
-                style={{ backgroundColor: "#FFF7E6", border: "1px solid #F0CD00", color: "#856404" }}>
-                <IdCard className="w-4 h-4 shrink-0 mt-0.5 text-[#C9A227]" />
-                <div>
-                    Your identity information is submitted directly to <strong>FV Bank</strong> for regulatory verification. PapaEgo does not make the approval decision.
-                </div>
-            </div>
 
             {/* Personal Information */}
             <section>

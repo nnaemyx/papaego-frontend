@@ -14,26 +14,23 @@ import VerificationReview from "@/components/business/VerificationReview";
 
 const STEP_ORDER: OnboardingStep[] = ["org-details", "qualification", "kyc", "kyb", "review"];
 
-export default function OnboardingPage() {
+export default function CustomerOnboardingPage() {
     const router = useRouter();
     const { isAuthenticated } = useAuthStore();
-    const { currentStep, completedSteps, setStep, markStepComplete, savedOrgId, setSavedOrg, reset } = useOnboardingStore();
+    const { currentStep, completedSteps, setStep, markStepComplete, setSavedOrg, reset } = useOnboardingStore();
 
-    // Auth guard & User Org Sync + Unmount Reset Cleanup
     useEffect(() => {
         if (!isAuthenticated) {
             router.push("/business/auth/signin");
             return;
         }
 
-        // Fetch organization for the currently authenticated user
         import("@/lib/api/organizations").then(({ organizationsApi }) => {
             organizationsApi.getMyOrganization()
                 .then((res) => {
                     if (res?.organization) {
                         setSavedOrg(res.organization);
                     } else {
-                        // User has no organization — ensure clean onboarding state
                         reset();
                     }
                 })
@@ -41,11 +38,6 @@ export default function OnboardingPage() {
                     reset();
                 });
         });
-
-        // Reset onboarding state when customer leaves/exits the page so it starts afresh next time
-        return () => {
-            reset();
-        };
     }, [isAuthenticated, router, setSavedOrg, reset]);
 
     const goToNext = () => {
