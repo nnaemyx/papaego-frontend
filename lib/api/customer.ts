@@ -75,6 +75,8 @@ export interface CustomerDashboardStats {
     pendingActions: number;
     kycVerified: boolean;
     kycStatus: 'NOT_SUBMITTED' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'RESUBMITTED';
+    availableBalance?: number | string;
+    reservedBalance?: number | string;
 }
 
 export interface CustomerTradeRequest {
@@ -375,6 +377,48 @@ export const customerApi = {
         featureEnabled: boolean;
     }> => {
         const response = await api.get(`/customer/portal/trades/${tradeId}/negotiation-eligibility`);
+        return response.data;
+    },
+
+    /** Check available ledger balance vs required amount */
+    checkLedgerBalance: async (amount: number): Promise<{
+        sufficient: boolean;
+        availableBalance: string;
+        reservedBalance: string;
+        requiredAmount: string;
+        shortfall: string;
+        currency: string;
+    }> => {
+        const response = await api.post("/customer/portal/wallet/check-balance", { amount });
+        return response.data;
+    },
+
+    /** Pay for trade using NGN Ledger balance */
+    payFromWallet: async (tradeId: string): Promise<{ success: boolean; trade: any; message: string }> => {
+        const response = await api.post(`/customer/portal/trades/${tradeId}/pay-from-wallet`);
+        return response.data;
+    },
+
+    /** Initialize Paystack direct deposit */
+    initializePaystackDeposit: async (amount: number): Promise<{
+        reference: string;
+        amount: number;
+        email: string;
+        publicKey: string;
+        currency: string;
+    }> => {
+        const response = await api.post("/customer/portal/wallet/paystack/initialize", { amount });
+        return response.data;
+    },
+
+    /** Verify Paystack deposit */
+    verifyPaystackDeposit: async (reference: string, amount: number): Promise<{
+        success: boolean;
+        amount: number;
+        availableBalance: string;
+        message: string;
+    }> => {
+        const response = await api.post("/customer/portal/wallet/paystack/verify", { reference, amount });
         return response.data;
     },
 

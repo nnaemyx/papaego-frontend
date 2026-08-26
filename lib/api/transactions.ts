@@ -13,6 +13,9 @@ export interface AdminTransaction {
     status: string;
     verification: string;
     createdAt: string;
+    sendCurrency?: string;
+    receiveCurrency?: string;
+    recipientName?: string;
 }
 
 export interface TransactionFilters {
@@ -32,6 +35,10 @@ export interface TransactionListResponse {
 export interface DashboardStats {
     totalTransactions: number;
     tradeVolume: number;
+    totalTreasuryValue?: number;
+    availableLiquidity?: number;
+    pendingSettlement?: number;
+    unmatchedDepositsCount?: number;
     activeAgents: number;
     pendingReviews: number;
     tradeHealth?: {

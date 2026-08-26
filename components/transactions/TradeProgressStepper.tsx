@@ -1,101 +1,164 @@
 "use client";
 
-import { Check, Clock, CircleDot, AlertCircle, RefreshCw } from "lucide-react";
+import { Check, Clock, CircleDot, AlertCircle, RefreshCw, FileText, Landmark, ShieldCheck } from "lucide-react";
 
-export type TradeStage = "PENDING" | "POOL" | "ASSIGNED" | "QUOTED" | "REJECTED" | 
-                         "AWAITING_PAYMENT" | "PAYMENT_UPLOADED" | "PROCESSING" | "COMPLETED" | "FLAGGED" | "CANCELLED";
+export type TradeStage =
+    | "PENDING"
+    | "POOL"
+    | "ASSIGNED"
+    | "QUOTED"
+    | "REJECTED"
+    | "SENT_TO_CUSTOMER"
+    | "CUSTOMER_CONFIRMED"
+    | "AWAITING_PAYMENT"
+    | "PAYMENT_UPLOADED"
+    | "PAYMENT_CONFIRMED"
+    | "PROCESSING"
+    | "PROCESSED"
+    | "COMPLETED"
+    | "FLAGGED"
+    | "CANCELLED";
 
 interface TradeProgressStepperProps {
     currentStatus: TradeStage;
-    isTradeRequest?: boolean; 
+    isTradeRequest?: boolean;
+    variant?: "detailed" | "dashboard" | "minimal";
 }
 
-// Normalize all statuses into a clean 5-step flow.
-const STEPS = [
-    { label: "Submitted", keys: ["PENDING", "POOL"] },
-    { label: "Rate Assigned", keys: ["ASSIGNED", "QUOTED"] },
-    { label: "Payment Awaiting", keys: ["AWAITING_PAYMENT"] },
-    { label: "Payment Received", keys: ["PAYMENT_UPLOADED", "PROCESSING", "PROCESSED"] },
-    { label: "Completed", keys: ["COMPLETED"] },
+// 4-Stage Lifecycle matching the Institutional Corporate Designs
+const FOUR_STAGES = [
+    {
+        stageNumber: 1,
+        label: "Quote Confirmed",
+        shortLabel: "Quoted",
+        subtext: "Pricing locked in",
+        activeSubtext: "Reviewing quote...",
+        completedSubtext: "Completed",
+        icon: FileText,
+        keys: ["PENDING", "POOL", "ASSIGNED", "QUOTED", "SENT_TO_CUSTOMER", "CUSTOMER_CONFIRMED"],
+    },
+    {
+        stageNumber: 2,
+        label: "Funding Received",
+        shortLabel: "Funding",
+        subtext: "Processing payment",
+        activeSubtext: "Processing...",
+        completedSubtext: "Funded",
+        icon: Landmark,
+        keys: ["AWAITING_PAYMENT", "PAYMENT_UPLOADED", "PAYMENT_CONFIRMED"],
+    },
+    {
+        stageNumber: 3,
+        label: "Route Optimization",
+        shortLabel: "Processing",
+        subtext: "Pending execution",
+        activeSubtext: "Routing...",
+        completedSubtext: "Optimized",
+        icon: RefreshCw,
+        keys: ["PROCESSING", "PROCESSED"],
+    },
+    {
+        stageNumber: 4,
+        label: "Settlement",
+        shortLabel: "Settlement",
+        subtext: "Awaiting clearance",
+        activeSubtext: "Settling...",
+        completedSubtext: "Settled",
+        icon: ShieldCheck,
+        keys: ["COMPLETED"],
+    },
 ];
 
-export function TradeProgressStepper({ currentStatus, isTradeRequest }: TradeProgressStepperProps) {
+export function TradeProgressStepper({ currentStatus, isTradeRequest, variant = "detailed" }: TradeProgressStepperProps) {
     if (currentStatus === "REJECTED" || currentStatus === "CANCELLED") {
         return (
             <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
-                <AlertCircle className="w-12 h-12 text-red-500 mb-3" />
-                <h3 className="text-xl font-bold text-red-700">Trade {currentStatus === "REJECTED" ? "Rejected" : "Cancelled"}</h3>
-                <p className="text-sm text-red-600 mt-1">This trade sequence will not proceed to the next stage.</p>
+                <AlertCircle className="w-10 h-10 text-red-500 mb-2" />
+                <h3 className="text-lg font-bold text-red-700">Trade {currentStatus === "REJECTED" ? "Rejected" : "Cancelled"}</h3>
+                <p className="text-xs text-red-600 mt-1">This trade sequence will not proceed to subsequent stages.</p>
             </div>
         );
     }
-    
+
     if (currentStatus === "FLAGGED") {
         return (
-            <div className="bg-orange-50 border border-orange-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
-                <AlertCircle className="w-12 h-12 text-orange-500 mb-3" />
-                <h3 className="text-xl font-bold text-orange-700">Trade Flagged</h3>
-                <p className="text-sm text-orange-600 mt-1">This trade has been flagged for review. Please check your messages or contact support.</p>
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
+                <AlertCircle className="w-10 h-10 text-amber-500 mb-2" />
+                <h3 className="text-lg font-bold text-amber-800">Trade Flagged for Review</h3>
+                <p className="text-xs text-amber-700 mt-1">Our compliance team is verifying this trade. You will be notified shortly.</p>
             </div>
         );
     }
 
     // Determine current index based on status
-    let currentIndex = 0;
-    const currentStepIndex = STEPS.findIndex(step => step.keys.includes(currentStatus));
-    
-    // If it's a Trade Request, it generally maxes out at index 1 before becoming a full Trade
-    if (currentStepIndex !== -1) {
-        currentIndex = currentStepIndex;
-    } else if (!isTradeRequest && !currentStatus) {
-        // Fallback for an unknown active trade
-        currentIndex = 2; 
+    let activeIdx = 0;
+    if (["AWAITING_PAYMENT", "PAYMENT_UPLOADED"].includes(currentStatus)) {
+        activeIdx = 1;
+    } else if (["PAYMENT_CONFIRMED", "PROCESSING", "PROCESSED"].includes(currentStatus)) {
+        activeIdx = 2;
+    } else if (currentStatus === "COMPLETED") {
+        activeIdx = 3;
+    } else {
+        activeIdx = 0;
     }
 
-    return (
-        <div className="bg-white border rounded-2xl p-6 lg:p-8 overflow-hidden w-full relative" style={{ borderColor: "#E1E3E6" }}>
-            <h3 className="text-base font-bold mb-6" style={{ color: "var(--text-primary)" }}>
-                Transaction Progress
-            </h3>
+    const progressPercentage = Math.max(0, Math.min(100, (activeIdx / (FOUR_STAGES.length - 1)) * 100));
 
+    return (
+        <div className="w-full">
             <div className="relative">
-                {/* Background Line */}
-                <div className="absolute top-[18px] left-[10%] right-[10%] h-1 bg-gray-100 rounded-full" />
-                
-                {/* Active Progress Line */}
-                <div 
-                    className="absolute top-[18px] left-[10%] h-1 bg-[#C9A227] rounded-full transition-all duration-500" 
-                    style={{ width: `${(currentIndex / (STEPS.length - 1)) * 80}%` }}
+                {/* Background Connecting Line */}
+                <div className="absolute top-5 left-[12%] right-[12%] h-[2px] bg-slate-200" />
+
+                {/* Active Gold Line */}
+                <div
+                    className="absolute top-5 left-[12%] h-[2px] bg-[#C9A227] transition-all duration-500"
+                    style={{ width: `calc(${progressPercentage}% * 0.76)` }}
                 />
 
                 <div className="flex justify-between relative z-10 w-full">
-                    {STEPS.map((step, idx) => {
-                        const isCompleted = idx < currentIndex;
-                        const isCurrent = idx === currentIndex;
-                        const isFuture = idx > currentIndex;
-
-                        let baseColor = "bg-white text-gray-300 border-2 border-gray-200";
-                        let Icon = Clock;
-
-                        if (isCompleted) {
-                            baseColor = "bg-[#C9A227] text-white border-2 border-[#C9A227]";
-                            Icon = Check;
-                        } else if (isCurrent) {
-                            baseColor = "bg-white text-[#C9A227] border-2 border-[#C9A227] shadow-[0_0_0_4px_rgba(201,162,39,0.1)]";
-                            Icon = currentStatus === "PROCESSING" || currentStatus === "ASSIGNED" ? RefreshCw : CircleDot;
-                        }
+                    {FOUR_STAGES.map((stage, idx) => {
+                        const isCompleted = idx < activeIdx || (idx === 3 && currentStatus === "COMPLETED");
+                        const isCurrent = idx === activeIdx && currentStatus !== "COMPLETED";
+                        const isFuture = idx > activeIdx;
 
                         return (
-                            <div key={step.label} className="flex flex-col items-center relative gap-3 w-1/5">
-                                <div 
-                                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 z-10 ${baseColor}`}
+                            <div key={stage.label} className="flex flex-col items-center relative text-center w-1/4 px-1">
+                                {/* Node Icon Circle */}
+                                <div
+                                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                                        isCompleted
+                                            ? "bg-[#C9A227] text-white shadow-sm"
+                                            : isCurrent
+                                            ? "bg-[#C9A227] text-white ring-4 ring-[#C9A227]/20 shadow-md animate-pulse"
+                                            : "bg-white text-slate-400 border border-slate-200"
+                                    }`}
                                 >
-                                    <Icon className={`w-5 h-5 ${isCurrent && (currentStatus === "PROCESSING" || currentStatus === "ASSIGNED") ? "animate-spin" : ""}`} />
+                                    {isCompleted ? (
+                                        <Check className="w-5 h-5 stroke-[2.5]" />
+                                    ) : isCurrent ? (
+                                        <div className="w-3 h-3 rounded-full bg-white" />
+                                    ) : (
+                                        <span className="text-xs font-semibold text-slate-400">{stage.stageNumber}</span>
+                                    )}
                                 </div>
-                                <span 
-                                    className={`text-xs font-semibold text-center mt-1 transition-colors duration-300 ${isCurrent ? "text-[#012333]" : isCompleted ? "text-[#C9A227]" : "text-gray-400"}`}
+
+                                {/* Title */}
+                                <span
+                                    className={`text-xs md:text-sm font-bold mt-2.5 transition-colors ${
+                                        isCurrent ? "text-[#C9A227]" : isCompleted ? "text-slate-900 font-bold" : "text-slate-400"
+                                    }`}
                                 >
-                                    {step.label}
+                                    {variant === "dashboard" ? stage.shortLabel : stage.label}
+                                </span>
+
+                                {/* Subtitle */}
+                                <span className="text-[10px] md:text-xs mt-0.5 text-slate-400">
+                                    {isCompleted
+                                        ? stage.completedSubtext
+                                        : isCurrent
+                                        ? stage.activeSubtext || stage.subtext
+                                        : stage.subtext}
                                 </span>
                             </div>
                         );

@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { TransactionStatsCards } from "@/components/features/admin/TransactionStatsCards";
-import { AdminTransactionsTable } from "@/components/features/admin/AdminTransactionsTable";
+import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,15 +12,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import Image from "next/image";
-import { transactionsApi } from "@/lib/api/transactions";
-import type { Transaction } from "@/lib/types/transaction";
+import {
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { transactionsApi, type AdminTransaction } from "@/lib/api/transactions";
 
-const PAGE_SIZE = 7;
+const PAGE_SIZE = 10;
 
-export default function AdminTransactionsPage() {
+export default function AdminPaymentObligationsPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [currencyFilter, setCurrencyFilter] = useState("ALL");
   const [page, setPage] = useState(1);
 
   const { data, isLoading } = useQuery({
@@ -29,194 +33,216 @@ export default function AdminTransactionsPage() {
     queryFn: () =>
       transactionsApi.getTransactions({
         search: search || undefined,
-        status: statusFilter !== "All" ? statusFilter : undefined,
+        status: statusFilter !== "ALL" ? statusFilter : undefined,
         page,
         limit: PAGE_SIZE,
       }),
     staleTime: 30_000,
   });
 
-  const { data: stats } = useQuery({
-    queryKey: ["dashboard-stats"],
-    queryFn: transactionsApi.getDashboardStats,
-    staleTime: 60_000,
-  });
-
-  const rawTransactions = data?.trades ?? [];
-  const total = data?.total ?? 0;
+  const rawTransactions: AdminTransaction[] = data?.trades ?? [];
+  const total = data?.total ?? rawTransactions.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  // Map backend shape to the Transaction type expected by AdminTransactionsTable
-  const transactions: Transaction[] = rawTransactions.map((t) => ({
-    id: t.id,
-    tradeId: t.tradeId,
-    date: t.date,
-    time: t.time,
-    customer: t.customer,
-    agent: t.agent,
-    transaction: t.transaction,
-    amount: t.amount,
-    status: t.status as any,
-    verification: t.verification as any,
-  }));
+  const filtered = rawTransactions.filter((t: any) => {
+    const cur = t.receiveCurrency || t.sendCurrency || (t.transaction ? t.transaction.split("→")[1]?.trim() : "");
+    if (currencyFilter !== "ALL" && !cur?.includes(currencyFilter)) {
+      return false;
+    }
+    return true;
+  });
 
-  const handleExport = () => {
-    const csv = [
-      ["Trade ID", "Date", "Time", "Customer", "Agent", "Transaction", "Amount", "Status"].join(","),
-      ...rawTransactions.map((t) =>
-        [t.tradeId, t.date, t.time, t.customer, t.agent, t.transaction, t.amount, t.status].join(",")
-      ),
-    ].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "transactions.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "COMPLETED":
+        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">• COMPLETED</span>;
+      case "PAYMENT_CONFIRMED":
+      case "PROCESSING":
+      case "PROCESSED":
+        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">• READY_FOR_ROUTING</span>;
+      case "AWAITING_PAYMENT":
+      case "SENT_TO_CUSTOMER":
+      case "QUOTED":
+        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">• PENDING_APPROVAL</span>;
+      case "FAILED":
+      case "REJECTED":
+      case "CANCELLED":
+        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">• FAILED</span>;
+      default:
+        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">• READY_FOR_ROUTING</span>;
+    }
+  };
+
+  const getRecommendedRoute = (sendCur?: string, recvCur?: string) => {
+    if (recvCur === "EUR" || sendCur === "EUR") return "SEPA - DB";
+    if (recvCur === "GBP" || sendCur === "GBP") return "CHAPS - BARC";
+    if (recvCur === "USD" || sendCur === "USD") return "SWIFT - JPM";
+    return "FASTER_PAYMENTS";
   };
 
   return (
-    <div className="space-y-6 p-4 md:p-6 lg:pl-7 lg:pr-6" style={{ backgroundColor: "#f7f8f9" }}>
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold" style={{ color: "#2b2f33" }}>
-          Transactions
-        </h1>
-        <p className="text-base" style={{ color: "#6b7078" }}>
-          View and monitor all platform transactions across agents, customers, and currencies
-        </p>
-      </div>
-
-      {/* Stats Cards */}
-      <TransactionStatsCards
-        totalTransactions={stats?.totalTransactions ?? 0}
-        tradeVolume={
-          stats?.tradeVolume
-            ? stats.tradeVolume >= 1_000_000_000
-              ? `₦${(stats.tradeVolume / 1_000_000_000).toFixed(2)}B`
-              : stats.tradeVolume >= 1_000_000
-                ? `₦${(stats.tradeVolume / 1_000_000).toFixed(1)}M`
-                : `₦${stats.tradeVolume.toLocaleString()}`
-            : "₦0"
-        }
-        successfulTransactions={stats?.totalTransactions ?? 0}
-        flaggedTransactions={stats?.pendingReviews ?? 0}
-      />
-
-      {/* All Transactions Section */}
-      <div className="space-y-4">
-        <h2 className="text-2xl font-bold" style={{ color: "#2b2f33" }}>
-          All Transactions
-        </h2>
-
-        {/* Filters and Actions */}
-        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-          {/* Search and Filters */}
-          <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
-            {/* Search */}
-            <div className="relative flex-1 sm:w-80">
-              <Image
-                src="/assets/icons/search-icon.svg"
-                alt=""
-                width={21}
-                height={22}
-                className="absolute left-3 top-1/2 -translate-y-1/2"
-                style={{ filter: "brightness(0) saturate(100%) invert(63%) sepia(7%) saturate(327%) hue-rotate(180deg) brightness(93%) contrast(84%)" }}
-              />
-              <Input
-                placeholder="Search by name, ID, or reference"
-                className="pl-10"
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                style={{ color: "#9aa0a6" }}
-              />
-            </div>
-
-            {/* Filters */}
-            <div className="flex gap-4">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-normal" style={{ color: "#c9a227" }}>Status</span>
-                <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-                  <SelectTrigger className="w-36">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All</SelectItem>
-                    <SelectItem value="COMPLETED">Completed</SelectItem>
-                    <SelectItem value="AWAITING_PAYMENT">Pending</SelectItem>
-                    <SelectItem value="PAYMENT_CONFIRMED">In Progress</SelectItem>
-                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                    <SelectItem value="FLAGGED">Flagged</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="border-2"
-              onClick={handleExport}
-              style={{ borderColor: "#27ae60", color: "#27ae60" }}
-            >
-              <Image
-                src="/assets/icons/export-icon.svg"
-                alt=""
-                width={22}
-                height={22}
-                className="mr-2"
-                style={{ filter: "brightness(0) saturate(100%) invert(60%) sepia(39%) saturate(1155%) hue-rotate(91deg) brightness(93%) contrast(83%)" }}
-              />
-              Export
-            </Button>
-          </div>
+    <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto font-sans" style={{ backgroundColor: "#F7F8F9" }}>
+      {/* ── Top Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4" style={{ borderColor: "#E1E3E6" }}>
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
+            Payment Obligations
+          </h1>
+          <p className="text-xs md:text-sm text-slate-500 mt-1">
+            Manage and monitor pending payment instructions.
+          </p>
         </div>
 
-        {/* Transactions Table */}
-        <AdminTransactionsTable transactions={transactions} isLoading={isLoading} />
+        <div className="flex flex-wrap items-center gap-3">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-32 h-9 text-xs font-semibold bg-white border-slate-200">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Statuses</SelectItem>
+              <SelectItem value="AWAITING_PAYMENT">Pending</SelectItem>
+              <SelectItem value="PROCESSING">Processing</SelectItem>
+              <SelectItem value="COMPLETED">Completed</SelectItem>
+              <SelectItem value="FAILED">Failed</SelectItem>
+            </SelectContent>
+          </Select>
 
-        {/* Pagination */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              <Image src="/assets/icons/arrow-left.svg" alt="Previous" width={6} height={10} />
-            </Button>
+          <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
+            <SelectTrigger className="w-32 h-9 text-xs font-semibold bg-white border-slate-200">
+              <SelectValue placeholder="All Currencies" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Currencies</SelectItem>
+              <SelectItem value="USD">USD</SelectItem>
+              <SelectItem value="EUR">EUR</SelectItem>
+              <SelectItem value="GBP">GBP</SelectItem>
+              <SelectItem value="NGN">NGN</SelectItem>
+            </SelectContent>
+          </Select>
 
-            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map((p) => (
-              <Button
-                key={p}
-                variant="ghost"
-                size="sm"
-                onClick={() => setPage(p)}
-                style={{
-                  color: p === page ? "#c9a227" : "#2b2f33",
-                  fontWeight: p === page ? 700 : 400,
-                }}
-              >
-                {p}
-              </Button>
-            ))}
-
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            >
-              <Image src="/assets/icons/arrow-right.svg" alt="Next" width={6} height={10} />
-            </Button>
+          <div className="w-48 sm:w-60">
+            <Input
+              placeholder="Search ID or Customer..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-9 text-xs bg-white border-slate-200"
+            />
           </div>
 
-          <div className="text-sm" style={{ color: "#6b7078" }}>
-            Showing {rawTransactions.length} of {total} transactions
+          <Button
+            onClick={() => router.push("/admin/transactions")}
+            className="bg-[#C9A227] hover:bg-[#b08e20] text-white text-xs font-bold px-4 py-2 h-9 rounded-lg shadow-sm gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            New Payment
+          </Button>
+        </div>
+      </div>
+
+      {/* ── Table Card ── */}
+      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: "#E1E3E6" }}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50/80 border-b border-slate-100 text-slate-500 uppercase tracking-wider text-[10px] font-bold">
+              <tr>
+                <th className="py-4 px-6">Payment ID</th>
+                <th className="py-4 px-6">Customer</th>
+                <th className="py-4 px-6">Supplier</th>
+                <th className="py-4 px-6 text-right">Amount</th>
+                <th className="py-4 px-6">Ccy</th>
+                <th className="py-4 px-6 text-center">Status</th>
+                <th className="py-4 px-6">Due Date</th>
+                <th className="py-4 px-6">Rec. Route</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                    Loading payment obligations...
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                    No payment obligations found.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((t: AdminTransaction) => {
+                  const paymentId = t.tradeId || `PO-${t.id.slice(0, 6).toUpperCase()}`;
+                  const amountNum = parseFloat(t.amount) || 0;
+                  const ccy = t.receiveCurrency || t.sendCurrency || (t.transaction ? t.transaction.split("→")[1]?.trim() : "USD");
+                  const dueDate = t.date || (t.createdAt ? new Date(t.createdAt).toISOString().slice(0, 10) : "2026-08-26");
+                  const recRoute = getRecommendedRoute(t.sendCurrency || "", t.receiveCurrency || "");
+                  const rawCust: unknown = t.customer;
+                  const custName = typeof rawCust === "string" ? rawCust : ((rawCust as any)?.fullName || (rawCust as any)?.name || "Acme Corp");
+                  const recipient = t.recipientName || "Global Logistics Inc.";
+
+                  return (
+                    <tr
+                      key={t.id}
+                      onClick={() => router.push(`/admin/transactions/${t.id}`)}
+                      className="hover:bg-slate-50/60 cursor-pointer transition-colors"
+                    >
+                      <td className="py-4 px-6 font-mono font-bold text-[#C9A227] whitespace-nowrap">
+                        {paymentId}
+                      </td>
+
+                      <td className="py-4 px-6 font-bold text-slate-900 whitespace-nowrap">
+                        {custName}
+                      </td>
+
+                      <td className="py-4 px-6 text-slate-600 whitespace-nowrap">
+                        {recipient}
+                      </td>
+
+                      <td className="py-4 px-6 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                        {amountNum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+
+                      <td className="py-4 px-6 font-bold text-slate-700 whitespace-nowrap">
+                        {ccy}
+                      </td>
+
+                      <td className="py-4 px-6 text-center whitespace-nowrap">
+                        {getStatusBadge(t.status)}
+                      </td>
+
+                      <td className="py-4 px-6 text-slate-500 font-mono whitespace-nowrap">
+                        {dueDate}
+                      </td>
+
+                      <td className="py-4 px-6 font-mono text-[11px] text-slate-500 whitespace-nowrap">
+                        {recRoute}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer with Pagination */}
+        <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <span>Showing 1 to {filtered.length} of {total} obligations</span>
+          <div className="flex items-center gap-1.5">
+            <button
+              disabled={page === 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="p-1 rounded hover:bg-slate-100 disabled:opacity-40"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="px-2.5 py-0.5 rounded bg-[#C9A227] text-white font-bold">{page}</span>
+            <button
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="p-1 rounded hover:bg-slate-100 disabled:opacity-40"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>

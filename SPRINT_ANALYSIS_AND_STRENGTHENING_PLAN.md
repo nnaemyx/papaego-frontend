@@ -949,7 +949,52 @@ transaction-safety themes above.
 
 ---
 
+### ✅ Completed: Banking Synchronization, Notifications & Webhook Security (Sprint 2 Hardening)
+
+The Sprint 2 Banking layer was hardened to match the robustness already applied
+to the Compliance webhook path, closing status-drift, notification, and
+webhook-authentication gaps.
+
+**`banking.notification.service.ts` + `email.service.ts` — customer visibility**
+- Added `notifyAccountStatusChange` so customers are emailed/notified on every
+  banking status transition (activated, suspended, frozen, closed, restricted),
+  not just on account creation.
+- All notification writes are best-effort and wrapped so they can never roll
+  back or block the committed banking state change.
+
+**`banking.webhook.service.ts` — atomic, guarded event processing**
+- Bank status webhooks now apply `BankAccount` + `BankingProfile` + 
+  `BankAccountEvent` updates inside a single Prisma transaction.
+- A banking state machine (`PENDING_CREATION → CREATING → ACTIVE → …
+  RESTRICTED/SUSPENDED/FROZEN → CLOSED`) rejects illegal remote transitions so a
+  stale/replayed webhook can never revive a `CLOSED` account.
+- Customer status-change notifications fire on every applied transition.
+
+**`banking.sync.service.ts` — same guarantees on the polling path**
+- Poll-driven sync shares the identical state-machine guard and atomic
+  account/profile/event update, and records `REJECTED` sync-log rows when an
+  illegal transition is ignored (full audit trail).
+- Sync-detected status changes now also notify the customer.
+
+**`banking.eligibility.service.ts` — expiry now enforced**
+- KYC/KYB approvals are only honored when not expired (`expiresAt > now`),
+  preventing provisioning against stale/expired verifications.
+- Added clear, customer-facing failure reasons for the expired-verification case.
+
+**`fvbank.banking.adapter.ts` + `compliance/fvbank.adapter.ts` — webhook auth**
+- Webhook signature verification now **fails closed in production** when
+  `FV_BANK_WEBHOOK_SECRET` is missing (previously it silently allowed the
+  request). Dev/stub mode still skips, with a warning.
+- When a secret is configured, a signature is mandatory, and length is checked
+  before `timingSafeEqual` to avoid throwing on mismatched buffers.
+
+**Verification:**
+- Backend type-checks clean: `npx tsc --noEmit` → exit 0.
+
+---
+
 ## Conclusion
+
 
 The current implementation provides a solid foundation but requires significant hardening before production deployment. The identified weaknesses span critical areas: concurrency control, data integrity, error recovery, and security.
 

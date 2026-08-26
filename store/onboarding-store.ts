@@ -95,16 +95,15 @@ export const useOnboardingStore = create<OnboardingState>()(
         }),
         {
             name: "onboarding-storage",
-            // Only persist draft data and completed steps (not sensitive data)
+            // SECURITY: Never persist personally identifiable / sensitive compliance
+            // data (KYC identity, KYB directors/UBOs, qualification answers) to
+            // localStorage. Those drafts live in-memory only for the current session
+            // and are re-submitted to the backend, which is the single source of truth.
+            // We only persist lightweight, non-sensitive navigation state so a page
+            // refresh mid-onboarding keeps the user on the right step & organization.
             partialize: (state) => ({
                 currentStep: state.currentStep,
                 completedSteps: state.completedSteps,
-                orgDraft: state.orgDraft,
-                qualificationDraft: state.qualificationDraft,
-                kycDraft: state.kycDraft,
-                kybDraft: state.kybDraft,
-                directors: state.directors,
-                ubos: state.ubos,
                 savedOrgId: state.savedOrgId,
                 savedOrg: state.savedOrg
             })

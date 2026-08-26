@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CheckCircle, RefreshCw, ChevronLeft } from "lucide-react";
+import { CheckCircle, RefreshCw, ChevronLeft, Wallet, AlertCircle, Sparkles, CreditCard } from "lucide-react";
 import { customerApi } from "@/lib/api/customer";
 import { NIGERIAN_SECTORS } from "@/lib/api/customer";
+import { loadPaystackInline } from "@/lib/paystack";
+import { toast } from "sonner";
 
 interface NewTransactionModalProps {
     onClose: () => void;
@@ -48,6 +50,15 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
     const [savedSuppliers, setSavedSuppliers] = useState<any[]>([]);
     const [useNewSupplier, setUseNewSupplier] = useState(draftToEdit ? !draftToEdit.supplierId : false);
 
+    // Wallet / Ledger state
+    const [availableBalance, setAvailableBalance] = useState<number | null>(null);
+    const [fundingPaystack, setFundingPaystack] = useState(false);
+    const [lowFundsError, setLowFundsError] = useState<{
+        available: string;
+        required: string;
+        shortfall: string;
+    } | null>(null);
+
     // UI state
     const [step, setStep] = useState<Step>(1);
     const [submitting, setSubmitting] = useState(false);
@@ -55,8 +66,20 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
     const [successMessage, setSuccessMessage] = useState("Request Submitted!");
     const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
 
+    const refreshBalance = async () => {
+        try {
+            const stats = await customerApi.getDashboardStats();
+            if (stats && stats.availableBalance !== undefined) {
+                setAvailableBalance(Number(stats.availableBalance));
+            }
+        } catch {
+            // Ignore if stats fail
+        }
+    };
+
     useEffect(() => {
         customerApi.getSuppliers?.().then(setSavedSuppliers).catch(() => {});
+        refreshBalance();
     }, []);
 
     const updateSupplier = (key: keyof SupplierDetails, value: string) =>
@@ -64,16 +87,62 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
 
     const handleStep1Next = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!amount || parseFloat(amount) <= 0) {
-            alert("Please enter a valid amount.");
+        const amt = parseFloat(amount);
+        if (!amount || isNaN(amt) || amt <= 0) {
+            toast.error("Please enter a valid amount.");
             return;
         }
         setStep(2);
     };
 
+    const handlePaystackTopUp = async (depositAmount: number) => {
+        if (!depositAmount || depositAmount <= 0) return;
+        setFundingPaystack(true);
+        try {
+            const init = await customerApi.initializePaystackDeposit(depositAmount);
+            const PaystackPop = await loadPaystackInline();
+            if (!PaystackPop) {
+                toast.error("Could not load Paystack SDK. Please check connection.");
+                setFundingPaystack(false);
+                return;
+            }
+
+            const handler = PaystackPop.setup({
+                key: init.publicKey,
+                email: init.email,
+                amount: Math.round(init.amount * 100),
+                ref: init.reference,
+                currency: "NGN",
+                callback: async (response: any) => {
+                    toast.loading("Verifying Paystack deposit...");
+                    try {
+                        await customerApi.verifyPaystackDeposit(response.reference, init.amount);
+                        toast.dismiss();
+                        toast.success(`Successfully deposited ₦${init.amount.toLocaleString()} to your ledger!`);
+                        setLowFundsError(null);
+                        await refreshBalance();
+                    } catch {
+                        toast.dismiss();
+                        toast.error("Deposit confirmation failed. Please refresh balance.");
+                    } finally {
+                        setFundingPaystack(false);
+                    }
+                },
+                onClose: () => {
+                    setFundingPaystack(false);
+                },
+            });
+            handler.openIframe();
+        } catch (err: any) {
+            toast.error(err?.response?.data?.error || "Failed to initialize Paystack deposit");
+            setFundingPaystack(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent, isDraft: boolean = false) => {
         if (e) e.preventDefault();
         setSubmitting(true);
+        setLowFundsError(null);
         try {
             let invoiceUrl = draftToEdit?.invoiceUrl || undefined;
             if (invoiceFile) {
@@ -103,15 +172,26 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
                 await customerApi.createTradeRequest(payload);
             }
 
-            setSuccessMessage(isDraft ? "Draft Saved!" : "Request Submitted!");
+            setSuccessMessage(isDraft ? "Draft Saved!" : "Request Submitted & Funded!");
             setSubmitted(true);
+            toast.success(isDraft ? "Trade request draft saved" : "Trade submitted and reserved from ledger");
             setTimeout(() => {
                 onClose();
                 window.location.reload();
-            }, 2000);
-        } catch (err) {
+            }, 1800);
+        } catch (err: any) {
             console.error("Trade initiation error:", err);
-            alert("Failed to initiate trade. Please try again.");
+            const data = err?.response?.data;
+            if (data?.code === "INSUFFICIENT_FUNDS") {
+                setLowFundsError({
+                    available: data.availableBalance || (availableBalance !== null ? availableBalance.toString() : "0"),
+                    required: data.requiredAmount || amount,
+                    shortfall: data.shortfall || (parseFloat(amount) - (availableBalance || 0)).toString(),
+                });
+                toast.error("Insufficient ledger balance. Please top up using Paystack.");
+            } else {
+                toast.error(data?.error || "Failed to initiate trade. Please try again.");
+            }
         } finally {
             setSubmitting(false);
         }
@@ -203,15 +283,24 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
                         {/* ── Step 1: Trade Details ── */}
                         {step === 1 && (
                             <form onSubmit={handleStep1Next} className="space-y-4">
-                                {/* BUY label */}
-                                <div
-                                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold"
-                                    style={{
-                                        backgroundColor: "#E2FDED",
-                                        color: "#27AE60",
-                                    }}
-                                >
-                                    Buy Currency
+                                {/* BUY label & Ledger Balance */}
+                                <div className="flex items-center justify-between">
+                                    <div
+                                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold"
+                                        style={{
+                                            backgroundColor: "#E2FDED",
+                                            color: "#27AE60",
+                                        }}
+                                    >
+                                        Buy Currency
+                                    </div>
+
+                                    {availableBalance !== null && (
+                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-700">
+                                            <Wallet className="w-3.5 h-3.5 text-amber-600" />
+                                            <span>Ledger: ₦{availableBalance.toLocaleString()}</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Currency selects */}
@@ -240,7 +329,7 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
                                             <select
                                                 value={value}
                                                 onChange={(e) => onChange(e.target.value)}
-                                                className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none bg-white"
+                                                className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none bg-white font-medium"
                                                 style={{
                                                     borderColor: "var(--border-custom)",
                                                     color: "var(--text-primary)",
@@ -256,20 +345,32 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
 
                                 {/* Amount */}
                                 <div>
-                                    <label
-                                        className="caption font-medium mb-1 block"
-                                        style={{ color: "var(--text-secondary)" }}
-                                    >
-                                        Amount (You Send)
-                                    </label>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label
+                                            className="caption font-medium block"
+                                            style={{ color: "var(--text-secondary)" }}
+                                        >
+                                            Amount (You Send)
+                                        </label>
+                                        {amount && !isNaN(parseFloat(amount)) && fromCurrency === "NGN" && availableBalance !== null && (
+                                            <span className={`text-xs font-medium ${parseFloat(amount) <= availableBalance ? "text-emerald-600" : "text-amber-600"}`}>
+                                                {parseFloat(amount) <= availableBalance
+                                                    ? "✓ Covered by ledger"
+                                                    : `Shortfall: ₦${(parseFloat(amount) - availableBalance).toLocaleString()}`}
+                                            </span>
+                                        )}
+                                    </div>
                                     <input
                                         type="number"
                                         value={amount}
-                                        onChange={(e) => setAmount(e.target.value)}
+                                        onChange={(e) => {
+                                            setAmount(e.target.value);
+                                            setLowFundsError(null);
+                                        }}
                                         placeholder="Enter amount"
                                         required
                                         min="1"
-                                        className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none"
+                                        className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none font-medium"
                                         style={{
                                             borderColor: "var(--border-custom)",
                                             color: "var(--text-primary)",
@@ -534,7 +635,56 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
                                     )}
                                 </div>
 
-                                <div className="flex flex-col gap-2 pt-4">
+                                {/* Low Funds / Paystack Top-up Card */}
+                                {lowFundsError ? (
+                                    <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 space-y-3">
+                                        <div className="flex items-start gap-2.5">
+                                            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                                            <div>
+                                                <h4 className="text-sm font-bold text-amber-900">Insufficient Ledger Balance</h4>
+                                                <p className="text-xs text-amber-700 mt-0.5">
+                                                    You need <span className="font-semibold">₦{parseFloat(lowFundsError.required).toLocaleString()}</span>, but have <span className="font-semibold">₦{parseFloat(lowFundsError.available).toLocaleString()}</span> in your wallet.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-1">
+                                            <span className="text-xs font-semibold text-amber-900">
+                                                Shortfall: ₦{parseFloat(lowFundsError.shortfall).toLocaleString()}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                disabled={fundingPaystack}
+                                                onClick={() => handlePaystackTopUp(parseFloat(lowFundsError.shortfall))}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 transition-colors shadow-sm disabled:opacity-50"
+                                            >
+                                                {fundingPaystack ? (
+                                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                                ) : (
+                                                    <CreditCard className="w-3.5 h-3.5" />
+                                                )}
+                                                {fundingPaystack ? "Loading Paystack..." : `Top Up ₦${parseFloat(lowFundsError.shortfall).toLocaleString()} via Paystack`}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    /* Normal Ledger Funding Notice */
+                                    <div className="p-3 rounded-xl border border-emerald-100 bg-emerald-50/60 flex items-center justify-between text-xs text-emerald-900">
+                                        <div className="flex items-center gap-2">
+                                            <Wallet className="w-4 h-4 text-emerald-600" />
+                                            <span>
+                                                Funds (<span className="font-bold">{amount} {fromCurrency}</span>) will be reserved from your Ledger.
+                                            </span>
+                                        </div>
+                                        {availableBalance !== null && (
+                                            <span className="font-semibold text-emerald-700">
+                                                Available: ₦{availableBalance.toLocaleString()}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="flex flex-col gap-2 pt-2">
                                     <div className="flex gap-3">
                                         <button
                                             type="button"
