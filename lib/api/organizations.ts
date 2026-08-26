@@ -19,6 +19,9 @@ export interface Organization {
     authorizedRepName: string;
     authorizedRepTitle: string;
     status: "DRAFT" | "ACTIVE" | "SUSPENDED" | "REJECTED";
+    qualification?: any;
+    kycRequests?: any[];
+    kybRequest?: any;
     createdAt: string;
     updatedAt: string;
 }

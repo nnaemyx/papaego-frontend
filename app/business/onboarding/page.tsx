@@ -19,7 +19,7 @@ export default function OnboardingPage() {
     const { isAuthenticated } = useAuthStore();
     const { currentStep, completedSteps, setStep, markStepComplete, savedOrgId, setSavedOrg, reset } = useOnboardingStore();
 
-    // Auth guard & User Org Sync + Unmount Reset Cleanup
+    // Auth guard & User Org Sync
     useEffect(() => {
         if (!isAuthenticated) {
             router.push("/business/auth/signin");
@@ -32,21 +32,17 @@ export default function OnboardingPage() {
                 .then((res) => {
                     if (res?.organization) {
                         setSavedOrg(res.organization);
-                    } else {
-                        // User has no organization — ensure clean onboarding state
-                        reset();
+                        if (res.organization.id) markStepComplete("org-details");
+                        if (res.organization.qualification) markStepComplete("qualification");
+                        if (res.organization.kycRequests && res.organization.kycRequests.length > 0) markStepComplete("kyc");
+                        if (res.organization.kybRequest) markStepComplete("kyb");
                     }
                 })
-                .catch(() => {
-                    reset();
+                .catch((err) => {
+                    console.error("Could not load organization:", err);
                 });
         });
-
-        // Reset onboarding state when customer leaves/exits the page so it starts afresh next time
-        return () => {
-            reset();
-        };
-    }, [isAuthenticated, router, setSavedOrg, reset]);
+    }, [isAuthenticated, router, setSavedOrg, markStepComplete]);
 
     const goToNext = () => {
         const idx = STEP_ORDER.indexOf(currentStep);

@@ -139,7 +139,7 @@ function CustomerSignupPageInner() {
     setLoading(true);
     setError("");
     try {
-      await customerApi.initiateSignup({
+      const res = await customerApi.initiateSignup({
         firstName: form.firstName,
         lastName: form.lastName,
         email: form.email,
@@ -152,7 +152,7 @@ function CustomerSignupPageInner() {
       setOtpAttemptsRemaining(5);
       setLockoutTime(null);
       setOtpError("");
-      setOtp("");
+      setOtp(res?.devOtp || "");
     } catch (err: any) {
       setError(err?.response?.data?.error || "Failed to initiate registration. Please try again.");
     } finally {
@@ -189,10 +189,9 @@ function CustomerSignupPageInner() {
     setOtpLoading(true);
     setOtpError("");
     try {
-      await customerApi.resendSignupOtp({ email: form.email });
+      const res = await customerApi.resendSignupOtp({ email: form.email });
       setOtpTimer(60);
-      setOtp("");
-      alert("Verification code has been resent to your email.");
+      setOtp(res?.devOtp || "");
     } catch (err: any) {
       setOtpError(err?.response?.data?.error || "Failed to resend code. Please try again.");
     } finally {

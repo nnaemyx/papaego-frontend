@@ -30,15 +30,17 @@ export default function CustomerOnboardingPage() {
                 .then((res) => {
                     if (res?.organization) {
                         setSavedOrg(res.organization);
-                    } else {
-                        reset();
+                        if (res.organization.id) markStepComplete("org-details");
+                        if (res.organization.qualification) markStepComplete("qualification");
+                        if (res.organization.kycRequests && res.organization.kycRequests.length > 0) markStepComplete("kyc");
+                        if (res.organization.kybRequest) markStepComplete("kyb");
                     }
                 })
-                .catch(() => {
-                    reset();
+                .catch((err) => {
+                    console.error("Could not load organization:", err);
                 });
         });
-    }, [isAuthenticated, router, setSavedOrg, reset]);
+    }, [isAuthenticated, router, setSavedOrg, markStepComplete]);
 
     const goToNext = () => {
         const idx = STEP_ORDER.indexOf(currentStep);
