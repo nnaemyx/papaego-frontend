@@ -401,7 +401,15 @@ export default function AdminTransferReviewPage({
               ✕
             </button>
           </div>
-          <TransactionChat tradeId={id} tradeInfo={{ status: rawTransaction.status }} />
+          <TransactionChat
+            tradeId={id}
+            tradeInfo={{
+              status: rawTransaction?.status,
+              amount: rawTransaction?.amount ? Number(rawTransaction.amount) : undefined,
+              sendCurrency: rawTransaction?.sendCurrency,
+              receiveCurrency: rawTransaction?.receiveCurrency,
+            }}
+          />
         </div>
       )}
     </div>

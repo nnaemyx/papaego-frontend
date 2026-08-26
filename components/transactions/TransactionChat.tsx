@@ -11,9 +11,9 @@ interface TransactionChatProps {
     tradeId?: string;
     tradeRequestId?: string;
     tradeInfo?: {
-        amount: number;
-        sendCurrency: string;
-        receiveCurrency: string;
+        amount?: number;
+        sendCurrency?: string;
+        receiveCurrency?: string;
         fxRate?: string;
         payoutAmount?: number;
         status?: string;
@@ -146,17 +146,19 @@ export function TransactionChat({ tradeId, tradeRequestId, tradeInfo }: Transact
                     className="px-4 py-2 border-b flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]"
                     style={{ backgroundColor: "#F0F2F5", borderColor: "#E1E3E6" }}
                 >
-                    <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-[#6B7078]">Trade:</span>
-                        <span className="font-medium text-[#012333]">
-                            {tradeInfo.amount} {tradeInfo.sendCurrency} → {tradeInfo.receiveCurrency}
-                        </span>
-                    </div>
+                    {(tradeInfo.amount || tradeInfo.sendCurrency) && (
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-[#6B7078]">Trade:</span>
+                            <span className="font-medium text-[#012333]">
+                                {tradeInfo.amount ?? ""} {tradeInfo.sendCurrency ?? ""} {tradeInfo.receiveCurrency ? `→ ${tradeInfo.receiveCurrency}` : ""}
+                            </span>
+                        </div>
+                    )}
                     {tradeInfo.fxRate && (
                         <div className="flex items-center gap-1.5">
                             <span className="font-bold text-[#6B7078]">Rate:</span>
                             <span className="font-medium text-[#012333]">
-                                {formatExchangeRate(Number(tradeInfo.fxRate), tradeInfo.sendCurrency, tradeInfo.receiveCurrency)}
+                                {formatExchangeRate(Number(tradeInfo.fxRate), tradeInfo.sendCurrency || "NGN", tradeInfo.receiveCurrency || "USD")}
                             </span>
                         </div>
                     )}
