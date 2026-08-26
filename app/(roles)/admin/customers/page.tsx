@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
     Search,
@@ -16,17 +16,28 @@ import {
     Building2,
     SlidersHorizontal,
     X,
+    Trash2,
 } from "lucide-react";
 import { adminCustomersApi } from "@/lib/api/customers";
 import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+    DialogDescription,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import Link from "next/link";
 
 export default function AdminCustomerLedgersPage() {
     const router = useRouter();
+    const queryClient = useQueryClient();
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
     const [page, setPage] = useState(1);
     const pageSize = 10;
 
@@ -42,6 +53,18 @@ export default function AdminCustomerLedgersPage() {
     const { data: stats, isLoading: statsLoading } = useQuery({
         queryKey: ["admin-customer-stats"],
         queryFn: adminCustomersApi.getCustomerStats,
+    });
+
+    const deleteCustomerMutation = useMutation({
+        mutationFn: (id: string) => adminCustomersApi.deleteCustomer(id),
+        onSuccess: () => {
+            toast.success("Customer and associated data deleted successfully");
+            setDeleteTarget(null);
+            queryClient.invalidateQueries({ queryKey: ["admin-customers"] });
+            queryClient.invalidateQueries({ queryKey: ["admin-customer-stats"] });
+            queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+        },
+        onError: () => toast.error("Failed to delete customer"),
     });
 
     const handleExport = async () => {
@@ -323,15 +346,29 @@ export default function AdminCustomerLedgersPage() {
                                             </td>
 
                                             <td className="py-4 px-6 text-right">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        router.push(`/admin/customers/${cust.id}`);
-                                                    }}
-                                                    className="text-xs font-bold text-slate-400 hover:text-slate-900 transition-colors inline-flex items-center gap-1"
-                                                >
-                                                    View <ChevronRight className="w-3.5 h-3.5" />
-                                                </button>
+                                                <div className="flex items-center justify-end gap-3">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            router.push(`/admin/customers/${cust.id}`);
+                                                        }}
+                                                        className="text-xs font-bold text-slate-400 hover:text-slate-900 transition-colors inline-flex items-center gap-1"
+                                                    >
+                                                        View <ChevronRight className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setDeleteTarget(cust);
+                                                        }}
+                                                        className="h-7 w-7 p-0 border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50"
+                                                        title="Delete Customer"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -373,6 +410,38 @@ export default function AdminCustomerLedgersPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Delete Customer Confirmation Dialog */}
+            <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Delete Customer</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to permanently delete this customer? All wallet ledger transactions, trade requests, and profile data will be permanently removed.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {deleteTarget && (
+                        <div className="bg-slate-50 p-3 rounded-lg text-xs space-y-1 my-2 border border-slate-200">
+                            <p><span className="text-slate-400">Customer:</span> <strong className="text-slate-900">{deleteTarget.name || deleteTarget.companyName || "Unknown"}</strong></p>
+                            <p><span className="text-slate-400">ID:</span> <span className="font-mono text-slate-700">{deleteTarget.customerId || deleteTarget.id}</span></p>
+                            <p><span className="text-slate-400">Available Balance:</span> <strong className="font-mono text-[#C9A227]">₦{Number(deleteTarget.availableBalance || 0).toLocaleString()}</strong></p>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => deleteTarget && deleteCustomerMutation.mutate(deleteTarget.id)}
+                            disabled={deleteCustomerMutation.isPending}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {deleteCustomerMutation.isPending ? "Deleting..." : "Delete Customer"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

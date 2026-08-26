@@ -64,20 +64,23 @@ export default function KybForm({ onNext, onBack }: Props) {
                 ubos: ubos.filter(u => u.name.trim()),
             });
 
-            if (incCertFile) {
+            const kybRequestId = (res as any)?.kyb?.id || (res as any)?.kybId;
+
+            if (incCertFile && kybRequestId) {
                 const fd = new FormData();
                 fd.append("file", incCertFile);
                 fd.append("organizationId", savedOrgId);
-                fd.append("kybRequestId", res.kyb.id);
+                fd.append("kybRequestId", kybRequestId);
                 fd.append("documentType", "CERTIFICATE_OF_INCORPORATION");
                 await complianceApi.uploadDocument(fd);
             }
 
-            toast.success("KYB application submitted to FV Bank!");
+            toast.success((res as any)?.message || "KYB application submitted successfully!");
             markStepComplete("kyb");
             onNext();
         } catch (err: any) {
-            toast.error(err?.response?.data?.error || "KYB submission failed.");
+            console.error("KYB submission error:", err);
+            toast.error(err?.response?.data?.error || err?.message || "KYB submission failed.");
         } finally {
             setIsLoading(false);
         }

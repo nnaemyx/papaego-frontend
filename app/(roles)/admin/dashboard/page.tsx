@@ -57,7 +57,7 @@ export default function AdminGlobalDashboardPage() {
   const pendingDeposits = rawDeposits.filter((d) => d.status === "PENDING");
   const unmatchedCount = stats?.unmatchedDepositsCount ?? pendingDeposits.length;
 
-  const totalTreasury = stats?.totalTreasuryValue ?? stats?.tradeVolume ?? 0;
+  const totalTreasury = stats?.totalTreasuryValue ?? 0;
   const totalAvailable = stats?.availableLiquidity ?? 0;
   const pendingSettlement = stats?.pendingSettlement ?? 0;
 

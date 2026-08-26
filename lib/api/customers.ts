@@ -127,4 +127,10 @@ export const adminCustomersApi = {
     const response = await api.patch(`/admin/customers/${id}/kyc/reject`, { reason });
     return response.data;
   },
+
+  // Delete customer wallet transaction / ledger entry
+  deleteWalletTransaction: async (transactionId: string) => {
+    const response = await api.delete(`/admin/wallet-transactions/${transactionId}`);
+    return response.data;
+  },
 };

@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
     Wallet, Send, Copy, Check, RefreshCw, Landmark, TrendingUp, Download,
     FileText, ArrowDownLeft, ArrowUpRight, Clock, CheckCircle2, ChevronRight,
-    Search, Bell, HelpCircle, Grid
+    Search, Bell, HelpCircle, Grid, ShieldCheck, ShieldAlert
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/auth-store";
@@ -88,6 +88,21 @@ export default function MergedBusinessCustomerDashboard() {
 
     if (!isAuthenticated) return null;
 
+    // Verification status calculations
+    const isOrgActive = org?.status === "ACTIVE";
+    const latestKyc = org?.kycRequests?.[0] || null;
+    const kycStatus = latestKyc?.status || "NOT_SUBMITTED";
+    const kybStatus = org?.kybRequest?.status || "NOT_SUBMITTED";
+    const qualificationOutcome = org?.qualification?.outcome || (org?.qualification ? "QUALIFIED" : "NOT_SUBMITTED");
+
+    const isFullyVerified = isOrgActive || (kycStatus === "APPROVED" && kybStatus === "APPROVED" && (qualificationOutcome === "QUALIFIED" || qualificationOutcome === "APPROVED"));
+
+    const step1Done = !!org?.id;
+    const step2Done = qualificationOutcome === "QUALIFIED" || !!org?.qualification;
+    const step3Done = kycStatus === "APPROVED" || kycStatus === "SUBMITTED" || kycStatus === "PROCESSING";
+    const step4Done = kybStatus === "APPROVED" || kybStatus === "SUBMITTED" || kybStatus === "PROCESSING";
+    const completedStepsCount = [step1Done, step2Done, step3Done, step4Done].filter(Boolean).length;
+
     // Calculate pending settlements sum from active in-flight trades or reserved balance
     const pendingSettlementTrades = trades.filter((t) =>
         ["AWAITING_PAYMENT", "PAYMENT_UPLOADED", "PAYMENT_CONFIRMED", "PROCESSING", "PROCESSED", "INITIATED", "QUOTED", "SENT_TO_CUSTOMER", "CUSTOMER_CONFIRMED"].includes(t.status)
@@ -116,11 +131,24 @@ export default function MergedBusinessCustomerDashboard() {
             {/* ── Top Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
-                        Corporate Dashboard
-                    </h1>
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
+                            {org?.businessName ? `${org.businessName}` : "Corporate Dashboard"}
+                        </h1>
+                        {isFullyVerified ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                Verified Institutional Account
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                <Clock className="w-3.5 h-3.5 text-amber-600" />
+                                Verification In Progress ({completedStepsCount}/4)
+                            </span>
+                        )}
+                    </div>
                     <p className="text-xs md:text-sm mt-1 text-slate-500">
-                        Overview of treasury operations and pending settlements.
+                        Overview of treasury operations, institutional settlements, and account status.
                     </p>
                 </div>
 
@@ -143,6 +171,136 @@ export default function MergedBusinessCustomerDashboard() {
                     </Button>
                 </div>
             </div>
+
+            {/* ── Verification Process Card (Shown if not fully verified) ── */}
+            {!isFullyVerified && (
+                <div
+                    className="bg-white p-5 md:p-6 rounded-2xl border shadow-sm space-y-4"
+                    style={{ borderColor: "#E1E3E6" }}
+                >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4" style={{ borderColor: "#E1E3E6" }}>
+                        <div className="flex items-start gap-3">
+                            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[#C9A227]">
+                                <ShieldCheck className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <h2 className="text-base font-bold text-slate-900">
+                                        Account Verification & Onboarding
+                                    </h2>
+                                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                        {completedStepsCount}/4 Steps Complete
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    Complete compliance verification to unlock full cross-border limits and dedicated U.S. banking.
+                                </p>
+                            </div>
+                        </div>
+
+                        <Link href="/customer/onboarding">
+                            <Button
+                                size="sm"
+                                className="bg-[#012333] hover:bg-[#02354d] text-white text-xs font-bold px-4 py-2 h-auto rounded-lg shadow-sm gap-1.5"
+                            >
+                                Continue Onboarding
+                                <ChevronRight className="w-3.5 h-3.5 text-[#C9A227]" />
+                            </Button>
+                        </Link>
+                    </div>
+
+                    {/* 4 Steps Verification Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                        {/* Step 1: Organization Details */}
+                        <div className="p-3.5 rounded-xl border bg-slate-50/60 border-slate-200 flex items-center justify-between">
+                            <div>
+                                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Step 1</div>
+                                <div className="text-xs font-bold text-slate-900 mt-0.5">Organization Profile</div>
+                            </div>
+                            {step1Done ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                    <CheckCircle2 className="w-3 h-3" /> Completed
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                                    Pending
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Step 2: Trade Qualification */}
+                        <div className="p-3.5 rounded-xl border bg-slate-50/60 border-slate-200 flex items-center justify-between">
+                            <div>
+                                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Step 2</div>
+                                <div className="text-xs font-bold text-slate-900 mt-0.5">Qualification</div>
+                            </div>
+                            {qualificationOutcome === "QUALIFIED" ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                    <CheckCircle2 className="w-3 h-3" /> Qualified
+                                </span>
+                            ) : org?.qualification ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                    <Clock className="w-3 h-3" /> In Review
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                                    Pending
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Step 3: Identity KYC */}
+                        <div className="p-3.5 rounded-xl border bg-slate-50/60 border-slate-200 flex items-center justify-between">
+                            <div>
+                                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Step 3</div>
+                                <div className="text-xs font-bold text-slate-900 mt-0.5">Director KYC</div>
+                            </div>
+                            {kycStatus === "APPROVED" ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                    <CheckCircle2 className="w-3 h-3" /> Approved
+                                </span>
+                            ) : kycStatus === "SUBMITTED" || kycStatus === "PROCESSING" ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                    <Clock className="w-3 h-3" /> In Review
+                                </span>
+                            ) : kycStatus === "REJECTED" ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">
+                                    Action Req
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                                    Pending
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Step 4: Business KYB & Documents */}
+                        <div className="p-3.5 rounded-xl border bg-slate-50/60 border-slate-200 flex items-center justify-between">
+                            <div>
+                                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Step 4</div>
+                                <div className="text-xs font-bold text-slate-900 mt-0.5">Corporate KYB</div>
+                            </div>
+                            {kybStatus === "APPROVED" ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                    <CheckCircle2 className="w-3 h-3" /> Approved
+                                </span>
+                            ) : kybStatus === "SUBMITTED" || kybStatus === "PROCESSING" ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                    <Clock className="w-3 h-3" /> In Review
+                                </span>
+                            ) : kybStatus === "REJECTED" ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">
+                                    Action Req
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                                    Pending
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ── Top 3 Financial Metrics Cards ── */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">

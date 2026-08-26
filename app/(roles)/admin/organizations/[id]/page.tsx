@@ -22,11 +22,20 @@ import {
     Activity,
     CreditCard,
     Check,
-    X
+    X,
+    Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+    DialogDescription,
+} from "@/components/ui/dialog";
 
 export default function AdminOrganizationDetailPage() {
     const params = useParams();
@@ -37,6 +46,7 @@ export default function AdminOrganizationDetailPage() {
     const [kycReason, setKycReason] = useState("");
     const [kybReason, setKybReason] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     const { data, isLoading, refetch } = useQuery({
         queryKey: ["admin-organization-detail", id],
@@ -45,6 +55,16 @@ export default function AdminOrganizationDetailPage() {
     });
 
     const org = data?.organization;
+
+    const deleteOrgMutation = useMutation({
+        mutationFn: () => adminOrganizationsApi.deleteOrganization(id),
+        onSuccess: () => {
+            toast.success("Organization deleted successfully");
+            queryClient.invalidateQueries({ queryKey: ["admin-organizations"] });
+            router.push("/admin/organizations");
+        },
+        onError: (err: any) => toast.error(err.response?.data?.error || "Failed to delete organization")
+    });
 
     // Approve KYC Mutation
     const updateKycMutation = useMutation({
@@ -193,6 +213,16 @@ export default function AdminOrganizationDetailPage() {
                             Provision U.S. Bank Account
                         </Button>
                     )}
+
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setIsDeleteDialogOpen(true)}
+                        className="text-red-600 border-red-200 hover:bg-red-50 text-xs font-semibold gap-1.5"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        Delete Organization
+                    </Button>
                 </div>
             </div>
 
@@ -536,6 +566,30 @@ export default function AdminOrganizationDetailPage() {
                 </div>
 
             </div>
+
+            {/* Delete Organization Confirmation Dialog */}
+            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Delete Business Organization</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to permanently delete <strong className="text-slate-900">{org.businessName}</strong>? All associated onboarding documents, KYC/KYB records, and bank profiles will be permanently removed.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => deleteOrgMutation.mutate()}
+                            disabled={deleteOrgMutation.isPending}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {deleteOrgMutation.isPending ? "Deleting..." : "Delete Organization"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, use } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
     ArrowLeft,
@@ -22,10 +22,19 @@ import {
     Clock,
     UserCheck,
     FileText,
+    Trash2,
 } from "lucide-react";
 import { adminCustomersApi } from "@/lib/api/customers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+    DialogDescription,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -36,12 +45,40 @@ export default function AdminCustomerTreasuryDetailPage({
 }) {
     const { id } = use(params);
     const router = useRouter();
+    const queryClient = useQueryClient();
 
     const [copiedField, setCopiedField] = useState<string | null>(null);
+    const [deleteTxTarget, setDeleteTxTarget] = useState<any | null>(null);
+    const [isDeleteCustomerOpen, setIsDeleteCustomerOpen] = useState(false);
 
     const { data: customer, isLoading } = useQuery({
         queryKey: ["admin-customer", id],
         queryFn: () => adminCustomersApi.getCustomer(id),
+    });
+
+    const deleteTxMutation = useMutation({
+        mutationFn: (txId: string) => adminCustomersApi.deleteWalletTransaction(txId),
+        onSuccess: () => {
+            toast.success("Customer ledger entry deleted successfully");
+            setDeleteTxTarget(null);
+            queryClient.invalidateQueries({ queryKey: ["admin-customer", id] });
+            queryClient.invalidateQueries({ queryKey: ["admin-customers"] });
+            queryClient.invalidateQueries({ queryKey: ["admin-customer-stats"] });
+            queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+        },
+        onError: () => toast.error("Failed to delete customer ledger entry"),
+    });
+
+    const deleteCustomerMutation = useMutation({
+        mutationFn: () => adminCustomersApi.deleteCustomer(id),
+        onSuccess: () => {
+            toast.success("Customer and associated data deleted successfully");
+            queryClient.invalidateQueries({ queryKey: ["admin-customers"] });
+            queryClient.invalidateQueries({ queryKey: ["admin-customer-stats"] });
+            queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+            router.push("/admin/customers");
+        },
+        onError: () => toast.error("Failed to delete customer"),
     });
 
     const handleCopy = (text: string, field: string) => {
@@ -131,6 +168,16 @@ export default function AdminCustomerTreasuryDetailPage({
                         >
                             <Plus className="w-3.5 h-3.5" />
                             View Trades
+                        </Button>
+
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setIsDeleteCustomerOpen(true)}
+                            className="bg-white border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold px-4 py-2 h-auto rounded-lg shadow-sm gap-1.5"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete Customer
                         </Button>
                     </div>
                 </div>
@@ -327,6 +374,7 @@ export default function AdminCustomerTreasuryDetailPage({
                                             <th className="py-3 px-5">Type</th>
                                             <th className="py-3 px-5 text-right">Amount</th>
                                             <th className="py-3 px-5 text-right">Balance After</th>
+                                            <th className="py-3 px-5 text-right">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
@@ -354,6 +402,17 @@ export default function AdminCustomerTreasuryDetailPage({
                                                     </td>
                                                     <td className="py-3.5 px-5 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
                                                         ₦{Number(tx.balanceAfter).toLocaleString()}
+                                                    </td>
+                                                    <td className="py-3.5 px-5 text-right whitespace-nowrap">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => setDeleteTxTarget(tx)}
+                                                            className="h-7 w-7 p-0 border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50"
+                                                            title="Delete Ledger Entry"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </Button>
                                                     </td>
                                                 </tr>
                                             );
@@ -423,6 +482,63 @@ export default function AdminCustomerTreasuryDetailPage({
                     </div>
                 </div>
             </div>
+
+            {/* Delete Wallet Transaction Confirmation Dialog */}
+            <Dialog open={!!deleteTxTarget} onOpenChange={(open) => !open && setDeleteTxTarget(null)}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Delete Customer Ledger Entry</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete this ledger transaction record?
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {deleteTxTarget && (
+                        <div className="bg-slate-50 p-3 rounded-lg text-xs space-y-1 my-2 border border-slate-200">
+                            <p><span className="text-slate-400">Description:</span> <strong className="text-slate-900">{deleteTxTarget.description || deleteTxTarget.type}</strong></p>
+                            <p><span className="text-slate-400">Type:</span> <span className="font-mono">{deleteTxTarget.type}</span></p>
+                            <p><span className="text-slate-400">Amount:</span> <strong className="font-mono text-slate-900">₦{Number(deleteTxTarget.amount).toLocaleString()}</strong></p>
+                            <p><span className="text-slate-400">Date:</span> <span className="text-slate-500">{new Date(deleteTxTarget.createdAt).toLocaleString()}</span></p>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteTxTarget(null)}>Cancel</Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => deleteTxTarget && deleteTxMutation.mutate(deleteTxTarget.id)}
+                            disabled={deleteTxMutation.isPending}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {deleteTxMutation.isPending ? "Deleting..." : "Delete Entry"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Customer Confirmation Dialog */}
+            <Dialog open={isDeleteCustomerOpen} onOpenChange={setIsDeleteCustomerOpen}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Delete Customer</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to permanently delete <strong className="text-slate-900">{entityName}</strong>? All wallet ledger transactions, trade requests, and customer records will be permanently removed.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsDeleteCustomerOpen(false)}>Cancel</Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => deleteCustomerMutation.mutate()}
+                            disabled={deleteCustomerMutation.isPending}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {deleteCustomerMutation.isPending ? "Deleting..." : "Delete Customer"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

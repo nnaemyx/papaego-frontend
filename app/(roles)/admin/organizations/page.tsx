@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminOrganizationsApi, type OrganizationListItem } from "@/lib/api/admin-organizations";
 import Link from "next/link";
 import {
@@ -16,19 +16,41 @@ import {
     ChevronRight,
     UserCheck,
     Landmark,
-    Filter
+    Filter,
+    Trash2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+    DialogDescription,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 export default function AdminOrganizationsPage() {
+    const queryClient = useQueryClient();
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
     const [searchQuery, setSearchQuery] = useState<string>("");
+    const [deleteTarget, setDeleteTarget] = useState<OrganizationListItem | null>(null);
 
     const { data, isLoading, refetch } = useQuery({
         queryKey: ["admin-organizations", statusFilter, searchQuery],
         queryFn: () => adminOrganizationsApi.getOrganizations({ status: statusFilter, search: searchQuery })
+    });
+
+    const deleteOrgMutation = useMutation({
+        mutationFn: (id: string) => adminOrganizationsApi.deleteOrganization(id),
+        onSuccess: () => {
+            toast.success("Business organization deleted successfully");
+            setDeleteTarget(null);
+            queryClient.invalidateQueries({ queryKey: ["admin-organizations"] });
+        },
+        onError: () => toast.error("Failed to delete business organization"),
     });
 
     const organizations = data?.organizations || [];
@@ -178,12 +200,23 @@ export default function AdminOrganizationsPage() {
                                             {getStatusBadge(org.status)}
                                         </td>
                                         <td className="p-4 text-right">
-                                            <Link href={`/admin/organizations/${org.id}`}>
-                                                <Button size="sm" variant="outline" className="text-xs font-medium gap-1 hover:bg-[#012333] hover:text-white">
-                                                    View Details
-                                                    <ChevronRight className="w-3.5 h-3.5" />
+                                            <div className="flex items-center justify-end gap-2">
+                                                <Link href={`/admin/organizations/${org.id}`}>
+                                                    <Button size="sm" variant="outline" className="text-xs font-medium gap-1 hover:bg-[#012333] hover:text-white">
+                                                        View Details
+                                                        <ChevronRight className="w-3.5 h-3.5" />
+                                                    </Button>
+                                                </Link>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => setDeleteTarget(org)}
+                                                    className="h-8 w-8 p-0 border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50"
+                                                    title="Delete Organization"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
                                                 </Button>
-                                            </Link>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -192,6 +225,38 @@ export default function AdminOrganizationsPage() {
                     </div>
                 </div>
             )}
+
+            {/* Delete Organization Confirmation Dialog */}
+            <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Delete Business Organization</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to permanently delete this organization? All associated onboarding documents, KYC/KYB records, and bank profiles will be removed.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {deleteTarget && (
+                        <div className="bg-slate-50 p-3 rounded-lg text-xs space-y-1 my-2 border border-slate-200">
+                            <p><span className="text-slate-400">Business:</span> <strong className="text-slate-900">{deleteTarget.businessName}</strong></p>
+                            <p><span className="text-slate-400">Email:</span> <span className="font-mono text-slate-700">{deleteTarget.contactEmail}</span></p>
+                            <p><span className="text-slate-400">Status:</span> <span className="font-semibold">{deleteTarget.status}</span></p>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => deleteTarget && deleteOrgMutation.mutate(deleteTarget.id)}
+                            disabled={deleteOrgMutation.isPending}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {deleteOrgMutation.isPending ? "Deleting..." : "Delete Organization"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

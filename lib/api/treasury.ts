@@ -125,6 +125,8 @@ export const treasuryApi = {
         provider: string;
         currency: string;
         accountType: AccountType;
+        initialBalance?: number | string;
+        accountNumber?: string;
         metadata?: Record<string, unknown>;
     }): Promise<{ account: TreasuryAccount }> => {
         const res = await api.post("/treasury/accounts", data);
@@ -137,6 +139,12 @@ export const treasuryApi = {
         data: { accountName?: string; provider?: string; status?: AccountStatus }
     ): Promise<{ account: TreasuryAccount }> => {
         const res = await api.patch(`/treasury/accounts/${id}`, data);
+        return res.data;
+    },
+
+    /** Delete a treasury account and its balances */
+    deleteAccount: async (id: string): Promise<{ success: boolean; message: string }> => {
+        const res = await api.delete(`/treasury/accounts/${id}`);
         return res.data;
     },
 

@@ -20,7 +20,8 @@ import {
     Calendar,
     ChevronLeft,
     ChevronRight,
-    ExternalLink
+    ExternalLink,
+    Trash2
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +50,9 @@ export default function AdminFundingEventsPage() {
     // Reject dialog
     const [rejectTarget, setRejectTarget] = useState<AdminDepositRequest | null>(null);
     const [rejectReason, setRejectReason] = useState<string>("");
+
+    // Delete dialog
+    const [deleteTarget, setDeleteTarget] = useState<AdminDepositRequest | null>(null);
 
     // Proof preview
     const [proofUrl, setProofUrl] = useState<string | null>(null);
@@ -111,6 +115,18 @@ export default function AdminFundingEventsPage() {
         },
         onError: (e: any) => {
             toast.error(e?.response?.data?.error ?? "Failed to reject deposit.");
+        },
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => adminDepositsApi.delete(id),
+        onSuccess: () => {
+            toast.success("Funding event deleted successfully.");
+            setDeleteTarget(null);
+            qc.invalidateQueries({ queryKey: ["admin-deposits"] });
+        },
+        onError: (e: any) => {
+            toast.error(e?.response?.data?.error ?? "Failed to delete funding event.");
         },
     });
 
@@ -281,27 +297,36 @@ export default function AdminFundingEventsPage() {
                                             </td>
 
                                             <td className="py-4 px-6 text-right whitespace-nowrap">
-                                                {evt.status === "PENDING" ? (
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <Button
-                                                            size="sm"
-                                                            onClick={() => setApproveTarget(evt)}
-                                                            className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5"
-                                                        >
-                                                            Match & Credit
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => setRejectTarget(evt)}
-                                                            className="h-7 text-[11px] border-red-200 text-red-600 hover:bg-red-50 font-bold px-2.5"
-                                                        >
-                                                            Reject
-                                                        </Button>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-[11px] text-slate-400">—</span>
-                                                )}
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {evt.status === "PENDING" && (
+                                                        <>
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={() => setApproveTarget(evt)}
+                                                                className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5"
+                                                            >
+                                                                Match & Credit
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() => setRejectTarget(evt)}
+                                                                className="h-7 text-[11px] border-red-200 text-red-600 hover:bg-red-50 font-bold px-2.5"
+                                                            >
+                                                                Reject
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => setDeleteTarget(evt)}
+                                                        className="h-7 w-7 p-0 border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50"
+                                                        title="Delete Funding Event"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -408,6 +433,38 @@ export default function AdminFundingEventsPage() {
                             className="bg-[#C9A227] hover:bg-[#b08e20] text-white"
                         >
                             Record Event
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Delete Funding Event</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to permanently delete this funding event record?
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {deleteTarget && (
+                        <div className="bg-slate-50 p-3 rounded-lg text-xs space-y-1 my-2 border border-slate-200">
+                            <p><span className="text-slate-400">Customer:</span> <strong className="text-slate-900">{deleteTarget.customer?.fullName || deleteTarget.customer?.email || "Unknown"}</strong></p>
+                            <p><span className="text-slate-400">Amount:</span> <strong className="font-mono text-slate-900">{deleteTarget.currency || "NGN"} {Number(deleteTarget.amount).toLocaleString()}</strong></p>
+                            <p><span className="text-slate-400">Reference:</span> <span className="font-mono text-slate-700">{deleteTarget.reference || "N/A"}</span></p>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+                            disabled={deleteMutation.isPending}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {deleteMutation.isPending ? "Deleting..." : "Delete Event"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

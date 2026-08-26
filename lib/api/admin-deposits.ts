@@ -79,4 +79,15 @@ export const adminDepositsApi = {
             reason ? { reason } : {}
         );
     },
+
+    /**
+     * Permanently delete a deposit request / funding event.
+     */
+    delete: async (
+        id: string
+    ): Promise<{ success: boolean; message: string }> => {
+        return apiClient.delete<{ success: boolean; message: string }>(
+            `/admin/deposits/${id}`
+        );
+    },
 };

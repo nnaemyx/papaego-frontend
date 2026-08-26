@@ -8,6 +8,7 @@ import {
     RefreshCw,
     Plus,
     Filter,
+    Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,7 @@ import {
     DialogHeader,
     DialogTitle,
     DialogFooter,
+    DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +40,7 @@ export default function AdminTreasuryPositionPage() {
 
     // Modals
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<TreasuryAccount | null>(null);
     const [newAccount, setNewAccount] = useState({
         accountName: "",
         accountType: "BANK",
@@ -68,6 +71,8 @@ export default function AdminTreasuryPositionPage() {
                 provider: newAccount.providerName,
                 currency: newAccount.currency,
                 accountType: newAccount.accountType as any,
+                initialBalance: newAccount.initialBalance ? parseFloat(newAccount.initialBalance) : 0,
+                accountNumber: newAccount.accountNumber || undefined,
             }),
         onSuccess: () => {
             toast.success("Treasury account registered");
@@ -83,6 +88,16 @@ export default function AdminTreasuryPositionPage() {
             queryClient.invalidateQueries({ queryKey: ["treasury-accounts"] });
         },
         onError: () => toast.error("Failed to create treasury account"),
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => treasuryApi.deleteAccount(id),
+        onSuccess: () => {
+            toast.success("Treasury account deleted successfully");
+            setDeleteTarget(null);
+            queryClient.invalidateQueries({ queryKey: ["treasury-accounts"] });
+        },
+        onError: () => toast.error("Failed to delete treasury account"),
     });
 
     const accounts: TreasuryAccount[] = (accountsData?.accounts || []).filter((acc: TreasuryAccount) => {
@@ -218,19 +233,20 @@ export default function AdminTreasuryPositionPage() {
                                 <th className="py-4 px-6 text-right">Reserved</th>
                                 <th className="py-4 px-6 text-right">Pending</th>
                                 <th className="py-4 px-6 text-right">Total Balance</th>
+                                <th className="py-4 px-6 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={7} className="py-12 text-center text-slate-400">
+                                    <td colSpan={8} className="py-12 text-center text-slate-400">
                                         Loading treasury position...
                                     </td>
                                 </tr>
                             ) : accounts.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="py-12 text-center text-slate-400">
-                                        No treasury accounts matching filters.
+                                    <td colSpan={8} className="py-12 text-center text-slate-400">
+                                        No treasury accounts matching filters. Click &quot;Add Account&quot; to create one.
                                     </td>
                                 </tr>
                             ) : (
@@ -279,6 +295,18 @@ export default function AdminTreasuryPositionPage() {
                                             <td className="py-4 px-6 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
                                                 {tot.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </td>
+
+                                            <td className="py-4 px-6 text-right whitespace-nowrap">
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => setDeleteTarget(acc)}
+                                                    className="h-7 w-7 p-0 border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50"
+                                                    title="Delete Treasury Account"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                            </td>
                                         </tr>
                                     );
                                 })
@@ -304,6 +332,7 @@ export default function AdminTreasuryPositionPage() {
                                     <td className="py-4 px-6 text-right font-mono text-emerald-700">
                                         ~ ${grandTotalUsd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
+                                    <td className="py-4 px-6" />
                                 </tr>
                             </tfoot>
                         )}
@@ -316,6 +345,7 @@ export default function AdminTreasuryPositionPage() {
                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle>Register Treasury Account</DialogTitle>
+                        <DialogDescription>Add a new treasury balance or operating bank account.</DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-2">
@@ -360,6 +390,37 @@ export default function AdminTreasuryPositionPage() {
                             </div>
                         </div>
 
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label className="text-xs font-semibold">Initial Balance</Label>
+                                <Input
+                                    type="number"
+                                    placeholder="0.00"
+                                    value={newAccount.initialBalance}
+                                    onChange={(e) => setNewAccount({ ...newAccount, initialBalance: e.target.value })}
+                                    className="mt-1"
+                                />
+                            </div>
+
+                            <div>
+                                <Label className="text-xs font-semibold">Account Type</Label>
+                                <Select
+                                    value={newAccount.accountType}
+                                    onValueChange={(t) => setNewAccount({ ...newAccount, accountType: t })}
+                                >
+                                    <SelectTrigger className="mt-1">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="BANK">Bank Account</SelectItem>
+                                        <SelectItem value="WALLET">Crypto Wallet</SelectItem>
+                                        <SelectItem value="EXCHANGE">Exchange Account</SelectItem>
+                                        <SelectItem value="LIQUIDITY_PROVIDER">Liquidity Provider</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
                         <div>
                             <Label className="text-xs font-semibold">Account Number / Reference</Label>
                             <Input
@@ -378,7 +439,37 @@ export default function AdminTreasuryPositionPage() {
                             disabled={createMutation.isPending || !newAccount.accountName || !newAccount.providerName}
                             className="bg-[#C9A227] hover:bg-[#b08e20] text-white"
                         >
-                            Save Account
+                            {createMutation.isPending ? "Saving..." : "Save Account"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Account Confirmation Dialog */}
+            <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Delete Treasury Account</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete this treasury account?
+                        </DialogDescription>
+                    </DialogHeader>
+                    {deleteTarget && (
+                        <div className="bg-slate-50 p-3 rounded-lg text-xs space-y-1 my-2 border border-slate-200">
+                            <p><span className="text-slate-400">Account:</span> <strong className="text-slate-900">{deleteTarget.accountName}</strong></p>
+                            <p><span className="text-slate-400">Provider:</span> <span className="text-slate-700">{deleteTarget.provider}</span></p>
+                            <p><span className="text-slate-400">Currency:</span> <strong className="font-mono text-slate-900">{deleteTarget.currency}</strong></p>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+                            disabled={deleteMutation.isPending}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            {deleteMutation.isPending ? "Deleting..." : "Delete Account"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

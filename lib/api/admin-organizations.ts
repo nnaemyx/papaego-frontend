@@ -176,5 +176,10 @@ export const adminOrganizationsApi = {
     provisionBank: async (id: string) => {
         const res = await api.post(`/admin/organizations/${id}/provision-bank`);
         return res.data;
+    },
+
+    deleteOrganization: async (id: string): Promise<{ success: boolean; message: string }> => {
+        const res = await api.delete(`/admin/organizations/${id}`);
+        return res.data;
     }
 };

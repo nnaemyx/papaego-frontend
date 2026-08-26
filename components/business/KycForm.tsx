@@ -40,10 +40,15 @@ export default function KycForm({ onNext, onBack }: Props) {
     const fileRef = useRef<HTMLInputElement>(null);
     const selfieRef = useRef<HTMLInputElement>(null);
 
-    const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+    const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
         resolver: zodResolver(schema),
-        defaultValues: kycDraft as Partial<FormData>
+        defaultValues: {
+            idType: "PASSPORT",
+            ...kycDraft
+        } as Partial<FormData>
     });
+
+    const selectedIdType = watch("idType") || "PASSPORT";
 
     const onSubmit = async (data: FormData) => {
         if (!savedOrgId) { toast.error("Complete organization details first."); return; }
@@ -59,10 +64,15 @@ export default function KycForm({ onNext, onBack }: Props) {
                 idType: data.idType as "PASSPORT" | "NATIONAL_ID" | "DRIVERS_LICENSE",
             });
 
+            const kycRequestId = (res as any)?.kyc?.id || (res as any)?.kycId;
+            if (!kycRequestId) {
+                throw new Error((res as any)?.message || "Failed to retrieve KYC Request ID");
+            }
+
             const formData = new FormData();
             formData.append("file", uploadedFile);
             formData.append("organizationId", savedOrgId);
-            formData.append("kycRequestId", res.kyc.id);
+            formData.append("kycRequestId", kycRequestId);
             formData.append("documentType", data.idType);
             await complianceApi.uploadDocument(formData);
 
@@ -70,16 +80,17 @@ export default function KycForm({ onNext, onBack }: Props) {
                 const selfieFormData = new FormData();
                 selfieFormData.append("file", selfieFile);
                 selfieFormData.append("organizationId", savedOrgId);
-                selfieFormData.append("kycRequestId", res.kyc.id);
+                selfieFormData.append("kycRequestId", kycRequestId);
                 selfieFormData.append("documentType", "SELFIE");
                 await complianceApi.uploadDocument(selfieFormData);
             }
 
-            toast.success("KYC application submitted to FV Bank!");
+            toast.success((res as any)?.message || "KYC application submitted successfully!");
             markStepComplete("kyc");
             onNext();
         } catch (err: any) {
-            toast.error(err?.response?.data?.error || "KYC submission failed. Please try again.");
+            console.error("KYC submission error:", err);
+            toast.error(err?.response?.data?.error || err?.message || "KYC submission failed. Please try again.");
         } finally {
             setIsLoading(false);
         }
@@ -144,16 +155,31 @@ export default function KycForm({ onNext, onBack }: Props) {
 
                 <div className="mb-5">
                     <label className="form-label">ID Type *</label>
-                    <div className="flex gap-3 mt-2">
-                        {ID_TYPES.map(t => (
-                            <label key={t.value} className="flex-1 cursor-pointer">
-                                <input {...register("idType")} type="radio" value={t.value} className="sr-only" />
-                                <div className="p-3 rounded-xl border text-center text-xs font-semibold transition-all border-[#E1E3E6] bg-white text-[#6B7078] hover:border-gray-300 has-[:checked]:border-[#C9A227] has-[:checked]:bg-[#FFF7E6] has-[:checked]:text-[#C9A227]">
-                                    {t.label}
-                                </div>
-                            </label>
-                        ))}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
+                        {ID_TYPES.map(t => {
+                            const isSelected = selectedIdType === t.value;
+                            return (
+                                <button
+                                    key={t.value}
+                                    type="button"
+                                    onClick={() => setValue("idType", t.value as any, { shouldValidate: true, shouldDirty: true, shouldTouch: true })}
+                                    className={`p-3.5 rounded-xl border text-center text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                                        isSelected
+                                            ? "border-[#C9A227] bg-[#FFF7E6] text-[#C9A227] shadow-sm font-bold ring-2 ring-[#C9A227]/30"
+                                            : "border-[#E1E3E6] bg-white text-[#6B7078] hover:border-slate-300 hover:bg-slate-50"
+                                    }`}
+                                >
+                                    <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
+                                        isSelected ? "border-[#C9A227] bg-[#C9A227]" : "border-slate-300 bg-white"
+                                    }`}>
+                                        {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                    </div>
+                                    <span className="truncate">{t.label}</span>
+                                </button>
+                            );
+                        })}
                     </div>
+                    <input type="hidden" {...register("idType")} />
                     {errors.idType && <FieldError msg={errors.idType.message!} />}
                 </div>
 
