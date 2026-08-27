@@ -36,8 +36,8 @@ export default function CustomerOnboardingPage() {
                         if (res.organization.kybRequest) markStepComplete("kyb");
                     }
                 })
-                .catch((err) => {
-                    console.error("Could not load organization:", err);
+                .catch(() => {
+                    // New user with no organization draft yet — proceed to Step 1
                 });
         });
     }, [isAuthenticated, router, setSavedOrg, markStepComplete]);

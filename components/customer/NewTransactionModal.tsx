@@ -107,34 +107,53 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
                 return;
             }
 
-            const handler = PaystackPop.setup({
-                key: init.publicKey,
-                email: init.email,
-                amount: Math.round(init.amount * 100),
-                ref: init.reference,
-                currency: "NGN",
-                callback: async (response: any) => {
-                    toast.loading("Verifying Paystack deposit...");
-                    try {
-                        await customerApi.verifyPaystackDeposit(response.reference, init.amount);
-                        toast.dismiss();
-                        toast.success(`Successfully deposited ₦${init.amount.toLocaleString()} to your ledger!`);
-                        setLowFundsError(null);
-                        await refreshBalance();
-                    } catch {
-                        toast.dismiss();
-                        toast.error("Deposit confirmation failed. Please refresh balance.");
-                    } finally {
-                        setFundingPaystack(false);
-                    }
-                },
-                onClose: () => {
+            const rawKey = init.publicKey || process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "pk_test_2250be21340e86249354313ff63bd93bc8656a15";
+            const publicKey = rawKey.trim();
+            const email = (init.email || "customer@papaego.com").trim();
+
+            const onPaymentSuccess = async (txRef: string) => {
+                toast.loading("Verifying Paystack deposit...");
+                try {
+                    await customerApi.verifyPaystackDeposit(txRef, init.amount);
+                    toast.dismiss();
+                    toast.success(`Successfully deposited ₦${init.amount.toLocaleString()} to your ledger!`);
+                    setLowFundsError(null);
+                    await refreshBalance();
+                } catch {
+                    toast.dismiss();
+                    toast.error("Deposit confirmation failed. Please refresh balance.");
+                } finally {
                     setFundingPaystack(false);
-                },
-            });
-            handler.openIframe();
+                }
+            };
+
+            if (typeof PaystackPop.setup === "function") {
+                const handler = PaystackPop.setup({
+                    key: publicKey,
+                    email: email,
+                    amount: Math.round(init.amount * 100),
+                    ref: init.reference,
+                    currency: "NGN",
+                    callback: (response: any) => onPaymentSuccess(response.reference || init.reference),
+                    onClose: () => setFundingPaystack(false),
+                });
+                handler.openIframe();
+            } else if (typeof PaystackPop === "function") {
+                const popup = new PaystackPop();
+                popup.newTransaction({
+                    key: publicKey,
+                    email: email,
+                    amount: Math.round(init.amount * 100),
+                    reference: init.reference,
+                    currency: "NGN",
+                    onSuccess: (transaction: any) => onPaymentSuccess(transaction.reference || init.reference),
+                    onCancel: () => setFundingPaystack(false),
+                });
+            }
         } catch (err: any) {
-            toast.error(err?.response?.data?.error || "Failed to initialize Paystack deposit");
+            console.error("Paystack top-up initialization error:", err);
+            const errMsg = err?.response?.data?.error || err?.message || "Failed to initialize Paystack deposit";
+            toast.error(errMsg);
             setFundingPaystack(false);
         }
     };

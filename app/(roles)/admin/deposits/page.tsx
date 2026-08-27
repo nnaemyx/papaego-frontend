@@ -281,7 +281,27 @@ export default function AdminFundingEventsPage() {
                                             </td>
 
                                             <td className="py-4 px-6 text-slate-600 whitespace-nowrap">
-                                                {evt.proofUrl?.includes("paystack") ? "Paystack Direct" : "FV Bank / Inbound Wire"}
+                                                {(() => {
+                                                    const methodUpper = (evt.method || "").toUpperCase();
+                                                    if (methodUpper.includes("PAYSTACK") || evt.reference?.startsWith("PSTK_") || evt.proofUrl?.includes("paystack")) {
+                                                        return (
+                                                            <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                                Paystack Direct
+                                                            </span>
+                                                        );
+                                                    }
+                                                    if (evt.depositBank) {
+                                                        return evt.depositBank;
+                                                    }
+                                                    if (methodUpper === "WIRE" || methodUpper === "ACH" || methodUpper === "FV_BANK") {
+                                                        return "FV Bank / Wire";
+                                                    }
+                                                    if (methodUpper === "BANK_TRANSFER") {
+                                                        return "Bank Transfer";
+                                                    }
+                                                    return evt.method || "Inbound Transfer";
+                                                })()}
                                             </td>
 
                                             <td className="py-4 px-6 font-mono text-slate-500 text-[11px] whitespace-nowrap">

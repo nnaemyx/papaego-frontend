@@ -188,21 +188,46 @@ export default function AdminFundingEventDetailPage({
               </div>
 
               <div className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <span className="text-slate-400 uppercase text-[10px] font-bold">Provider Transaction ID</span>
-                <span className="font-mono text-slate-700">TRX-998822-ACME-EUR</span>
+                <span className="text-slate-400 uppercase text-[10px] font-bold">Payment Provider / Method</span>
+                <span className="font-bold text-slate-900">
+                  {(() => {
+                    const methodUpper = (deposit?.method || "").toUpperCase();
+                    if (methodUpper.includes("PAYSTACK") || deposit?.reference?.startsWith("PSTK_") || deposit?.proofUrl?.includes("paystack")) {
+                      return "Paystack Direct (Automated Settlement)";
+                    }
+                    if (deposit?.depositBank) return deposit.depositBank;
+                    if (methodUpper === "WIRE" || methodUpper === "ACH" || methodUpper === "FV_BANK") return "FV Bank / Inbound Wire";
+                    if (methodUpper === "BANK_TRANSFER") return "Direct Bank Transfer";
+                    return deposit?.method || "Inbound Settlement";
+                  })()}
+                </span>
               </div>
 
               <div className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <span className="text-slate-400 uppercase text-[10px] font-bold">Destination Account</span>
+                <span className="text-slate-400 uppercase text-[10px] font-bold">Provider Transaction Ref</span>
+                <span className="font-mono text-slate-700">{refCode}</span>
+              </div>
+
+              <div className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <span className="text-slate-400 uppercase text-[10px] font-bold">Destination Account / Gateway</span>
                 <div className="font-mono text-slate-700 text-[11px]">
-                  <p>IBAN: DE89 3704 0044 0532 0130 00</p>
-                  <p className="text-slate-400 mt-0.5">TIS Master Pool EUR</p>
+                  {deposit?.method?.toUpperCase() === "PAYSTACK" || deposit?.reference?.startsWith("PSTK_") ? (
+                    <>
+                      <p className="font-bold text-emerald-700">Paystack NGN Collection Account</p>
+                      <p className="text-slate-400 mt-0.5">Automated Gateway Settlement</p>
+                    </>
+                  ) : (
+                    <>
+                      <p>Account: {deposit?.depositBank || "FV Bank Master Pool USD/EUR"}</p>
+                      <p className="text-slate-400 mt-0.5">TIS Master Pool</p>
+                    </>
+                  )}
                 </div>
               </div>
 
               <div className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <span className="text-slate-400 uppercase text-[10px] font-bold">Reference / Remittance</span>
-                <span className="font-mono text-slate-800 italic">"{refCode}"</span>
+                <span className="text-slate-400 uppercase text-[10px] font-bold">Customer Note / Memo</span>
+                <span className="font-mono text-slate-800 italic">{deposit?.note ? `"${deposit.note}"` : "None provided"}</span>
               </div>
             </div>
           </div>

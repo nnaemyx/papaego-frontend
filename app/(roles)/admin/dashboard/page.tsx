@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { transactionsApi } from "@/lib/api/transactions";
 import { treasuryApi } from "@/lib/api/treasury";
 import { adminDepositsApi } from "@/lib/api/admin-deposits";
+import { auditLogsApi, type AuditLogEntry } from "@/lib/api/audit-logs";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -46,6 +47,12 @@ export default function AdminGlobalDashboardPage() {
     staleTime: 30_000,
   });
 
+  const { data: auditLogsData } = useQuery({
+    queryKey: ["admin-recent-audit-logs"],
+    queryFn: () => auditLogsApi.getAuditLogs({ limit: 6 }),
+    staleTime: 15_000,
+  });
+
   const { data: treasuryData } = useQuery({
     queryKey: ["treasury-balances"],
     queryFn: () => treasuryApi.getAllBalances(),
@@ -54,6 +61,7 @@ export default function AdminGlobalDashboardPage() {
 
   const rawTrades = recentData?.trades ?? [];
   const rawDeposits = depositsData?.deposits ?? [];
+  const rawLogs: AuditLogEntry[] = Array.isArray(auditLogsData) ? auditLogsData : [];
   const pendingDeposits = rawDeposits.filter((d) => d.status === "PENDING");
   const unmatchedCount = stats?.unmatchedDepositsCount ?? pendingDeposits.length;
 
@@ -327,12 +335,68 @@ export default function AdminGlobalDashboardPage() {
         <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4 flex flex-col justify-between" style={{ borderColor: "#E1E3E6" }}>
           <div>
             <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: "#E1E3E6" }}>
-              <h2 className="text-sm font-bold text-slate-900">Recent Activity Feed</h2>
-              <Filter className="w-3.5 h-3.5 text-slate-400" />
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <h2 className="text-sm font-bold text-slate-900">Recent Activity Feed</h2>
+              </div>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Live Sync
+              </span>
             </div>
 
             <div className="divide-y divide-slate-100 text-xs">
-              {rawTrades.length > 0 ? (
+              {rawLogs.length > 0 ? (
+                rawLogs.slice(0, 4).map((log) => {
+                  const act = log.action.toUpperCase();
+                  const isDeposit = act.includes("DEPOSIT") || act.includes("PAYSTACK") || act.includes("WALLET");
+                  const isKyc = act.includes("KYC") || act.includes("KYB") || act.includes("VERIF");
+                  const isTrade = act.includes("TRADE") || act.includes("TRANSACTION");
+
+                  return (
+                    <div key={log.id} className="py-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                            isDeposit
+                              ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                              : isKyc
+                              ? "bg-blue-50 text-blue-600 border border-blue-200"
+                              : isTrade
+                              ? "bg-amber-50 text-amber-600 border border-amber-200"
+                              : "bg-slate-50 text-slate-600 border border-slate-200"
+                          }`}
+                        >
+                          {isDeposit ? (
+                            <Wallet className="w-3.5 h-3.5" />
+                          ) : isKyc ? (
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                          ) : isTrade ? (
+                            <ArrowUpRight className="w-3.5 h-3.5" />
+                          ) : (
+                            <Clock className="w-3.5 h-3.5" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 truncate">
+                            {log.action}
+                          </p>
+                          <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-600">{log.actorType}</span>
+                            <span>•</span>
+                            <span>{log.targetType || "System"}</span>
+                            <span>•</span>
+                            <span>{log.timestamp}</span>
+                          </p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-600 shrink-0">
+                        {log.logId}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : rawTrades.length > 0 ? (
                 rawTrades.slice(0, 4).map((trade) => {
                   const isCompleted = trade.status === "COMPLETED";
                   return (
@@ -365,8 +429,8 @@ export default function AdminGlobalDashboardPage() {
           </div>
 
           <div className="pt-3 border-t border-slate-100 text-center">
-            <Link href="/admin/transactions" className="text-xs font-bold text-[#C9A227] hover:underline">
-              View All Activity →
+            <Link href="/admin/audit-logs" className="text-xs font-bold text-[#C9A227] hover:underline">
+              View All Activity & Audit Trail →
             </Link>
           </div>
         </div>

@@ -68,7 +68,7 @@ export const organizationsApi = {
         apiClient.get<{ organization: Organization }>(`/organizations/${id}`),
 
     getMyOrganization: () =>
-        apiClient.get<{ organization: Organization }>("/organizations/me"),
+        apiClient.get<{ organization: Organization | null }>("/organizations/me"),
 
     update: (id: string, data: Partial<CreateOrganizationPayload>) =>
         apiClient.patch<{ organization: Organization }>(`/organizations/${id}`, data),
