@@ -24,7 +24,6 @@ const roleNavigation = {
     { name: 'Transactions', href: '/customer/wallet', icon: Wallet },
     { name: 'Suppliers', href: '/customer/suppliers', icon: Building2 },
     { name: 'Exchange Rates', href: '/customer/rates', icon: DollarSign },
-    { name: 'Accounts', href: '/customer/banking', icon: Database },
     { name: 'Profile', href: '/customer/profile', icon: Users },
   ],
   ORG_OWNER: [
@@ -33,7 +32,6 @@ const roleNavigation = {
     { name: 'Transactions', href: '/customer/wallet', icon: Wallet },
     { name: 'Suppliers', href: '/customer/suppliers', icon: Building2 },
     { name: 'Exchange Rates', href: '/customer/rates', icon: DollarSign },
-    { name: 'Accounts', href: '/customer/banking', icon: Database },
     { name: 'Profile', href: '/customer/profile', icon: Users },
   ],
   ORG_ADMIN: [
@@ -42,7 +40,6 @@ const roleNavigation = {
     { name: 'Transactions', href: '/customer/wallet', icon: Wallet },
     { name: 'Suppliers', href: '/customer/suppliers', icon: Building2 },
     { name: 'Exchange Rates', href: '/customer/rates', icon: DollarSign },
-    { name: 'Accounts', href: '/customer/banking', icon: Database },
     { name: 'Profile', href: '/customer/profile', icon: Users },
   ],
   ADMIN: [

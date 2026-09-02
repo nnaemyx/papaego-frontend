@@ -83,6 +83,10 @@ export default function MergedBusinessCustomerDashboard() {
         }
         if (isAuthenticated) {
             fetchDashboardData();
+            const interval = setInterval(() => {
+                fetchDashboardData();
+            }, 20000);
+            return () => clearInterval(interval);
         }
     }, [pathname, isAuthenticated, router, fetchDashboardData]);
 

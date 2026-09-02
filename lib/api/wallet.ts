@@ -37,9 +37,20 @@ export interface Wallet {
     updatedAt: string;
 }
 
+export interface WalletQueryParams {
+    page?: number;
+    limit?: number;
+    type?: WalletTransactionType | "ALL";
+    startDate?: string;
+    endDate?: string;
+    minAmount?: number;
+    maxAmount?: number;
+    search?: string;
+}
+
 /**
  * The wallet endpoint returns balances at the top level (flat), alongside the
- * recent transactions. This shape mirrors the backend `getMyWallet` response.
+ * transactions and pagination metadata.
  */
 export interface WalletSummary {
     id: string;
@@ -48,6 +59,10 @@ export interface WalletSummary {
     reservedBalance: string;
     totalDeposited: string;
     transactions: WalletTransaction[];
+    totalCount?: number;
+    totalPages?: number;
+    page?: number;
+    limit?: number;
 }
 
 export interface DepositRequest {
@@ -65,10 +80,20 @@ export interface DepositRequest {
 }
 
 /**
- * Fetch the authenticated customer's wallet balance and recent transactions.
+ * Fetch the authenticated customer's wallet balance and filtered/paginated transactions.
  */
-export async function getMyWallet(): Promise<WalletSummary> {
-    return apiClient.get<WalletSummary>("/customer/portal/wallet");
+export async function getMyWallet(params?: WalletQueryParams): Promise<WalletSummary> {
+    const query: any = {};
+    if (params?.page) query.page = params.page;
+    if (params?.limit) query.limit = params.limit;
+    if (params?.type && params.type !== "ALL") query.type = params.type;
+    if (params?.startDate) query.startDate = params.startDate;
+    if (params?.endDate) query.endDate = params.endDate;
+    if (params?.minAmount != null) query.minAmount = params.minAmount;
+    if (params?.maxAmount != null) query.maxAmount = params.maxAmount;
+    if (params?.search) query.search = params.search;
+
+    return apiClient.get<WalletSummary>("/customer/portal/wallet", { params: query });
 }
 
 /**

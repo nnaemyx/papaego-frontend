@@ -33,17 +33,26 @@ const ID_TYPES = [
 ];
 
 export default function KycForm({ onNext, onBack }: Props) {
-    const { kycDraft, setKycDraft, savedOrgId, markStepComplete } = useOnboardingStore();
+    const { kycDraft, setKycDraft, savedOrg, savedOrgId, markStepComplete } = useOnboardingStore();
     const [isLoading, setIsLoading] = useState(false);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [selfieFile, setSelfieFile] = useState<File | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
     const selfieRef = useRef<HTMLInputElement>(null);
 
+    const existingKyc = savedOrg?.kycRequests?.[0];
+    const hasExistingDoc = !!(existingKyc?.id || existingKyc?.documents?.length);
+
     const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
         resolver: zodResolver(schema),
         defaultValues: {
-            idType: "PASSPORT",
+            idType: existingKyc?.idType || "PASSPORT",
+            fullName: existingKyc?.fullName || kycDraft.fullName || "",
+            dateOfBirth: existingKyc?.dateOfBirth ? new Date(existingKyc.dateOfBirth).toISOString().split('T')[0] : (kycDraft.dateOfBirth ? new Date(kycDraft.dateOfBirth).toISOString().split('T')[0] : ""),
+            nationality: existingKyc?.nationality || kycDraft.nationality || "",
+            residentialAddress: existingKyc?.residentialAddress || kycDraft.residentialAddress || "",
+            phone: existingKyc?.phone || kycDraft.phone || "",
+            email: existingKyc?.email || kycDraft.email || "",
             ...kycDraft
         } as Partial<FormData>
     });
@@ -52,7 +61,7 @@ export default function KycForm({ onNext, onBack }: Props) {
 
     const onSubmit = async (data: FormData) => {
         if (!savedOrgId) { toast.error("Complete organization details first."); return; }
-        if (!uploadedFile) { toast.error("Please upload your government-issued ID."); return; }
+        if (!uploadedFile && !hasExistingDoc) { toast.error("Please upload your government-issued ID."); return; }
 
         setIsLoading(true);
         setKycDraft(data as Partial<KycSubmitPayload>);
@@ -69,12 +78,14 @@ export default function KycForm({ onNext, onBack }: Props) {
                 throw new Error((res as any)?.message || "Failed to retrieve KYC Request ID");
             }
 
-            const formData = new FormData();
-            formData.append("file", uploadedFile);
-            formData.append("organizationId", savedOrgId);
-            formData.append("kycRequestId", kycRequestId);
-            formData.append("documentType", data.idType);
-            await complianceApi.uploadDocument(formData);
+            if (uploadedFile) {
+                const formData = new FormData();
+                formData.append("file", uploadedFile);
+                formData.append("organizationId", savedOrgId);
+                formData.append("kycRequestId", kycRequestId);
+                formData.append("documentType", data.idType);
+                await complianceApi.uploadDocument(formData);
+            }
 
             if (selfieFile) {
                 const selfieFormData = new FormData();
@@ -85,7 +96,7 @@ export default function KycForm({ onNext, onBack }: Props) {
                 await complianceApi.uploadDocument(selfieFormData);
             }
 
-            toast.success((res as any)?.message || "KYC application submitted successfully!");
+            toast.success((res as any)?.message || "KYC application updated successfully!");
             markStepComplete("kyc");
             onNext();
         } catch (err: any) {

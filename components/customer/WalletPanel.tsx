@@ -1,11 +1,27 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getMyWallet, type WalletSummary, type WalletTransaction } from "@/lib/api/wallet";
+import { getMyWallet, type WalletSummary, type WalletTransaction, type WalletTransactionType } from "@/lib/api/wallet";
 import { customerApi } from "@/lib/api/customer";
 import { loadPaystackInline } from "@/lib/paystack";
 import { toast } from "sonner";
-import { Wallet, CreditCard, Sparkles, CheckCircle2, RefreshCw, ArrowDownLeft, ArrowUpRight, Clock, ShieldCheck } from "lucide-react";
+import {
+    Wallet,
+    CreditCard,
+    Sparkles,
+    CheckCircle2,
+    RefreshCw,
+    ArrowDownLeft,
+    ArrowUpRight,
+    Clock,
+    ShieldCheck,
+    Search,
+    Filter,
+    X,
+    ChevronLeft,
+    ChevronRight,
+    Calendar,
+} from "lucide-react";
 
 function formatMoney(amount: string | number, currency = "NGN") {
     const value = typeof amount === "string" ? Number(amount) : amount;
@@ -22,10 +38,29 @@ function formatDate(iso: string) {
 
 const PRESET_AMOUNTS = [50000, 100000, 250000, 500000, 1000000, 2500000];
 
+const TYPE_OPTIONS: { label: string; value: WalletTransactionType | "ALL" }[] = [
+    { label: "All Types", value: "ALL" },
+    { label: "Deposits", value: "DEPOSIT" },
+    { label: "Trade Debits", value: "TRADE_DEBIT" },
+    { label: "Trade Refunds", value: "TRADE_REFUND" },
+    { label: "Adjustment Credit", value: "ADJUSTMENT_CREDIT" },
+    { label: "Adjustment Debit", value: "ADJUSTMENT_DEBIT" },
+];
+
 export function WalletPanel() {
     const [summary, setSummary] = useState<WalletSummary | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Filter states
+    const [selectedType, setSelectedType] = useState<WalletTransactionType | "ALL">("ALL");
+    const [search, setSearch] = useState("");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+    const [minAmount, setMinAmount] = useState("");
+    const [maxAmount, setMaxAmount] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const limit = 10;
 
     // Paystack Instant Deposit state
     const [paystackAmount, setPaystackAmount] = useState("100000");
@@ -35,7 +70,16 @@ export function WalletPanel() {
         setLoading(true);
         setError(null);
         try {
-            const walletData = await getMyWallet();
+            const walletData = await getMyWallet({
+                page: currentPage,
+                limit,
+                type: selectedType,
+                search: search.trim() || undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
+                minAmount: minAmount ? Number(minAmount) : undefined,
+                maxAmount: maxAmount ? Number(maxAmount) : undefined,
+            });
             setSummary(walletData);
         } catch (err) {
             console.error("Failed to load wallet", err);
@@ -43,11 +87,23 @@ export function WalletPanel() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [currentPage, selectedType, search, startDate, endDate, minAmount, maxAmount]);
 
     useEffect(() => {
         load();
     }, [load]);
+
+    const resetFilters = () => {
+        setSelectedType("ALL");
+        setSearch("");
+        setStartDate("");
+        setEndDate("");
+        setMinAmount("");
+        setMaxAmount("");
+        setCurrentPage(1);
+    };
+
+    const hasActiveFilters = selectedType !== "ALL" || search || startDate || endDate || minAmount || maxAmount;
 
     const handlePaystackDeposit = async () => {
         const parsed = Number(paystackAmount);
@@ -99,6 +155,8 @@ export function WalletPanel() {
 
     const currency = summary?.currency ?? "NGN";
     const transactions = summary?.transactions ?? [];
+    const totalCount = summary?.totalCount ?? transactions.length;
+    const totalPages = summary?.totalPages ?? (Math.ceil(totalCount / limit) || 1);
 
     return (
         <div className="space-y-6 font-sans">
@@ -112,7 +170,7 @@ export function WalletPanel() {
                         </div>
                     </div>
                     <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-                        {loading ? "—" : formatMoney(summary?.availableBalance ?? 0, currency)}
+                        {loading && !summary ? "—" : formatMoney(summary?.availableBalance ?? 0, currency)}
                     </p>
                     <p className="text-xs text-emerald-600 mt-2 font-medium">Ready for immediate trades</p>
                 </div>
@@ -125,7 +183,7 @@ export function WalletPanel() {
                         </div>
                     </div>
                     <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-                        {loading ? "—" : formatMoney(summary?.reservedBalance ?? 0, currency)}
+                        {loading && !summary ? "—" : formatMoney(summary?.reservedBalance ?? 0, currency)}
                     </p>
                     <p className="text-xs text-amber-600 mt-2 font-medium">Held for active trades</p>
                 </div>
@@ -138,7 +196,7 @@ export function WalletPanel() {
                         </div>
                     </div>
                     <p className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-                        {loading ? "—" : formatMoney(summary?.totalDeposited ?? 0, currency)}
+                        {loading && !summary ? "—" : formatMoney(summary?.totalDeposited ?? 0, currency)}
                     </p>
                     <p className="text-xs text-slate-500 mt-2 font-medium">Cumulative funded amount</p>
                 </div>
@@ -235,24 +293,112 @@ export function WalletPanel() {
                 </div>
             </div>
 
-            {/* Wallet Ledger Transactions */}
-            <div className="rounded-2xl border bg-white p-6 shadow-sm border-slate-200 space-y-4">
-                <div className="flex items-center justify-between">
+            {/* ── Wallet Ledger Transactions with Filters & Pagination (Findings 7 & 8) ── */}
+            <div className="rounded-2xl border bg-white p-6 shadow-sm border-slate-200 space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                         <h3 className="text-lg font-bold text-slate-900">Ledger Activity</h3>
-                        <p className="text-xs text-slate-500">Immutable record of every deposit and trade deduction</p>
+                        <p className="text-xs text-slate-500">Immutable record of every deposit, trade deduction, and refund</p>
                     </div>
                     <button
                         onClick={load}
-                        className="text-xs font-semibold text-[#C9A227] hover:underline flex items-center gap-1"
+                        className="text-xs font-bold text-[#C9A227] hover:underline flex items-center gap-1 self-start sm:self-auto"
                     >
-                        <RefreshCw className="w-3.5 h-3.5" /> Refresh
+                        <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh Table
                     </button>
                 </div>
 
-                {transactions.length === 0 ? (
-                    <div className="text-center py-10 text-slate-400 text-xs">
-                        No ledger transactions recorded yet.
+                {/* Filter Toolbar */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                            <Filter className="w-3.5 h-3.5 text-[#C9A227]" />
+                            Transaction Filters
+                        </span>
+                        {hasActiveFilters && (
+                            <button
+                                onClick={resetFilters}
+                                className="text-xs font-bold text-red-600 hover:underline flex items-center gap-1"
+                            >
+                                <X className="w-3.5 h-3.5" /> Clear Filters
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {/* Search description */}
+                        <div className="relative">
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                                type="text"
+                                value={search}
+                                onChange={(e) => {
+                                    setSearch(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                placeholder="Search by description or ID..."
+                                className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-medium focus:outline-none focus:border-[#C9A227]"
+                            />
+                        </div>
+
+                        {/* Type Select */}
+                        <div>
+                            <select
+                                value={selectedType}
+                                onChange={(e) => {
+                                    setSelectedType(e.target.value as any);
+                                    setCurrentPage(1);
+                                }}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#C9A227]"
+                            >
+                                {TYPE_OPTIONS.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Date From */}
+                        <div className="relative">
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => {
+                                    setStartDate(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 focus:outline-none focus:border-[#C9A227]"
+                                title="From Date"
+                            />
+                        </div>
+
+                        {/* Date To */}
+                        <div className="relative">
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => {
+                                    setEndDate(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-700 focus:outline-none focus:border-[#C9A227]"
+                                title="To Date"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Table */}
+                {loading ? (
+                    <div className="space-y-2 py-4">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className="h-12 bg-slate-100 rounded-lg animate-pulse" />
+                        ))}
+                    </div>
+                ) : transactions.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400 text-xs border border-dashed rounded-xl bg-slate-50/50">
+                        No ledger transactions found {hasActiveFilters ? "matching your filter criteria" : "yet"}.
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -298,6 +444,57 @@ export function WalletPanel() {
                                 })}
                             </tbody>
                         </table>
+                    </div>
+                )}
+
+                {/* ── Pagination Controls (Finding 7) ── */}
+                {totalPages > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100">
+                        <p className="text-xs text-slate-500 font-medium">
+                            Showing page <span className="font-bold text-slate-800">{currentPage}</span> of{" "}
+                            <span className="font-bold text-slate-800">{totalPages}</span> ({totalCount} total entries)
+                        </p>
+
+                        <div className="flex items-center gap-2">
+                            <button
+                                disabled={currentPage === 1 || loading}
+                                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                className="px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1"
+                            >
+                                <ChevronLeft className="w-3.5 h-3.5" /> Previous
+                            </button>
+
+                            <div className="flex items-center gap-1">
+                                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                    .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                                    .map((p, idx, arr) => {
+                                        const prev = arr[idx - 1];
+                                        return (
+                                            <div key={p} className="flex items-center gap-1">
+                                                {prev && p - prev > 1 && <span className="text-slate-400 text-xs px-1">…</span>}
+                                                <button
+                                                    onClick={() => setCurrentPage(p)}
+                                                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors ${
+                                                        currentPage === p
+                                                            ? "bg-[#C9A227] text-white"
+                                                            : "border border-slate-200 text-slate-700 hover:bg-slate-50"
+                                                    }`}
+                                                >
+                                                    {p}
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                            </div>
+
+                            <button
+                                disabled={currentPage === totalPages || loading}
+                                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                className="px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1"
+                            >
+                                Next <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
