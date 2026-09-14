@@ -126,3 +126,44 @@ export async function createDepositRequest(input: {
 export async function cancelDepositRequest(id: string): Promise<DepositRequest> {
     return apiClient.patch<DepositRequest>(`/customer/portal/wallet/deposits/${id}/cancel`, {});
 }
+
+// ─── MoneyPings ────────────────────────────────────────────────────────────
+
+export interface MoneyPingsWallet {
+    walletReference: string;
+    externalReference: string;
+    status: string;
+    balanceMinor: number;
+    balance: string;
+    message: string;
+}
+
+export interface MoneyPingsPayIn {
+    accountNumber: string;
+    accountName: string;
+    bankName: string;
+    amount: string;
+    amountMinor: number;
+    currency: string;
+    expiresAt: string;
+    reference: string;
+    walletReference: string;
+    notice: string;
+}
+
+/**
+ * Ensure the customer has a MoneyPings wallet.
+ * Idempotent — safe to call every time before generating a pay-in account.
+ */
+export async function initMoneyPingsWallet(): Promise<MoneyPingsWallet> {
+    return apiClient.post<MoneyPingsWallet>("/customer/portal/wallet/moneypings/init-wallet", {});
+}
+
+/**
+ * Generate a temporary virtual bank account for the customer to pay into.
+ * The account expires in ~5 hours and is tied to a single payment.
+ * @param amount NGN amount, e.g. 500 means ₦500
+ */
+export async function getMoneyPingsPayIn(amount: number): Promise<MoneyPingsPayIn> {
+    return apiClient.post<MoneyPingsPayIn>("/customer/portal/wallet/moneypings/pay-in", { amount });
+}
