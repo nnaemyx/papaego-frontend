@@ -411,6 +411,21 @@ export const customerApi = {
         return response.data;
     },
 
+    /** Generate dedicated MoneyPings virtual deposit account */
+    initMoneyPingsDeposit: async (amount: number): Promise<{
+        accountNumber: string;
+        accountName: string;
+        bankName: string;
+        amount: number;
+        amountMinor: number;
+        currency: string;
+        expiresAt: string;
+        reference: string;
+    }> => {
+        const response = await api.post("/customer/portal/wallet/moneypings/pay-in", { amount });
+        return response.data;
+    },
+
     /** Verify Paystack deposit */
     verifyPaystackDeposit: async (reference: string, amount: number): Promise<{
         success: boolean;

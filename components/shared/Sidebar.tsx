@@ -53,7 +53,6 @@ const roleNavigation = {
     { name: 'Customers', href: '/admin/customers', icon: UserCircle },
     { name: 'Deposits', href: '/admin/deposits', icon: ArrowDownToLine },
     { name: 'Commissions', href: '/admin/commissions', icon: Wallet },
-    { name: 'Rates', href: '/admin/rates', icon: BarChart2 },
     { name: 'Treasury', href: '/admin/treasury', icon: Database },
     { name: 'Exchange Rates', href: '/admin/exchange-rates', icon: DollarSign },
     { name: 'Audit Logs', href: '/admin/audit-logs', icon: FileText },

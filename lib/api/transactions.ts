@@ -128,4 +128,25 @@ export const transactionsApi = {
         const response = await api.post(`/admin/transactions/${id}/negotiate/reject`, {});
         return response.data;
     },
+
+    createTransaction: async (payload: {
+        customerId: string;
+        recipientName: string;
+        supplierBankName?: string;
+        supplierAccountNumber?: string;
+        swiftBic?: string;
+        destinationCountry?: string;
+        sendCurrency: string;
+        receiveCurrency: string;
+        amount: string | number;
+        payoutAmount?: string | number;
+        fxRate?: string | number;
+        route?: string;
+        status?: string;
+        dueDate?: string;
+        purpose?: string;
+    }): Promise<any> => {
+        const response = await api.post("/admin/transactions", payload);
+        return response.data;
+    },
 };

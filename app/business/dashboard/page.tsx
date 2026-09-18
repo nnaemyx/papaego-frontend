@@ -76,6 +76,18 @@ export default function MergedBusinessCustomerDashboard() {
         }
     }, []);
 
+    // Unify active in-flight trades and trade requests
+    const inFlightTrade = trades.find((t) =>
+        ["INITIATED", "QUOTED", "SENT_TO_CUSTOMER", "CUSTOMER_CONFIRMED", "AWAITING_PAYMENT", "PAYMENT_UPLOADED", "PAYMENT_CONFIRMED", "PROCESSING", "PROCESSED", "PENDING"].includes(t.status)
+    );
+    const inFlightRequest = tradeRequests.find((r) =>
+        ["PENDING", "POOL", "ASSIGNED", "QUOTED", "SENT_TO_CUSTOMER", "CUSTOMER_CONFIRMED", "AWAITING_PAYMENT", "PROCESSING"].includes(r.status)
+    );
+
+    // Active transfer for Lifecycle Stepper (priority: active in-flight trade > active request > latest trade > latest request)
+    const activeTransfer = inFlightTrade || inFlightRequest || trades[0] || tradeRequests[0] || null;
+    const isTransferInFlight = Boolean(inFlightTrade || inFlightRequest);
+
     useEffect(() => {
         if (pathname === "/business/dashboard") {
             router.replace("/customer/dashboard");
@@ -83,12 +95,14 @@ export default function MergedBusinessCustomerDashboard() {
         }
         if (isAuthenticated) {
             fetchDashboardData();
+            // Fast real-time polling every 3 seconds if active transfer is in-flight, else 8 seconds
+            const pollInterval = isTransferInFlight ? 3000 : 8000;
             const interval = setInterval(() => {
                 fetchDashboardData();
-            }, 20000);
+            }, pollInterval);
             return () => clearInterval(interval);
         }
-    }, [pathname, isAuthenticated, router, fetchDashboardData]);
+    }, [pathname, isAuthenticated, router, fetchDashboardData, isTransferInFlight]);
 
     if (!isAuthenticated) return null;
 
@@ -114,17 +128,14 @@ export default function MergedBusinessCustomerDashboard() {
     const tradesSum = pendingSettlementTrades.reduce((acc, t) => acc + (parseFloat(t.amount) || 0), 0);
     const pendingSettlementTotal = Math.max(ledgerBalance.reserved || 0, tradesSum);
 
-    // Active trade for Lifecycle Stepper
-    const activeTrade = pendingSettlementTrades[0] || trades[0] || null;
-
     // Determine lifecycle stage title
     const getActiveStageBadge = (status?: string) => {
         if (!status) return "Idle";
-        if (["QUOTED", "SENT_TO_CUSTOMER", "CUSTOMER_CONFIRMED"].includes(status)) return "Quoted (Stage 1 of 4)";
-        if (["AWAITING_PAYMENT", "PAYMENT_UPLOADED"].includes(status)) return "Funding (Stage 2 of 4)";
-        if (["PAYMENT_CONFIRMED", "PROCESSING", "PROCESSED"].includes(status)) return "Processing (Stage 3 of 4)";
-        if (status === "COMPLETED") return "Settled (Stage 4 of 4)";
-        return "Processing (Stage 2 of 4)";
+        if (["PENDING", "POOL", "ASSIGNED", "QUOTED", "SENT_TO_CUSTOMER", "CUSTOMER_CONFIRMED"].includes(status)) return "Quote Confirmed (Stage 1 of 4)";
+        if (["AWAITING_PAYMENT", "PAYMENT_UPLOADED"].includes(status)) return "Funding Received (Stage 2 of 4)";
+        if (["PAYMENT_CONFIRMED", "PROCESSING", "PROCESSED"].includes(status)) return "Route Execution & Wire (Stage 3 of 4)";
+        if (status === "COMPLETED") return "Settled & Dispatched (Stage 4 of 4)";
+        return "Processing (Stage 3 of 4)";
     };
 
     // Calculate total ledger value = available + reserved (or totalDeposited)
@@ -430,13 +441,23 @@ export default function MergedBusinessCustomerDashboard() {
             >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-4">
                     <div>
-                        <h2 className="text-base md:text-lg font-bold text-slate-900">
-                            Transaction Lifecycle
-                        </h2>
-                        {activeTrade ? (
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-base md:text-lg font-bold text-slate-900">
+                                Transaction Lifecycle
+                            </h2>
+                            {isTransferInFlight && (
+                                <span className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" /> Live Real-Time
+                                </span>
+                            )}
+                        </div>
+                        {activeTransfer ? (
                             <p className="text-xs text-slate-500 mt-0.5">
-                                Active Transfer: <span className="font-semibold text-slate-800">{activeTrade.tradeId}</span>{" "}
-                                ({formatCurrency(activeTrade.amount, activeTrade.sendCurrency)} → {activeTrade.receiveCurrency})
+                                Active Transfer:{" "}
+                                <span className="font-semibold text-slate-800">
+                                    {(activeTransfer as any).tradeId || `REQ-${activeTransfer.id.slice(0, 8).toUpperCase()}`}
+                                </span>{" "}
+                                ({formatCurrency(activeTransfer.amount, activeTransfer.sendCurrency || "NGN")} → {activeTransfer.receiveCurrency || "USD"})
                             </p>
                         ) : (
                             <p className="text-xs text-slate-500 mt-0.5">
@@ -445,17 +466,25 @@ export default function MergedBusinessCustomerDashboard() {
                         )}
                     </div>
 
-                    {activeTrade && (
-                        <span className="self-start sm:self-auto px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                            {getActiveStageBadge(activeTrade.status)}
-                        </span>
+                    {activeTransfer && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="self-start sm:self-auto px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                {getActiveStageBadge(activeTransfer.status)}
+                            </span>
+                            <Link
+                                href={inFlightTrade ? `/customer/trades/${inFlightTrade.id}` : inFlightRequest ? `/customer/trade-requests/${inFlightRequest.id}` : `/customer/trades`}
+                                className="text-xs font-bold text-[#C9A227] hover:text-[#a8861d] ml-1"
+                            >
+                                View Details →
+                            </Link>
+                        </div>
                     )}
                 </div>
 
                 {/* 4-Stage Stepper */}
                 <div className="py-2">
                     <TradeProgressStepper
-                        currentStatus={(activeTrade?.status as TradeStage) || "QUOTED"}
+                        currentStatus={(activeTransfer?.status as TradeStage) || "QUOTED"}
                         variant="dashboard"
                     />
                 </div>

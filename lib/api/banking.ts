@@ -46,6 +46,8 @@ export interface BankingProfile {
     country: string;
     swiftBic: string;
     status: BankAccountStatus;
+    availableBalance?: number;
+    transitBalance?: number;
     createdAt: string;
     updatedAt: string;
     recentEvents?: BankAccountEvent[];

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMyWallet, type WalletSummary, type WalletTransaction, type WalletTransactionType } from "@/lib/api/wallet";
 import { customerApi } from "@/lib/api/customer";
-import { loadPaystackInline } from "@/lib/paystack";
 import { toast } from "sonner";
 import {
     Wallet,
@@ -21,6 +20,9 @@ import {
     ChevronLeft,
     ChevronRight,
     Calendar,
+    Copy,
+    Check,
+    Building,
 } from "lucide-react";
 
 function formatMoney(amount: string | number, currency = "NGN") {
@@ -62,9 +64,18 @@ export function WalletPanel() {
     const [currentPage, setCurrentPage] = useState(1);
     const limit = 10;
 
-    // Paystack Instant Deposit state
-    const [paystackAmount, setPaystackAmount] = useState("100000");
-    const [submittingPaystack, setSubmittingPaystack] = useState(false);
+    // MoneyPings Instant Bank Rail state
+    const [depositAmount, setDepositAmount] = useState("100000");
+    const [submittingMoneyPings, setSubmittingMoneyPings] = useState(false);
+    const [moneyPingsAccount, setMoneyPingsAccount] = useState<{
+        accountNumber: string;
+        accountName: string;
+        bankName: string;
+        amount: number;
+        expiresAt: string;
+        reference: string;
+    } | null>(null);
+    const [copied, setCopied] = useState(false);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -105,52 +116,31 @@ export function WalletPanel() {
 
     const hasActiveFilters = selectedType !== "ALL" || search || startDate || endDate || minAmount || maxAmount;
 
-    const handlePaystackDeposit = async () => {
-        const parsed = Number(paystackAmount);
+    const handleMoneyPingsDeposit = async () => {
+        const parsed = Number(depositAmount);
         if (!parsed || parsed < 100) {
             toast.error("Enter a valid deposit amount (min ₦100).");
             return;
         }
 
-        setSubmittingPaystack(true);
+        setSubmittingMoneyPings(true);
         try {
-            const init = await customerApi.initializePaystackDeposit(parsed);
-            const PaystackPop = await loadPaystackInline();
-            if (!PaystackPop) {
-                toast.error("Could not load Paystack SDK. Please check your connection.");
-                setSubmittingPaystack(false);
-                return;
-            }
-
-            const handler = PaystackPop.setup({
-                key: init.publicKey,
-                email: init.email,
-                amount: Math.round(init.amount * 100),
-                ref: init.reference,
-                currency: "NGN",
-                callback: async (response: any) => {
-                    toast.loading("Verifying Paystack deposit...");
-                    try {
-                        await customerApi.verifyPaystackDeposit(response.reference, init.amount);
-                        toast.dismiss();
-                        toast.success(`Successfully deposited ₦${init.amount.toLocaleString()} into your ledger!`);
-                        await load();
-                    } catch {
-                        toast.dismiss();
-                        toast.error("Deposit confirmation failed. Please refresh balance.");
-                    } finally {
-                        setSubmittingPaystack(false);
-                    }
-                },
-                onClose: () => {
-                    setSubmittingPaystack(false);
-                },
-            });
-            handler.openIframe();
+            const data = await customerApi.initMoneyPingsDeposit(parsed);
+            setMoneyPingsAccount(data);
+            toast.success("Dedicated MoneyPings deposit account generated!");
         } catch (err: any) {
-            toast.error(err?.response?.data?.error || "Failed to initialize Paystack deposit");
-            setSubmittingPaystack(false);
+            console.error("MoneyPings deposit initialization error:", err);
+            toast.error(err?.response?.data?.error || err?.response?.data?.details || "Failed to generate MoneyPings deposit account");
+        } finally {
+            setSubmittingMoneyPings(false);
         }
+    };
+
+    const handleCopyAccount = (acc: string) => {
+        navigator.clipboard.writeText(acc);
+        setCopied(true);
+        toast.success("Account number copied to clipboard!");
+        setTimeout(() => setCopied(false), 2000);
     };
 
     const currency = summary?.currency ?? "NGN";
@@ -206,91 +196,201 @@ export function WalletPanel() {
                 <div className="rounded-xl bg-red-50 p-4 text-sm text-red-700 border border-red-200">{error}</div>
             )}
 
-            {/* Fund wallet via Paystack */}
+            {/* Fund wallet via MoneyPings */}
             <div className="rounded-2xl border bg-white p-6 shadow-sm border-slate-200 space-y-5">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b pb-4 border-slate-100">
                     <div>
-                        <h3 className="text-lg font-bold text-slate-900">Fund Your Ledger via Paystack</h3>
+                        <h3 className="text-lg font-bold text-slate-900">Fund Your Ledger via MoneyPings</h3>
                         <p className="text-xs text-slate-500 mt-0.5">
-                            Instant automated verification — funds reflect in your spendable ledger balance immediately.
+                            Automated bank transfer rails — transfer directly to your dedicated virtual account to credit your ledger instantly.
                         </p>
                     </div>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        Instant 24/7 Deposit
+                        MoneyPings Direct Rail
                     </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
-                            Deposit Amount ({currency})
-                        </label>
-                        <div className="relative">
-                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
-                                ₦
-                            </span>
-                            <input
-                                type="number"
-                                min="100"
-                                step="100"
-                                value={paystackAmount}
-                                onChange={(e) => setPaystackAmount(e.target.value)}
-                                className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-slate-200 font-bold text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C9A227]/40 focus:border-[#C9A227]"
-                                placeholder="50,000.00"
-                            />
+                {moneyPingsAccount ? (
+                    /* Active Virtual Account Display */
+                    <div className="p-6 rounded-2xl bg-gradient-to-br from-amber-50/70 via-slate-50 to-amber-50/40 border border-amber-200/80 space-y-5 animate-fade-in">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3 border-amber-200/60">
+                            <div>
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
+                                    Dedicated Deposit Account Ready
+                                </span>
+                                <h4 className="text-sm font-bold text-slate-900">
+                                    Transfer exact funds below via your mobile banking app
+                                </h4>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-900 bg-amber-100/80 px-3 py-1 rounded-lg">
+                                <Clock className="w-3.5 h-3.5 text-amber-700" />
+                                <span>Expires in ~5 hours</span>
+                            </div>
                         </div>
 
-                        {/* Quick Presets */}
-                        <div className="space-y-1">
-                            <span className="text-[11px] font-semibold text-slate-500">Quick Select:</span>
-                            <div className="grid grid-cols-3 gap-2">
-                                {PRESET_AMOUNTS.map((preset) => (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Account Details Box */}
+                            <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                                <div>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                        Beneficiary Bank
+                                    </span>
+                                    <p className="text-sm font-bold text-slate-900 flex items-center gap-1.5 mt-0.5">
+                                        <Building className="w-4 h-4 text-[#C9A227]" />
+                                        {moneyPingsAccount.bankName || "Providus Bank / Wema Bank"}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                        Virtual Account Number
+                                    </span>
+                                    <div className="flex items-center justify-between mt-0.5 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                                        <span className="font-mono text-lg font-extrabold text-slate-900 tracking-wider">
+                                            {moneyPingsAccount.accountNumber}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleCopyAccount(moneyPingsAccount.accountNumber)}
+                                            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold text-[#C9A227] hover:bg-amber-50 rounded-md border border-[#C9A227]/40 transition-colors"
+                                        >
+                                            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                                            {copied ? "Copied" : "Copy"}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                        Account Name
+                                    </span>
+                                    <p className="text-xs font-bold text-slate-800 mt-0.5">
+                                        {moneyPingsAccount.accountName || "PapaEgo / Customer Wallet"}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Payment Summary Box */}
+                            <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                                <div className="space-y-2">
+                                    <div>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                            Exact Amount to Transfer
+                                        </span>
+                                        <p className="text-2xl font-black text-slate-900 font-mono mt-0.5 text-emerald-600">
+                                            ₦{Number(moneyPingsAccount.amount || depositAmount).toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-100 space-y-1">
+                                        <p className="flex items-center gap-1 text-slate-700 font-medium">
+                                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                            Automated HMAC-SHA256 Webhook Verification
+                                        </p>
+                                        <p>
+                                            Once your bank completes the transfer, MoneyPings notifies PapaEgo and your ledger credits automatically within seconds.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2 pt-2">
                                     <button
-                                        key={preset}
                                         type="button"
-                                        onClick={() => setPaystackAmount(preset.toString())}
-                                        className={`py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all ${
-                                            paystackAmount === preset.toString()
-                                                ? "bg-amber-50 border-[#C9A227] text-[#C9A227]"
-                                                : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
-                                        }`}
+                                        onClick={() => setMoneyPingsAccount(null)}
+                                        className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all"
                                     >
-                                        ₦{preset.toLocaleString()}
+                                        New Amount
                                     </button>
-                                ))}
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            toast.loading("Checking for credited funds...");
+                                            await load();
+                                            toast.dismiss();
+                                            toast.success("Ledger refreshed!");
+                                        }}
+                                        className="flex-[2] py-2.5 rounded-xl bg-[#C9A227] hover:bg-[#b08e20] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                                    >
+                                        <RefreshCw className="w-3.5 h-3.5" />
+                                        I Have Transferred / Refresh
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-
-                    <div className="flex flex-col justify-between bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
-                        <div className="space-y-2">
-                            <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                                <CreditCard className="w-4 h-4 text-[#C9A227]" />
-                                Supported Payment Channels
+                ) : (
+                    /* Amount Selection & Generation View */
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                                Deposit Amount ({currency})
+                            </label>
+                            <div className="relative">
+                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">
+                                    ₦
+                                </span>
+                                <input
+                                    type="number"
+                                    min="100"
+                                    step="100"
+                                    value={depositAmount}
+                                    onChange={(e) => setDepositAmount(e.target.value)}
+                                    className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-slate-200 font-bold text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C9A227]/40 focus:border-[#C9A227]"
+                                    placeholder="50,000.00"
+                                />
                             </div>
-                            <p className="text-xs text-slate-600">
-                                Pay with Mastercards, Visa, Verve, instant bank transfers, or USSD codes directly via Paystack's secure inline portal.
-                            </p>
+
+                            {/* Quick Presets */}
+                            <div className="space-y-1">
+                                <span className="text-[11px] font-semibold text-slate-500">Quick Select:</span>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {PRESET_AMOUNTS.map((preset) => (
+                                        <button
+                                            key={preset}
+                                            type="button"
+                                            onClick={() => setDepositAmount(preset.toString())}
+                                            className={`py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all ${
+                                                depositAmount === preset.toString()
+                                                    ? "bg-amber-50 border-[#C9A227] text-[#C9A227]"
+                                                    : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                                            }`}
+                                        >
+                                            ₦{preset.toLocaleString()}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
 
-                        <button
-                            type="button"
-                            disabled={submittingPaystack || !paystackAmount || parseFloat(paystackAmount) <= 0}
-                            onClick={handlePaystackDeposit}
-                            className="w-full py-3 rounded-xl bg-[#C9A227] hover:bg-[#b08e20] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50"
-                        >
-                            {submittingPaystack ? (
-                                <RefreshCw className="w-4 h-4 animate-spin" />
-                            ) : (
-                                <CreditCard className="w-4 h-4" />
-                            )}
-                            {submittingPaystack
-                                ? "Connecting to Paystack..."
-                                : `Deposit ₦${paystackAmount ? Number(paystackAmount).toLocaleString() : "0"} via Paystack`}
-                        </button>
+                        <div className="flex flex-col justify-between bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                            <div className="space-y-2">
+                                <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <Building className="w-4 h-4 text-[#C9A227]" />
+                                    Dedicated MoneyPings Bank Transfer Rail
+                                </div>
+                                <p className="text-xs text-slate-600">
+                                    Generates a unique Nigerian virtual bank account number dedicated to this deposit. No card fees, no transaction limits.
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                disabled={submittingMoneyPings || !depositAmount || parseFloat(depositAmount) <= 0}
+                                onClick={handleMoneyPingsDeposit}
+                                className="w-full py-3 rounded-xl bg-[#C9A227] hover:bg-[#b08e20] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                            >
+                                {submittingMoneyPings ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <Building className="w-4 h-4" />
+                                )}
+                                {submittingMoneyPings
+                                    ? "Generating Dedicated Account..."
+                                    : `Generate Deposit Account (₦${depositAmount ? Number(depositAmount).toLocaleString() : "0"})`}
+                            </button>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* ── Wallet Ledger Transactions with Filters & Pagination (Findings 7 & 8) ── */}

@@ -31,7 +31,7 @@ export default function AdminTransferReviewPage({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [selectedRoute, setSelectedRoute] = useState<"USDT" | "SWIFT">("USDT");
+  const [selectedRoute, setSelectedRoute] = useState<"FV_BANK" | "USDT" | "SWIFT">("FV_BANK");
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
   const [showChat, setShowChat] = useState(false);
 
@@ -62,7 +62,13 @@ export default function AdminTransferReviewPage({
       return transactionsApi.approveNegotiation ? transactionsApi.approveNegotiation(id) : null;
     },
     onSuccess: () => {
-      toast.success("Transfer approved and routing initiated!");
+      const routeLabel =
+        selectedRoute === "FV_BANK"
+          ? "FV Bank GMA Corporate Rail (USD Transit → Supplier Wire)"
+          : selectedRoute === "USDT"
+          ? "NGN-to-USDT Rail"
+          : "Standard Bank Wire (SWIFT)";
+      toast.success(`Transfer approved! Routed via ${routeLabel}`);
       queryClient.invalidateQueries({ queryKey: ["admin-transaction", id] });
     },
     onError: () => toast.error("Failed to approve transfer"),
@@ -191,6 +197,55 @@ export default function AdminTransferReviewPage({
             </div>
           </div>
 
+          {/* Supplier Disbursement Destination Card */}
+          <div className="bg-white rounded-2xl border p-6 md:p-8 shadow-sm space-y-4" style={{ borderColor: "#E1E3E6" }}>
+            <div className="flex items-center justify-between border-b pb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🏢</span>
+                <h2 className="text-base md:text-lg font-bold text-slate-900">Supplier Wire Destination</h2>
+              </div>
+              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold">
+                PAYOUT READY
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+                <span className="text-slate-400 font-medium">Beneficiary / Supplier Name</span>
+                <p className="font-bold text-slate-900 text-sm mt-0.5">
+                  {rawTransaction.recipientName || rawTransaction.supplierBusinessName || "Guangzhou Industrial Trading Ltd."}
+                </p>
+                <span className="text-[11px] text-slate-500 mt-1 block">
+                  {rawTransaction.destinationCountry || "China (CN)"}
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+                <span className="text-slate-400 font-medium">Beneficiary Bank & SWIFT / BIC</span>
+                <p className="font-bold text-slate-900 text-sm mt-0.5">
+                  {rawTransaction.supplierBankName || "Bank of China / Standard Chartered"}
+                </p>
+                <span className="font-mono text-[11px] text-slate-600 mt-1 block">
+                  SWIFT: {rawTransaction.swiftBic || "BKCHCNBJXXX"}
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+                <span className="text-slate-400 font-medium">Supplier Account Number / IBAN</span>
+                <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+                  {rawTransaction.supplierAccountNumber || "9823 4810 2938 1029"}
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+                <span className="text-slate-400 font-medium">Payout Amount (Foreign Currency)</span>
+                <p className="font-bold text-emerald-700 text-sm mt-0.5">
+                  {rawTransaction.receiveCurrency || "USD"} {Number(rawTransaction.payoutAmount || rawTransaction.amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Route Intelligence Card */}
           <div className="bg-white rounded-2xl border p-6 md:p-8 shadow-sm space-y-5" style={{ borderColor: "#E1E3E6" }}>
             <div className="flex items-center justify-between border-b pb-4">
@@ -203,7 +258,55 @@ export default function AdminTransferReviewPage({
               </span>
             </div>
 
-            {/* Route Option 1: NGN-to-USDT Rail (Recommended) */}
+            {/* Route Option 1: FV Bank GMA Corporate Rail (Recommended) */}
+            <div
+              onClick={() => setSelectedRoute("FV_BANK")}
+              className={`rounded-2xl border-2 p-5 cursor-pointer transition-all ${
+                selectedRoute === "FV_BANK"
+                  ? "border-[#012333] bg-amber-50/20 shadow-sm"
+                  : "border-slate-200 hover:border-slate-300"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold text-lg">
+                    🏛️
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-slate-900">FV Bank GMA Corporate Rail</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#012333] text-white">
+                        RECOMMENDED
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Customer USD Transit Position → Overseas Supplier SWIFT/Wire
+                    </p>
+                  </div>
+                </div>
+
+                <span className="text-xs font-bold text-[#C9A227]">
+                  {selectedRoute === "FV_BANK" ? "SELECTED" : "SELECT"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-100 text-xs">
+                <div>
+                  <span className="text-slate-400">Est. Speed</span>
+                  <p className="font-bold text-slate-900 mt-0.5">Same-Day / Direct</p>
+                </div>
+                <div>
+                  <span className="text-slate-400">Routing Cost</span>
+                  <p className="font-bold text-slate-900 mt-0.5">$15.00 Flat</p>
+                </div>
+                <div>
+                  <span className="text-slate-400">Risk Score</span>
+                  <p className="font-bold text-emerald-600 mt-0.5">Low (0.8) Cleared</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Route Option 2: NGN-to-USDT Rail */}
             <div
               onClick={() => setSelectedRoute("USDT")}
               className={`rounded-2xl border-2 p-5 cursor-pointer transition-all ${
@@ -220,13 +323,14 @@ export default function AdminTransferReviewPage({
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm text-slate-900">NGN-to-USDT Rail</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-900 text-white">
-                        RECOMMENDED
-                      </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-0.5">Binance P2P → Kraken OTC</p>
                   </div>
                 </div>
+
+                <span className="text-xs font-bold text-slate-500 hover:text-slate-900">
+                  {selectedRoute === "USDT" ? "SELECTED" : "SELECT"}
+                </span>
               </div>
 
               <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-100 text-xs">
@@ -245,7 +349,7 @@ export default function AdminTransferReviewPage({
               </div>
             </div>
 
-            {/* Route Option 2: Standard Bank Wire */}
+            {/* Route Option 3: Standard Bank Wire */}
             <div
               onClick={() => setSelectedRoute("SWIFT")}
               className={`rounded-2xl border-2 p-5 cursor-pointer transition-all ${

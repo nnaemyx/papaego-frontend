@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,11 +18,14 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { transactionsApi, type AdminTransaction } from "@/lib/api/transactions";
+import { NewPaymentModal } from "@/components/transactions/NewPaymentModal";
 
 const PAGE_SIZE = 10;
 
 export default function AdminPaymentObligationsPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [showNewPaymentModal, setShowNewPaymentModal] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [currencyFilter, setCurrencyFilter] = useState("ALL");
@@ -130,7 +133,7 @@ export default function AdminPaymentObligationsPage() {
           </div>
 
           <Button
-            onClick={() => router.push("/admin/transactions")}
+            onClick={() => setShowNewPaymentModal(true)}
             className="bg-[#C9A227] hover:bg-[#b08e20] text-white text-xs font-bold px-4 py-2 h-9 rounded-lg shadow-sm gap-1.5"
           >
             <Plus className="w-4 h-4" />
@@ -246,6 +249,14 @@ export default function AdminPaymentObligationsPage() {
           </div>
         </div>
       </div>
+
+      <NewPaymentModal
+        isOpen={showNewPaymentModal}
+        onClose={() => setShowNewPaymentModal(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["admin-transactions"] });
+        }}
+      />
     </div>
   );
 }

@@ -11,7 +11,6 @@ export const BankingDetailsPage: React.FC = () => {
     const [syncing, setSyncing] = useState(false);
     const [profile, setProfile] = useState<BankingProfile | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [copiedField, setCopiedField] = useState<string | null>(null);
 
     useEffect(() => {
         loadProfile();
@@ -46,12 +45,6 @@ export const BankingDetailsPage: React.FC = () => {
         } finally {
             setSyncing(false);
         }
-    };
-
-    const copyToClipboard = (text: string, fieldName: string) => {
-        navigator.clipboard.writeText(text);
-        setCopiedField(fieldName);
-        setTimeout(() => setCopiedField(null), 2500);
     };
 
     if (loading) {
@@ -106,8 +99,13 @@ export const BankingDetailsPage: React.FC = () => {
                 <div className="bg-[#012333] text-white p-8 relative">
                     <div className="flex justify-between items-start">
                         <div>
-                            <span className="text-xs uppercase tracking-widest text-[#C9A227] font-semibold">Dedicated U.S. Banking</span>
-                            <h2 className="text-2xl font-bold mt-1">{profile.bankName}</h2>
+                            <span className="text-xs uppercase tracking-widest text-[#C9A227] font-semibold">
+                                Corporate Transit Rail
+                            </span>
+                            <h2 className="text-2xl font-bold mt-1">Managed USD Position</h2>
+                            <p className="text-xs text-white/60 mt-1">
+                                Dedicated settlement position provisioned via {profile.bankName}
+                            </p>
                         </div>
                         <span className="px-3 py-1 bg-[#FFF7E6] text-[#012333] text-xs font-extrabold rounded-md">
                             {profile.currency}
@@ -115,67 +113,82 @@ export const BankingDetailsPage: React.FC = () => {
                     </div>
 
                     <div className="mt-8 space-y-1">
-                        <span className="text-xs text-[#6B7078] uppercase tracking-wider block">Account Holder</span>
+                        <span className="text-xs text-[#6B7078] uppercase tracking-wider block">Registered Account Holder</span>
                         <p className="text-lg font-semibold text-white">{profile.accountHolder}</p>
                     </div>
                 </div>
 
-                {/* Details Grid */}
-                <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6 bg-white">
-                    {/* Account Number Field */}
-                    <div className="p-5 rounded-xl border border-[#E1E3E6] bg-[#F7F8F9] flex flex-col justify-between">
-                        <div>
-                            <span className="text-xs font-bold text-[#6B7078] uppercase tracking-wider block mb-1">
-                                Account Number
-                            </span>
-                            <p className="text-xl font-mono font-bold text-[#012333]">
-                                {profile.accountNumber}
+                {/* Security & Architecture Notice */}
+                <div className="p-6 bg-amber-50/70 border-b border-amber-200/60 flex items-start gap-3.5">
+                    <div className="p-2 rounded-lg bg-amber-100 text-amber-700 shrink-0 mt-0.5">
+                        <span className="text-base">🛡️</span>
+                    </div>
+                    <div>
+                        <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider">
+                            Managed Settlement Rail
+                        </h4>
+                        <p className="text-xs text-amber-800/90 mt-1 leading-relaxed">
+                            This dedicated USD position is an internal managed transit rail operated by PapaEgo Treasury.
+                            When you execute cross-border trades, funds are transferred directly from PapaEgo Treasury to fund this position for seamless supplier disbursement. Direct public banking credentials remain restricted for your security.
+                        </p>
+                    </div>
+                </div>
+
+                {/* Transit Rail Status Grid */}
+                <div className="p-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 bg-white">
+                    {/* Transit Balance */}
+                    <div className="p-5 rounded-xl border border-[#E1E3E6] bg-[#F7F8F9]">
+                        <span className="text-xs font-bold text-[#6B7078] uppercase tracking-wider block mb-1">
+                            Transit Position Balance
+                        </span>
+                        <p className="text-xl font-mono font-extrabold text-[#012333] mt-2">
+                            ${Number(profile.availableBalance ?? profile.transitBalance ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                        <span className="text-[10px] text-emerald-600 font-bold block mt-1">
+                            Settlement & Wire Ready
+                        </span>
+                    </div>
+
+                    {/* Rail Status */}
+                    <div className="p-5 rounded-xl border border-[#E1E3E6] bg-[#F7F8F9]">
+                        <span className="text-xs font-bold text-[#6B7078] uppercase tracking-wider block mb-1">
+                            Rail Status
+                        </span>
+                        <div className="flex items-center gap-2 mt-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <p className="text-sm font-bold text-emerald-700">
+                                Active & Settlement Ready
                             </p>
                         </div>
-                        <button
-                            onClick={() => copyToClipboard(profile.accountNumber, "accountNumber")}
-                            className="mt-4 w-full py-2 bg-white border border-[#E1E3E6] rounded-lg text-xs font-bold text-[#012333] hover:border-[#C9A227] transition-all flex items-center justify-center gap-1.5"
-                        >
-                            {copiedField === "accountNumber" ? (
-                                <span className="text-emerald-600">✓ Copied!</span>
-                            ) : (
-                                <span>📋 Copy Account Number</span>
-                            )}
-                        </button>
+                        <span className="text-[10px] text-slate-400 block mt-1">
+                            Managed Treasury Rail
+                        </span>
                     </div>
 
-                    {/* Routing Number Field */}
-                    <div className="p-5 rounded-xl border border-[#E1E3E6] bg-[#F7F8F9] flex flex-col justify-between">
-                        <div>
-                            <span className="text-xs font-bold text-[#6B7078] uppercase tracking-wider block mb-1">
-                                Routing Number (ABA / ACH)
-                            </span>
-                            <p className="text-xl font-mono font-bold text-[#012333]">
-                                {profile.routingNumber}
-                            </p>
-                        </div>
-                        <button
-                            onClick={() => copyToClipboard(profile.routingNumber, "routingNumber")}
-                            className="mt-4 w-full py-2 bg-white border border-[#E1E3E6] rounded-lg text-xs font-bold text-[#012333] hover:border-[#C9A227] transition-all flex items-center justify-center gap-1.5"
-                        >
-                            {copiedField === "routingNumber" ? (
-                                <span className="text-emerald-600">✓ Copied!</span>
-                            ) : (
-                                <span>📋 Copy Routing Number</span>
-                            )}
-                        </button>
+                    {/* Masked Position Reference */}
+                    <div className="p-5 rounded-xl border border-[#E1E3E6] bg-[#F7F8F9]">
+                        <span className="text-xs font-bold text-[#6B7078] uppercase tracking-wider block mb-1">
+                            Transit Reference
+                        </span>
+                        <p className="text-base font-mono font-bold text-[#012333] mt-2">
+                            {profile.maskedAccountNumber || (profile.accountNumber ? `•••• ${profile.accountNumber.slice(-4)}` : "•••• 0001")}
+                        </p>
+                        <span className="text-[10px] text-slate-400 block mt-1">
+                            Sub-account ID
+                        </span>
                     </div>
 
-                    {/* SWIFT / BIC */}
-                    <div className="p-4 rounded-xl border border-[#E1E3E6] bg-white">
-                        <span className="text-xs font-semibold text-[#6B7078] block">SWIFT / BIC Code</span>
-                        <p className="text-sm font-mono font-semibold text-[#012333] mt-1">{profile.swiftBic}</p>
-                    </div>
-
-                    {/* Country */}
-                    <div className="p-4 rounded-xl border border-[#E1E3E6] bg-white">
-                        <span className="text-xs font-semibold text-[#6B7078] block">Bank Jurisdiction</span>
-                        <p className="text-sm font-semibold text-[#012333] mt-1">{profile.country}</p>
+                    {/* Banking Partner */}
+                    <div className="p-5 rounded-xl border border-[#E1E3E6] bg-[#F7F8F9]">
+                        <span className="text-xs font-bold text-[#6B7078] uppercase tracking-wider block mb-1">
+                            Settlement Partner
+                        </span>
+                        <p className="text-base font-bold text-[#012333] mt-2">
+                            {profile.bankName || "FV Bank"}
+                        </p>
+                        <span className="text-[10px] text-[#C9A227] font-bold block mt-1">
+                            Corporate USD Transit
+                        </span>
                     </div>
                 </div>
             </div>

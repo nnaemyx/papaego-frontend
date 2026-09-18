@@ -4,7 +4,7 @@ import { use, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminTradeRequestsApi } from "@/lib/api/admin-trade-requests";
-import { adminRatesApi } from "@/lib/api/fx-rates";
+import { exchangeRatesApi } from "@/lib/api/exchange-rates";
 import { adminCustomersApi } from "@/lib/api/customers";
 import { transactionsApi } from "@/lib/api/transactions";
 import { Button } from "@/components/ui/button";
@@ -62,12 +62,6 @@ export default function AdminTradeRequestReviewPage({
     refetchInterval: 10_000,
   });
 
-  // Fetch live market FX rates
-  const { data: adminRates = [] } = useQuery({
-    queryKey: ["admin-rates"],
-    queryFn: () => adminRatesApi.getRates(),
-  });
-
   // Fetch customer details for context (balance, AML, etc.)
   const customerId = request?.customer?.id;
   const { data: customerData } = useQuery({
@@ -88,30 +82,39 @@ export default function AdminTradeRequestReviewPage({
   const handleFetchLiveRate = async () => {
     if (!request) return;
     try {
-      const rates = await adminRatesApi.getRates();
-      const pairName =
+      const base =
         request.sendCurrency === "NGN"
-          ? `${request.receiveCurrency}/NGN`
-          : `${request.sendCurrency}/NGN`;
+          ? request.receiveCurrency
+          : request.sendCurrency;
+      const quote = "NGN";
+      const pairName = `${base}/${quote}`;
 
-      const activeRates =
-        rates.length > 0
-          ? rates
-          : [
-              { pair: "USD/NGN", buy: 1580, sell: 1600 },
-              { pair: "GBP/NGN", buy: 1990, sell: 2020 },
-              { pair: "EUR/NGN", buy: 1720, sell: 1745 },
-              { pair: "CAD/NGN", buy: 1150, sell: 1170 },
-              { pair: "AED/NGN", buy: 430, sell: 445 },
-            ];
+      let rateVal: number | null = null;
+      try {
+        const res = await exchangeRatesApi.getCustomerRate(base, quote);
+        if ("rate" in res && res.rate?.customerRate) {
+          rateVal = res.rate.customerRate;
+        }
+      } catch {
+        // Fallback if not configured in DB yet
+      }
 
-      const matchingRate = activeRates.find((r: any) => r.pair === pairName);
-      if (!matchingRate) {
+      if (!rateVal) {
+        const fallbacks: Record<string, number> = {
+          "USD/NGN": 1600,
+          "GBP/NGN": 2020,
+          "EUR/NGN": 1745,
+          "CAD/NGN": 1170,
+          "AED/NGN": 445,
+        };
+        rateVal = fallbacks[pairName] ?? null;
+      }
+
+      if (!rateVal) {
         toast.error(`Live rate for ${pairName} not found`);
         return;
       }
 
-      const rateVal = request.sendCurrency === "NGN" ? matchingRate.sell : matchingRate.buy;
       setAdminFxRate(String(rateVal));
 
       const a = parseFloat(String(request.amount));
