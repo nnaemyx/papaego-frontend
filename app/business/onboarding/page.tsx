@@ -61,7 +61,7 @@ export default function OnboardingPage() {
     const handleFinalSubmit = () => {
         markStepComplete("review");
         toast.success("Onboarding complete!", {
-            description: "Your KYC and KYB applications have been submitted to FV Bank. We'll notify you as verification progresses.",
+            description: "Your KYC and KYB applications have been submitted for verification. We'll notify you as verification progresses.",
             duration: 6000
         });
         router.push("/customer/dashboard");

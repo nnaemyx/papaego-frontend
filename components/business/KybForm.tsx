@@ -98,8 +98,8 @@ export default function KybForm({ onNext, onBack }: Props) {
                     <h2 className="text-base font-bold" style={{ color: "#012333" }}>Company Information</h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="md:col-span-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                    <div className="sm:col-span-2">
                         <label className="form-label">Company Name (as registered) *</label>
                         <input {...register("companyName")} className="form-input" placeholder="Acme Holdings Limited" />
                         {errors.companyName && <FieldError msg={errors.companyName.message!} />}
@@ -114,12 +114,12 @@ export default function KybForm({ onNext, onBack }: Props) {
                         <input {...register("countryOfIncorporation")} className="form-input" placeholder="Nigeria" />
                         {errors.countryOfIncorporation && <FieldError msg={errors.countryOfIncorporation.message!} />}
                     </div>
-                    <div className="md:col-span-2">
+                    <div className="sm:col-span-2">
                         <label className="form-label">Registered Business Address *</label>
                         <input {...register("businessAddress")} className="form-input" placeholder="12 Business Avenue, Lagos, Nigeria" />
                         {errors.businessAddress && <FieldError msg={errors.businessAddress.message!} />}
                     </div>
-                    <div>
+                    <div className="sm:col-span-2">
                         <label className="form-label">Tax Identification Number</label>
                         <input {...register("taxIdentification")} className="form-input" placeholder="e.g. 0123456789" />
                     </div>
@@ -131,7 +131,7 @@ export default function KybForm({ onNext, onBack }: Props) {
                 <label className="form-label mb-2 block">Certificate of Incorporation</label>
                 <div
                     onClick={() => document.getElementById("inc-cert-upload")?.click()}
-                    className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+                    className={`border-2 border-dashed rounded-xl p-4 sm:p-6 text-center cursor-pointer transition-all ${
                         incCertFile ? "border-emerald-500 bg-emerald-50 text-emerald-800" : "border-gray-200 bg-gray-50 hover:border-[#C9A227]"
                     }`}
                 >
@@ -139,13 +139,13 @@ export default function KybForm({ onNext, onBack }: Props) {
                         onChange={e => { const f = e.target.files?.[0]; if (f) setIncCertFile(f); }} />
                     {incCertFile ? (
                         <div className="flex items-center justify-center gap-2 text-emerald-700">
-                            <CheckCircle2 className="w-5 h-5" />
-                            <span className="text-sm font-semibold">{incCertFile.name}</span>
+                            <CheckCircle2 className="w-5 h-5 shrink-0" />
+                            <span className="text-xs sm:text-sm font-semibold truncate max-w-full px-2">{incCertFile.name}</span>
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center gap-2 text-[#6B7078]">
-                            <Upload className="w-6 h-6 text-gray-400" />
-                            <span className="text-sm font-medium">Upload Certificate of Incorporation (PDF, JPG, PNG)</span>
+                        <div className="flex flex-col items-center gap-1.5 sm:gap-2 text-[#6B7078]">
+                            <Upload className="w-5 sm:w-6 h-5 sm:h-6 text-gray-400" />
+                            <span className="text-xs sm:text-sm font-medium">Upload Certificate of Incorporation (PDF, JPG, PNG)</span>
                         </div>
                     )}
                 </div>
@@ -153,16 +153,16 @@ export default function KybForm({ onNext, onBack }: Props) {
 
             {/* Directors */}
             <section>
-                <div className="flex items-center justify-between mb-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                             style={{ backgroundColor: "#FFF7E6", border: "1px solid #F0CD00" }}>
                             <Users className="w-4 h-4 text-[#C9A227]" />
                         </div>
                         <h2 className="text-base font-bold" style={{ color: "#012333" }}>Directors</h2>
                     </div>
                     <button type="button" onClick={addDirector}
-                        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all"
+                        className="self-start sm:self-auto flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all"
                         style={{ backgroundColor: "#FFF7E6", borderColor: "#F0CD00", color: "#C9A227" }}>
                         <Plus className="w-3.5 h-3.5" />
                         Add Director
@@ -171,17 +171,17 @@ export default function KybForm({ onNext, onBack }: Props) {
 
                 <div className="space-y-4">
                     {directors.map((dir, i) => (
-                        <div key={i} className="bg-gray-50 border rounded-xl p-4" style={{ borderColor: "#E1E3E6" }}>
-                            <div className="flex items-center justify-between mb-4">
+                        <div key={i} className="bg-gray-50 border rounded-xl p-3.5 sm:p-4" style={{ borderColor: "#E1E3E6" }}>
+                            <div className="flex items-center justify-between mb-3 sm:mb-4">
                                 <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#6B7078" }}>Director {i + 1}</span>
                                 {directors.length > 1 && (
                                     <button type="button" onClick={() => removeDirector(i)}
-                                        className="text-red-500 hover:text-red-700 transition-colors">
+                                        className="text-red-500 hover:text-red-700 transition-colors p-1" aria-label="Remove director">
                                         <Trash2 className="w-4 h-4" />
                                     </button>
                                 )}
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
                                     <label className="form-label">Full Name *</label>
                                     <input value={dir.name} onChange={e => updateDirector(i, "name", e.target.value)}
@@ -210,13 +210,13 @@ export default function KybForm({ onNext, onBack }: Props) {
 
             {/* UBOs */}
             <section>
-                <div className="flex items-center justify-between mb-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
                     <div>
                         <h2 className="text-base font-bold" style={{ color: "#012333" }}>Ultimate Beneficial Owners (UBOs)</h2>
                         <p className="text-xs mt-0.5" style={{ color: "#6B7078" }}>Individuals owning 25% or more of the company</p>
                     </div>
                     <button type="button" onClick={addUBO}
-                        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all"
+                        className="self-start sm:self-auto flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all"
                         style={{ backgroundColor: "#FFF7E6", borderColor: "#F0CD00", color: "#C9A227" }}>
                         <Plus className="w-3.5 h-3.5" />
                         Add UBO
@@ -224,21 +224,21 @@ export default function KybForm({ onNext, onBack }: Props) {
                 </div>
 
                 {ubos.length === 0 ? (
-                    <div className="border border-dashed rounded-xl p-6 text-center text-sm"
+                    <div className="border border-dashed rounded-xl p-5 sm:p-6 text-center text-xs sm:text-sm"
                         style={{ borderColor: "#E1E3E6", color: "#6B7078" }}>
-                        No UBOs added. Click "Add UBO" if applicable.
+                        No UBOs added. Click &quot;Add UBO&quot; if applicable.
                     </div>
                 ) : (
                     <div className="space-y-4">
                         {ubos.map((ubo, i) => (
-                            <div key={i} className="bg-gray-50 border rounded-xl p-4" style={{ borderColor: "#E1E3E6" }}>
+                            <div key={i} className="bg-gray-50 border rounded-xl p-3.5 sm:p-4" style={{ borderColor: "#E1E3E6" }}>
                                 <div className="flex items-center justify-between mb-3">
                                     <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#6B7078" }}>UBO {i + 1}</span>
-                                    <button type="button" onClick={() => removeUBO(i)} className="text-red-500 hover:text-red-700">
+                                    <button type="button" onClick={() => removeUBO(i)} className="text-red-500 hover:text-red-700 p-1" aria-label="Remove UBO">
                                         <Trash2 className="w-4 h-4" />
                                     </button>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
                                         <label className="form-label">Full Name *</label>
                                         <input value={ubo.name} onChange={e => updateUBO(i, "name", e.target.value)}
@@ -257,14 +257,14 @@ export default function KybForm({ onNext, onBack }: Props) {
                 )}
             </section>
 
-            <div className="flex justify-between pt-4 border-t" style={{ borderColor: "#E1E3E6" }}>
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t" style={{ borderColor: "#E1E3E6" }}>
                 <button type="button" onClick={onBack}
-                    className="flex items-center gap-2 px-5 py-3 rounded-xl border border-[#E1E3E6] text-sm font-semibold text-[#6B7078] hover:bg-gray-50 transition-all">
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-[#E1E3E6] text-sm font-semibold text-[#6B7078] hover:bg-gray-50 transition-all">
                     <ChevronLeft className="w-4 h-4" />
                     Back
                 </button>
                 <button type="submit" disabled={isLoading}
-                    className="flex items-center gap-2 font-semibold px-8 py-3 rounded-xl text-white transition-all hover:opacity-95 disabled:opacity-60 shadow-sm"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 font-semibold px-8 py-3 rounded-xl text-white transition-all hover:opacity-95 disabled:opacity-60 shadow-sm"
                     style={{ backgroundColor: "#C9A227" }}>
                     {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                     {isLoading ? "Submitting KYB..." : "Submit KYB"}

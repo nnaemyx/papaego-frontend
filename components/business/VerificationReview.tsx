@@ -61,8 +61,8 @@ export default function VerificationReview({ onSubmit, onBack, isLoading }: Prop
                     <Shield className="w-7 h-7" />
                 </div>
                 <h2 className="text-xl font-bold" style={{ color: "#012333" }}>Ready to Submit?</h2>
-                <p className="text-sm mt-1 max-w-sm" style={{ color: "#6B7078" }}>
-                    Please review your information below. Once submitted, FV Bank will begin the compliance verification process.
+                <p className="text-xs sm:text-sm mt-1 max-w-sm" style={{ color: "#6B7078" }}>
+                    Please review your information below. Once submitted, your applications will begin the regulatory compliance verification process.
                 </p>
             </div>
 
@@ -71,55 +71,59 @@ export default function VerificationReview({ onSubmit, onBack, isLoading }: Prop
                 {steps.map((step) => {
                     const isComplete = completedSteps.includes(step.id as any);
                     return (
-                        <div key={step.id} className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
+                        <div key={step.id} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-xl border transition-all ${
                             isComplete
                                 ? "bg-emerald-50 border-emerald-200"
                                 : "bg-red-50 border-red-200"
                         }`}>
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                                isComplete ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
-                            }`}>
-                                {isComplete ? <CheckCircle2 className="w-4 h-4" /> : step.icon}
+                            <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                    isComplete ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                                }`}>
+                                    {isComplete ? <CheckCircle2 className="w-4 h-4" /> : step.icon}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className={`text-xs sm:text-sm font-semibold ${isComplete ? "text-emerald-900" : "text-red-900"}`}>
+                                        {step.label}
+                                    </p>
+                                    <p className={`text-[11px] sm:text-xs mt-0.5 truncate ${isComplete ? "text-emerald-700" : "text-red-700"}`}>
+                                        {step.summary}
+                                    </p>
+                                </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-semibold ${isComplete ? "text-emerald-900" : "text-red-900"}`}>
-                                    {step.label}
-                                </p>
-                                <p className={`text-xs mt-0.5 truncate ${isComplete ? "text-emerald-700" : "text-red-700"}`}>
-                                    {step.summary}
-                                </p>
+                            <div className="self-end sm:self-center shrink-0">
+                                <ComplianceStatusBadge
+                                    status={isComplete ? "SUBMITTED" : "DRAFT"}
+                                    size="sm"
+                                    showDot={false}
+                                />
                             </div>
-                            <ComplianceStatusBadge
-                                status={isComplete ? "SUBMITTED" : "DRAFT"}
-                                size="sm"
-                                showDot={false}
-                            />
                         </div>
                     );
                 })}
             </div>
 
             {/* Legal disclaimer */}
-            <div className="p-4 rounded-xl text-xs leading-relaxed"
+            <div className="p-3.5 sm:p-4 rounded-xl text-xs leading-relaxed"
                 style={{ backgroundColor: "#FFF7E6", border: "1px solid #F0CD00", color: "#856404" }}>
-                By submitting, you confirm that all information provided is accurate and complete. PapaEgo will transmit your KYC and KYB data to FV Bank for regulatory compliance verification. The final approval decision rests solely with FV Bank.
+                By submitting, you confirm that all information provided is accurate and complete. PapaEgo will transmit your KYC and KYB data to our regulatory compliance partners for identity and corporate verification.
             </div>
 
             {!allComplete && (
-                <div className="flex gap-2 p-4 rounded-xl text-sm bg-amber-50 border border-amber-200 text-amber-800">
-                    <span>⚠️</span>
+                <div className="flex gap-2 p-3.5 sm:p-4 rounded-xl text-xs sm:text-sm bg-amber-50 border border-amber-200 text-amber-800">
+                    <span className="shrink-0">⚠️</span>
                     <span>Please complete all steps before submitting. Some sections are still incomplete.</span>
                 </div>
             )}
 
-            <div className="flex justify-between pt-4 border-t" style={{ borderColor: "#E1E3E6" }}>
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t" style={{ borderColor: "#E1E3E6" }}>
                 <button onClick={onBack}
-                    className="flex items-center gap-2 px-5 py-3 rounded-xl border border-[#E1E3E6] text-sm font-semibold text-[#6B7078] hover:bg-gray-50 transition-all">
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-[#E1E3E6] text-sm font-semibold text-[#6B7078] hover:bg-gray-50 transition-all">
                     ← Back
                 </button>
                 {allComplete && (
                     <button onClick={onSubmit} disabled={isLoading}
-                        className="flex items-center gap-2 font-semibold px-8 py-3 rounded-xl text-white transition-all hover:opacity-95 disabled:opacity-60 shadow-md"
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 font-semibold px-8 py-3 rounded-xl text-white transition-all hover:opacity-95 disabled:opacity-60 shadow-md"
                         style={{ backgroundColor: "#10B981" }}>
                         {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                         {isLoading ? "Submitting..." : "Complete Submission"}

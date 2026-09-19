@@ -96,8 +96,8 @@ export default function OrgDetailsForm({ onNext }: Props) {
                     <h2 className="text-base font-bold" style={{ color: "#012333" }}>Business Information</h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="md:col-span-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                    <div className="sm:col-span-2">
                         <label className="form-label">Legal Business Name *</label>
                         <input {...register("businessName")} className="form-input" placeholder="Acme Holdings Ltd." />
                         {errors.businessName && <FieldError msg={errors.businessName.message!} />}
@@ -144,8 +144,8 @@ export default function OrgDetailsForm({ onNext }: Props) {
                     <h2 className="text-base font-bold" style={{ color: "#012333" }}>Business Address</h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="md:col-span-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                    <div className="sm:col-span-2">
                         <label className="form-label">Street Address *</label>
                         <input {...register("businessAddress")} className="form-input" placeholder="12 Business Avenue" />
                         {errors.businessAddress && <FieldError msg={errors.businessAddress.message!} />}
@@ -181,7 +181,7 @@ export default function OrgDetailsForm({ onNext }: Props) {
                     <h2 className="text-base font-bold" style={{ color: "#012333" }}>Contact Details</h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                     <div>
                         <label className="form-label">Business Email *</label>
                         <input {...register("contactEmail")} type="email" className="form-input" placeholder="info@company.com" />
@@ -192,7 +192,7 @@ export default function OrgDetailsForm({ onNext }: Props) {
                         <input {...register("contactPhone")} className="form-input" placeholder="+234 800 000 0000" />
                         {errors.contactPhone && <FieldError msg={errors.contactPhone.message!} />}
                     </div>
-                    <div className="md:col-span-2">
+                    <div className="sm:col-span-2">
                         <label className="form-label">Website</label>
                         <input {...register("website")} className="form-input" placeholder="https://yourcompany.com" />
                         {errors.website && <FieldError msg={errors.website.message!} />}
@@ -210,7 +210,7 @@ export default function OrgDetailsForm({ onNext }: Props) {
                     <h2 className="text-base font-bold" style={{ color: "#012333" }}>Authorized Representative</h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                     <div>
                         <label className="form-label">Full Name *</label>
                         <input {...register("authorizedRepName")} className="form-input" placeholder="John Doe" />
@@ -228,7 +228,7 @@ export default function OrgDetailsForm({ onNext }: Props) {
                 <button
                     type="submit"
                     disabled={isLoading}
-                    className="flex items-center gap-2 font-semibold px-8 py-3 rounded-xl text-white transition-all hover:opacity-95 disabled:opacity-60 shadow-sm"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 font-semibold px-8 py-3 rounded-xl text-white transition-all hover:opacity-95 disabled:opacity-60 shadow-sm"
                     style={{ backgroundColor: "#C9A227" }}
                 >
                     {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}

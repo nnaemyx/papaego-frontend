@@ -120,8 +120,8 @@ export default function KycForm({ onNext, onBack }: Props) {
                     <h2 className="text-base font-bold" style={{ color: "#012333" }}>Personal Information</h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="md:col-span-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                    <div className="sm:col-span-2">
                         <label className="form-label">Full Legal Name *</label>
                         <input {...register("fullName")} className="form-input" placeholder="As it appears on your ID" />
                         {errors.fullName && <FieldError msg={errors.fullName.message!} />}
@@ -136,7 +136,7 @@ export default function KycForm({ onNext, onBack }: Props) {
                         <input {...register("nationality")} className="form-input" placeholder="Nigerian" />
                         {errors.nationality && <FieldError msg={errors.nationality.message!} />}
                     </div>
-                    <div className="md:col-span-2">
+                    <div className="sm:col-span-2">
                         <label className="form-label">Residential Address *</label>
                         <input {...register("residentialAddress")} className="form-input" placeholder="Full residential address" />
                         {errors.residentialAddress && <FieldError msg={errors.residentialAddress.message!} />}
@@ -166,7 +166,7 @@ export default function KycForm({ onNext, onBack }: Props) {
 
                 <div className="mb-5">
                     <label className="form-label">ID Type *</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 mt-2">
                         {ID_TYPES.map(t => {
                             const isSelected = selectedIdType === t.value;
                             return (
@@ -174,7 +174,7 @@ export default function KycForm({ onNext, onBack }: Props) {
                                     key={t.value}
                                     type="button"
                                     onClick={() => setValue("idType", t.value as any, { shouldValidate: true, shouldDirty: true, shouldTouch: true })}
-                                    className={`p-3.5 rounded-xl border text-center text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                                    className={`p-3 sm:p-3.5 rounded-xl border text-left sm:text-center text-xs font-semibold transition-all flex items-center justify-start sm:justify-center gap-2 cursor-pointer ${
                                         isSelected
                                             ? "border-[#C9A227] bg-[#FFF7E6] text-[#C9A227] shadow-sm font-bold ring-2 ring-[#C9A227]/30"
                                             : "border-[#E1E3E6] bg-white text-[#6B7078] hover:border-slate-300 hover:bg-slate-50"
@@ -185,7 +185,7 @@ export default function KycForm({ onNext, onBack }: Props) {
                                     }`}>
                                         {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                                     </div>
-                                    <span className="truncate">{t.label}</span>
+                                    <span className="text-xs leading-tight">{t.label}</span>
                                 </button>
                             );
                         })}
@@ -195,7 +195,7 @@ export default function KycForm({ onNext, onBack }: Props) {
                 </div>
 
                 {/* File uploads */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
                     <FileDropZone
                         label="ID Document *"
                         hint="Upload front of your ID (JPG, PNG or PDF, max 10MB)"
@@ -214,11 +214,11 @@ export default function KycForm({ onNext, onBack }: Props) {
                 </div>
             </section>
 
-            <div className="flex justify-between pt-4 border-t" style={{ borderColor: "#E1E3E6" }}>
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t" style={{ borderColor: "#E1E3E6" }}>
                 <button
                     type="button"
                     onClick={onBack}
-                    className="flex items-center gap-2 px-5 py-3 rounded-xl border border-[#E1E3E6] text-sm font-semibold text-[#6B7078] hover:bg-gray-50 transition-all"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-[#E1E3E6] text-sm font-semibold text-[#6B7078] hover:bg-gray-50 transition-all"
                 >
                     <ChevronLeft className="w-4 h-4" />
                     Back
@@ -227,7 +227,7 @@ export default function KycForm({ onNext, onBack }: Props) {
                 <button
                     type="submit"
                     disabled={isLoading}
-                    className="flex items-center gap-2 font-semibold px-8 py-3 rounded-xl text-white transition-all hover:opacity-95 disabled:opacity-60 shadow-sm"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 font-semibold px-8 py-3 rounded-xl text-white transition-all hover:opacity-95 disabled:opacity-60 shadow-sm"
                     style={{ backgroundColor: "#C9A227" }}
                 >
                     {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -257,7 +257,7 @@ function FileDropZone({ label, hint, file, onFile, inputRef, optional }: {
                 onDrop={handleDrop}
                 onDragOver={e => e.preventDefault()}
                 onClick={() => inputRef.current?.click()}
-                className={`relative mt-2 border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+                className={`relative mt-2 border-2 border-dashed rounded-xl p-4 sm:p-6 text-center cursor-pointer transition-all ${
                     file
                         ? "border-emerald-500 bg-emerald-50"
                         : "border-gray-200 bg-gray-50 hover:border-[#C9A227] hover:bg-[#FFF7E6]/40"
@@ -272,15 +272,15 @@ function FileDropZone({ label, hint, file, onFile, inputRef, optional }: {
                 />
                 {file ? (
                     <div className="flex flex-col items-center gap-2">
-                        <CheckCircle2 className="w-7 h-7 text-emerald-600" />
-                        <p className="text-emerald-800 text-sm font-medium truncate max-w-full">{file.name}</p>
-                        <p className="text-emerald-600 text-xs">{(file.size / 1024).toFixed(0)} KB</p>
+                        <CheckCircle2 className="w-6 sm:w-7 h-6 sm:h-7 text-emerald-600" />
+                        <p className="text-emerald-800 text-xs sm:text-sm font-medium truncate max-w-full px-2">{file.name}</p>
+                        <p className="text-emerald-600 text-[11px] sm:text-xs">{(file.size / 1024).toFixed(0)} KB</p>
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center gap-2">
-                        <Upload className="w-7 h-7 text-gray-400" />
-                        <p className="text-[#012333] text-sm font-semibold">Click or drag to upload</p>
-                        <p className="text-xs" style={{ color: "#6B7078" }}>{hint}</p>
+                    <div className="flex flex-col items-center gap-1.5 sm:gap-2">
+                        <Upload className="w-6 sm:w-7 h-6 sm:h-7 text-gray-400" />
+                        <p className="text-[#012333] text-xs sm:text-sm font-semibold">Click or drag to upload</p>
+                        <p className="text-[11px] sm:text-xs px-2" style={{ color: "#6B7078" }}>{hint}</p>
                     </div>
                 )}
             </div>

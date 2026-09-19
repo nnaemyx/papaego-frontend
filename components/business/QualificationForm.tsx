@@ -153,7 +153,7 @@ export default function QualificationForm({ onNext, onBack }: Props) {
                             <h2 className="text-base font-bold" style={{ color: "#012333" }}>Transaction Profile</h2>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                             <div>
                                 <label className="form-label">Expected Monthly Volume (USD)</label>
                                 <input
@@ -181,18 +181,18 @@ export default function QualificationForm({ onNext, onBack }: Props) {
                     {/* Countries */}
                     <section>
                         <label className="form-label mb-2 block">Countries of Operation *</label>
-                        <p className="text-xs mb-4" style={{ color: "#6B7078" }}>Select all countries you send or receive payments to/from</p>
+                        <p className="text-xs mb-3" style={{ color: "#6B7078" }}>Select all countries you send or receive payments to/from</p>
                         <Controller
                             name="countriesOfOperation"
                             control={control}
                             render={({ field }) => (
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                     {COUNTRIES.map(country => (
                                         <button
                                             key={country}
                                             type="button"
                                             onClick={() => toggleCountry(country, field.onChange)}
-                                            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                                                 selectedCountries.includes(country)
                                                     ? "border-[#C9A227] bg-[#FFF7E6] text-[#C9A227]"
                                                     : "border-[#E1E3E6] bg-white text-[#6B7078] hover:border-gray-300"
@@ -228,11 +228,11 @@ export default function QualificationForm({ onNext, onBack }: Props) {
                 </>
             )}
 
-            <div className="flex justify-between pt-4 border-t" style={{ borderColor: "#E1E3E6" }}>
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t" style={{ borderColor: "#E1E3E6" }}>
                 <button
                     type="button"
                     onClick={onBack}
-                    className="flex items-center gap-2 px-5 py-3 rounded-xl border border-[#E1E3E6] text-sm font-semibold text-[#6B7078] hover:bg-gray-50 transition-all"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-[#E1E3E6] text-sm font-semibold text-[#6B7078] hover:bg-gray-50 transition-all"
                 >
                     <ChevronLeft className="w-4 h-4" />
                     Back
@@ -241,7 +241,7 @@ export default function QualificationForm({ onNext, onBack }: Props) {
                 <button
                     type="submit"
                     disabled={isLoading}
-                    className="flex items-center gap-2 font-semibold px-8 py-3 rounded-xl text-white transition-all hover:opacity-95 disabled:opacity-60 shadow-sm"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 font-semibold px-8 py-3 rounded-xl text-white transition-all hover:opacity-95 disabled:opacity-60 shadow-sm"
                     style={{ backgroundColor: "#C9A227" }}
                 >
                     {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
