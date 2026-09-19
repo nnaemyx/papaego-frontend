@@ -26,7 +26,7 @@ interface TradeProgressStepperProps {
 }
 
 // 4-Stage Lifecycle matching the Institutional Corporate Designs
-const FOUR_STAGES = [
+export const FOUR_STAGES = [
     {
         stageNumber: 1,
         label: "Quote Confirmed",
@@ -35,27 +35,27 @@ const FOUR_STAGES = [
         activeSubtext: "Reviewing quote...",
         completedSubtext: "Completed",
         icon: FileText,
-        keys: ["PENDING", "POOL", "ASSIGNED", "QUOTED", "SENT_TO_CUSTOMER", "CUSTOMER_CONFIRMED"],
+        keys: ["PENDING", "POOL", "ASSIGNED", "INITIATED", "CUSTOMER_VERIFIED", "QUOTED", "SENT_TO_CUSTOMER", "CUSTOMER_CONFIRMED"],
     },
     {
         stageNumber: 2,
         label: "Funding Received",
         shortLabel: "Funding",
         subtext: "Processing payment",
-        activeSubtext: "Processing...",
+        activeSubtext: "Processing payment...",
         completedSubtext: "Funded",
         icon: Landmark,
-        keys: ["AWAITING_PAYMENT", "PAYMENT_UPLOADED", "PAYMENT_CONFIRMED"],
+        keys: ["AWAITING_PAYMENT", "PAYMENT_UPLOADED"],
     },
     {
         stageNumber: 3,
         label: "Route Optimization",
         shortLabel: "Processing",
         subtext: "Pending execution",
-        activeSubtext: "Routing...",
-        completedSubtext: "Optimized",
+        activeSubtext: "Routing & Wires...",
+        completedSubtext: "Dispatched",
         icon: RefreshCw,
-        keys: ["PROCESSING", "PROCESSED"],
+        keys: ["PAYMENT_CONFIRMED", "PROCESSING", "PROCESSED", "UNDER_REVIEW", "IN_PROGRESS"],
     },
     {
         stageNumber: 4,
@@ -65,9 +65,25 @@ const FOUR_STAGES = [
         activeSubtext: "Settling...",
         completedSubtext: "Settled",
         icon: ShieldCheck,
-        keys: ["COMPLETED"],
+        keys: ["COMPLETED", "SETTLED"],
     },
 ];
+
+export function getActiveStageIndex(status?: string): number {
+    if (!status) return 0;
+    const idx = FOUR_STAGES.findIndex((s) => s.keys.includes(status));
+    return idx !== -1 ? idx : 0;
+}
+
+export function getActiveStageBadge(status?: string): string {
+    if (!status) return "Idle";
+    if (status === "REJECTED") return "Trade Rejected";
+    if (status === "CANCELLED") return "Trade Cancelled";
+    if (status === "FLAGGED") return "Trade Flagged";
+    const idx = getActiveStageIndex(status);
+    const stage = FOUR_STAGES[idx];
+    return `${stage.label} (Stage ${stage.stageNumber} of 4)`;
+}
 
 export function TradeProgressStepper({ currentStatus, isTradeRequest, variant = "detailed" }: TradeProgressStepperProps) {
     if (currentStatus === "REJECTED" || currentStatus === "CANCELLED") {
@@ -90,17 +106,8 @@ export function TradeProgressStepper({ currentStatus, isTradeRequest, variant = 
         );
     }
 
-    // Determine current index based on status
-    let activeIdx = 0;
-    if (["AWAITING_PAYMENT", "PAYMENT_UPLOADED"].includes(currentStatus)) {
-        activeIdx = 1;
-    } else if (["PAYMENT_CONFIRMED", "PROCESSING", "PROCESSED"].includes(currentStatus)) {
-        activeIdx = 2;
-    } else if (currentStatus === "COMPLETED") {
-        activeIdx = 3;
-    } else {
-        activeIdx = 0;
-    }
+    // Determine current index based on status using exact stage key matching
+    const activeIdx = getActiveStageIndex(currentStatus);
 
     const progressPercentage = Math.max(0, Math.min(100, (activeIdx / (FOUR_STAGES.length - 1)) * 100));
 

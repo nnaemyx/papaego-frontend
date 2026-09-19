@@ -15,7 +15,7 @@ import { getBankingProfile, type BankingProfile } from "@/lib/api/banking";
 import { customerApi, type CustomerTrade, type CustomerTradeRequest, type FxRate } from "@/lib/api/customer";
 import { NewTransactionModal } from "@/components/customer/NewTransactionModal";
 import { PapaEgoFundModal } from "@/components/customer/PapaEgoFundModal";
-import { TradeProgressStepper, type TradeStage } from "@/components/transactions/TradeProgressStepper";
+import { TradeProgressStepper, getActiveStageBadge, type TradeStage } from "@/components/transactions/TradeProgressStepper";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/formatters";
@@ -128,15 +128,6 @@ export default function MergedBusinessCustomerDashboard() {
     const tradesSum = pendingSettlementTrades.reduce((acc, t) => acc + (parseFloat(t.amount) || 0), 0);
     const pendingSettlementTotal = Math.max(ledgerBalance.reserved || 0, tradesSum);
 
-    // Determine lifecycle stage title
-    const getActiveStageBadge = (status?: string) => {
-        if (!status) return "Idle";
-        if (["PENDING", "POOL", "ASSIGNED", "QUOTED", "SENT_TO_CUSTOMER", "CUSTOMER_CONFIRMED"].includes(status)) return "Quote Confirmed (Stage 1 of 4)";
-        if (["AWAITING_PAYMENT", "PAYMENT_UPLOADED"].includes(status)) return "Funding Received (Stage 2 of 4)";
-        if (["PAYMENT_CONFIRMED", "PROCESSING", "PROCESSED"].includes(status)) return "Route Execution & Wire (Stage 3 of 4)";
-        if (status === "COMPLETED") return "Settled & Dispatched (Stage 4 of 4)";
-        return "Processing (Stage 3 of 4)";
-    };
 
     // Calculate total ledger value = available + reserved (or totalDeposited)
     const totalLedgerValue = (ledgerBalance.available || 0) + (ledgerBalance.reserved || 0);
