@@ -106,10 +106,9 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
         fetchRates();
     }, []);
 
-    // Calculate applied FX rate, market base rate, spread, and breakdown
-    const { marketRate, spread, currentRate, supplierReceives, papaegoFee, totalPayable, calculatedPayout } = useMemo(() => {
-        let baseRate = 1500;
-        let rateSpread = 100;
+    // Calculate authoritative customer exchange rate and payout
+    const { currentRate, supplierReceives, totalPayable, calculatedPayout } = useMemo(() => {
+        let rate = 1;
 
         const pairDirect = `${fromCurrency}/${toCurrency}`;
         const pairInverse = `${toCurrency}/${fromCurrency}`;
@@ -117,84 +116,35 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
         const inverseMatch = fxRates.find(r => r.pair === pairInverse);
 
         if (directMatch) {
-            if (directMatch.buy && directMatch.sell) {
-                baseRate = directMatch.buy;
-                rateSpread = Math.max(0, directMatch.sell - directMatch.buy);
-            } else {
-                const total = directMatch.sell || directMatch.buy || 1600;
-                rateSpread = (directMatch as any).spread || 100;
-                baseRate = Math.max(1, total - rateSpread);
-            }
+            rate = Number((directMatch as any).customerRate || directMatch.sell || directMatch.buy || 1);
         } else if (inverseMatch) {
-            if (inverseMatch.buy && inverseMatch.sell) {
-                baseRate = inverseMatch.buy;
-                rateSpread = Math.max(0, inverseMatch.sell - inverseMatch.buy);
-            } else {
-                const total = inverseMatch.sell || inverseMatch.buy || 1600;
-                rateSpread = (inverseMatch as any).spread || 100;
-                baseRate = Math.max(1, total - rateSpread);
-            }
-        } else {
-            // Default institutional benchmarks
-            if (fromCurrency === "USD" && toCurrency === "NGN") {
-                baseRate = 1500;
-                rateSpread = 100;
-            } else if (fromCurrency === "NGN" && toCurrency === "USD") {
-                baseRate = 1500;
-                rateSpread = 100;
-            } else if (fromCurrency === "GBP" && toCurrency === "NGN") {
-                baseRate = 1900;
-                rateSpread = 100;
-            } else if (fromCurrency === "EUR" && toCurrency === "NGN") {
-                baseRate = 1600;
-                rateSpread = 100;
-            } else if (fromCurrency === "CAD" && toCurrency === "NGN") {
-                baseRate = 1100;
-                rateSpread = 80;
-            } else if (fromCurrency === "AED" && toCurrency === "NGN") {
-                baseRate = 410;
-                rateSpread = 30;
-            } else {
-                baseRate = 1;
-                rateSpread = 0;
-            }
+            const raw = Number((inverseMatch as any).customerRate || inverseMatch.sell || inverseMatch.buy || 1);
+            rate = raw > 0 ? raw : 1;
         }
 
-        const effectiveRate = baseRate + rateSpread; // e.g. 1500 + 100 = 1600 NGN/USD
         const amtNum = parseFloat(amount) || 0;
-
         let supplierReceivesVal = 0;
-        let papaegoFeeVal = 0;
-        let totalPayableVal = 0;
+        let totalPayableVal = amtNum;
 
-        if (fromCurrency === "USD" && toCurrency === "NGN") {
-            // Exactly matching user instructions:
-            // "Then the system calculates the 1500 X the amount they want to send as what supplier will receive.
-            // The 100 naira ontop will be calculated as our total charge for that transaction."
-            supplierReceivesVal = amtNum * baseRate; // 1500 * 3000 = 4,500,000 NGN
-            papaegoFeeVal = amtNum * rateSpread;     // 100 * 3000 = 300,000 NGN
-            totalPayableVal = amtNum * effectiveRate;// 1600 * 3000 = 4,800,000 NGN
-        } else if (fromCurrency === "NGN" && toCurrency === "USD") {
-            // Customer pays NGN for supplier to get USD
-            supplierReceivesVal = amtNum > 0 ? amtNum / effectiveRate : 0;
-            papaegoFeeVal = supplierReceivesVal * rateSpread;
+        if (fromCurrency === "NGN") {
+            // Customer pays NGN; supplier receives foreign currency (USD, CNY, GBP, etc.)
+            // Pascal's rule: e.g. ₦3,000,000 ÷ ₦1,595 = $1,880.88
+            supplierReceivesVal = rate > 0 && amtNum > 0 ? amtNum / rate : 0;
             totalPayableVal = amtNum;
         } else {
-            supplierReceivesVal = amtNum * baseRate;
-            papaegoFeeVal = amtNum * rateSpread;
-            totalPayableVal = amtNum * effectiveRate;
+            // Customer pays foreign currency; supplier receives NGN
+            supplierReceivesVal = amtNum * rate;
+            totalPayableVal = amtNum;
         }
 
         return {
-            marketRate: baseRate,
-            spread: rateSpread,
-            currentRate: effectiveRate,
+            currentRate: rate,
             supplierReceives: supplierReceivesVal,
-            papaegoFee: papaegoFeeVal,
             totalPayable: totalPayableVal,
             calculatedPayout: supplierReceivesVal
         };
     }, [fromCurrency, toCurrency, fxRates, amount]);
+
 
     const updateSupplier = (key: keyof SupplierDetails, value: string) =>
         setSupplier((prev) => ({ ...prev, [key]: value }));
@@ -516,73 +466,50 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
                                         </div>
                                     </div>
 
-                                    {/* ── TRANSPARENT FX RATE & SPREAD BREAKDOWN CARD ── */}
+                                    {/* ── PAPAEGO EXCHANGE RATE & PAYOUT SUMMARY CARD ── */}
                                     <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50/70 space-y-3">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 <Sparkles className="w-4 h-4 text-[#C9A227]" />
                                                 <span className="text-xs font-bold text-amber-900 uppercase tracking-wider">
-                                                    PapaEgo FX Rate & Spread
+                                                    PapaEgo Exchange Rate
                                                 </span>
                                             </div>
-                                            <span className="text-xs font-semibold text-slate-500">
-                                                {loadingRates ? "Updating rate..." : "Live Spot Rate"}
+                                            <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100/80 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                                {loadingRates ? "Updating rate..." : "Locked 10 mins"}
                                             </span>
                                         </div>
 
-                                        {/* Rate details 3-box breakdown */}
-                                        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-amber-200/60 text-center">
-                                            <div className="bg-white/85 p-2.5 rounded-xl border border-amber-100 shadow-2xs">
-                                                <p className="text-[10px] uppercase font-bold text-slate-500">Market Rate</p>
-                                                <p className="text-xs font-extrabold text-slate-900 mt-0.5">
-                                                    {marketRate >= 1 ? marketRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : marketRate.toFixed(4)}
-                                                </p>
-                                                <p className="text-[9px] text-slate-400">per 1 {fromCurrency}</p>
-                                            </div>
-                                            <div className="bg-white/85 p-2.5 rounded-xl border border-amber-100 shadow-2xs">
-                                                <p className="text-[10px] uppercase font-bold text-amber-700">Our Spread</p>
-                                                <p className="text-xs font-extrabold text-amber-800 mt-0.5">
-                                                    +{spread >= 1 ? spread.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : spread.toFixed(4)}
-                                                </p>
-                                                <p className="text-[9px] text-amber-600 font-medium">{toCurrency} / {fromCurrency}</p>
-                                            </div>
-                                            <div className="bg-white/85 p-2.5 rounded-xl border border-amber-200 shadow-2xs">
-                                                <p className="text-[10px] uppercase font-bold text-slate-700">Offered Rate</p>
-                                                <p className="text-xs font-extrabold text-[#C9A227] mt-0.5">
-                                                    {currentRate >= 1 ? currentRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : currentRate.toFixed(4)}
-                                                </p>
-                                                <p className="text-[9px] text-slate-500 font-medium">All-in rate</p>
-                                            </div>
+                                        {/* Single clean exchange rate banner */}
+                                        <div className="bg-white p-3.5 rounded-xl border border-amber-200/80 text-center shadow-2xs">
+                                            <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Exchange Rate</p>
+                                            <p className="text-lg font-black text-slate-900 mt-0.5">
+                                                1 {fromCurrency === "NGN" ? toCurrency : fromCurrency} = ₦{currentRate >= 1 ? currentRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : currentRate.toFixed(4)}
+                                            </p>
+                                            <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Guaranteed all-in rate · No hidden fees</p>
                                         </div>
 
-                                        {/* Payout & fee calculation preview */}
+                                        {/* Payout preview */}
                                         <div className="p-3 bg-white rounded-xl border border-amber-200/70 space-y-2">
                                             <div className="flex items-center justify-between text-xs">
                                                 <span className="text-slate-600 font-medium">
+                                                    You Send:
+                                                </span>
+                                                <span className="font-bold text-slate-900 text-sm">
+                                                    {fromCurrency} {parseFloat(amount) > 0 ? parseFloat(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
+                                                <span className="text-slate-600 font-medium">
                                                     Supplier Receives:
                                                 </span>
-                                                <span className="font-extrabold text-emerald-700 text-sm">
+                                                <span className="font-black text-emerald-700 text-base">
                                                     {toCurrency} {supplierReceives > 0 ? supplierReceives.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100">
-                                                <span className="text-slate-600 font-medium">
-                                                    PapaEgo Total Charge (Spread):
-                                                </span>
-                                                <span className="font-bold text-amber-800">
-                                                    {toCurrency} {papaegoFee > 0 ? papaegoFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between text-xs pt-1.5 border-t border-slate-100 font-bold">
-                                                <span className="text-slate-800">
-                                                    Total Transaction Value:
-                                                </span>
-                                                <span className="text-slate-900 font-extrabold">
-                                                    {toCurrency} {totalPayable > 0 ? totalPayable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
                                                 </span>
                                             </div>
                                         </div>
                                     </div>
+
 
                                     {/* Next Button */}
                                     <button
@@ -841,35 +768,18 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
                                                 </div>
                                             )}
                                             <div className="pt-2 flex justify-between">
-                                                <span className="text-slate-500">Market Rate</span>
-                                                <span className="font-semibold text-slate-800">
-                                                    1 {fromCurrency} = {marketRate >= 1 ? marketRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : marketRate.toFixed(4)} {toCurrency}
-                                                </span>
-                                            </div>
-                                            <div className="pt-2 flex justify-between">
-                                                <span className="text-slate-500">Our Spread</span>
-                                                <span className="font-bold text-amber-700">
-                                                    +{spread >= 1 ? spread.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : spread.toFixed(4)} {toCurrency}
-                                                </span>
-                                            </div>
-                                            <div className="pt-2 flex justify-between">
-                                                <span className="text-slate-500">Applied FX Rate</span>
+                                                <span className="text-slate-500">PapaEgo Exchange Rate</span>
                                                 <span className="font-bold text-slate-900">
-                                                    1 {fromCurrency} = {currentRate >= 1 ? currentRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : currentRate.toFixed(4)} {toCurrency}
+                                                    1 {fromCurrency === "NGN" ? toCurrency : fromCurrency} = ₦{currentRate >= 1 ? currentRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : currentRate.toFixed(4)}
                                                 </span>
                                             </div>
                                             <div className="pt-2 flex justify-between">
-                                                <span className="text-slate-500">Supplier Payout (Market Rate × Amount)</span>
-                                                <span className="font-bold text-emerald-700">
+                                                <span className="text-slate-500">Supplier Payout</span>
+                                                <span className="font-black text-emerald-700 text-sm">
                                                     {toCurrency} {supplierReceives.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </span>
                                             </div>
-                                            <div className="pt-2 flex justify-between">
-                                                <span className="text-slate-500">PapaEgo Total Charge (Spread)</span>
-                                                <span className="font-bold text-amber-800">
-                                                    {toCurrency} {papaegoFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                </span>
-                                            </div>
+
                                             {purpose && (
                                                 <div className="pt-2 flex justify-between">
                                                     <span className="text-slate-500">Purpose</span>
