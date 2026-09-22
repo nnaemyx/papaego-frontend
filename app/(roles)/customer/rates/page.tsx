@@ -7,6 +7,7 @@ import { customerApi, FxRate } from "@/lib/api/customer";
 export default function CustomerRatesPage() {
   const [rates, setRates] = useState<FxRate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -19,21 +20,17 @@ export default function CustomerRatesPage() {
     setLoading((prev) => (rates.length === 0 ? true : prev));
     try {
       const { rates: r } = await customerApi.getFxRates();
-      setRates(r);
+      setRates(r || []);
       setLastUpdated(new Date());
+      setError(null);
     } catch {
-      setRates([
-        { pair: "USD/NGN", buy: 1580, sell: 1600, lastUpdated: new Date().toISOString() },
-        { pair: "GBP/NGN", buy: 1990, sell: 2020, lastUpdated: new Date().toISOString() },
-        { pair: "EUR/NGN", buy: 1720, sell: 1745, lastUpdated: new Date().toISOString() },
-        { pair: "CAD/NGN", buy: 1150, sell: 1170, lastUpdated: new Date().toISOString() },
-        { pair: "AED/NGN", buy: 430,  sell: 445,  lastUpdated: new Date().toISOString() },
-      ]);
+      setError("Live exchange rates are currently updating. Please tap refresh to reload.");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
+
 
   return (
     <div className="p-4 md:p-6 lg:pl-7 lg:pr-6 space-y-6">
@@ -109,6 +106,20 @@ export default function CustomerRatesPage() {
               style={{ backgroundColor: "#E1E3E6" }}
             />
           ))
+        ) : rates.length === 0 ? (
+          <div className="bg-white rounded-xl border p-8 text-center" style={{ borderColor: "var(--border-custom)" }}>
+            <p className="font-semibold text-base mb-1" style={{ color: "var(--text-primary)" }}>
+              {error || "Exchange rates are currently updating"}
+            </p>
+            <p className="text-sm text-gray-500 mb-4">Please try refreshing in a few moments.</p>
+            <button
+              onClick={fetchRates}
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm"
+              style={{ backgroundColor: "#012333" }}
+            >
+              Retry
+            </button>
+          </div>
         ) : (
           rates.map((rate) => {
             const [from] = rate.pair.split("/");

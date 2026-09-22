@@ -162,4 +162,29 @@ export const exchangeRatesApi = {
         const res = await api.get("/exchange-rate/logs", { params });
         return res.data;
     },
+
+    // ── Rate Health & Breakdown (admin only) ───────────────────────────────────
+
+    /** Get latest rate health & divergence between OneLiquidity and OKX */
+    getRateHealth: async (): Promise<{ health: any[] }> => {
+        const res = await api.get("/exchange-rate/health");
+        return res.data;
+    },
+
+    /** Calculate trade breakdown including margin and underlying market value */
+    calculateBreakdown: async (data: {
+        baseCurrency: string;
+        quoteCurrency: string;
+        amount: number;
+    }): Promise<{ breakdown: any }> => {
+        const res = await api.post("/exchange-rate/breakdown", data);
+        return res.data;
+    },
+
+    /** Trigger manual refresh of live rates */
+    triggerRefresh: async (): Promise<{ success: boolean; message: string }> => {
+        const res = await api.post("/exchange-rate/refresh");
+        return res.data;
+    },
 };
+

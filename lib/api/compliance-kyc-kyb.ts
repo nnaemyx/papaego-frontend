@@ -119,6 +119,7 @@ export interface KycSubmitPayload {
     phone: string;
     email: string;
     idType: "PASSPORT" | "NATIONAL_ID" | "DRIVERS_LICENSE";
+    idNumber: string;
 }
 
 export interface KybSubmitPayload {
@@ -135,7 +136,7 @@ export interface KybSubmitPayload {
 export const complianceApi = {
     // KYC
     submitKyc: (data: KycSubmitPayload) =>
-        apiClient.post<{ kyc: KycRequest; fvBankApplicationId: string }>("/compliance/kyc", data),
+        apiClient.post<{ kyc: KycRequest; fvBankApplicationId: string; verificationId?: string; verificationUrl?: string }>("/compliance/kyc", data),
 
     getKycStatus: (organizationId: string) =>
         apiClient.get<{ kyc: KycRequest }>(`/compliance/kyc/status?organizationId=${organizationId}`),

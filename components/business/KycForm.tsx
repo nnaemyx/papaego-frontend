@@ -17,6 +17,7 @@ const schema = z.object({
     phone: z.string().min(7, "Phone required"),
     email: z.string().email("Valid email required"),
     idType: z.enum(["PASSPORT", "NATIONAL_ID", "DRIVERS_LICENSE"]),
+    idNumber: z.string().min(3, "ID Document number is required"),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -28,7 +29,7 @@ interface Props {
 
 const ID_TYPES = [
     { value: "PASSPORT", label: "International Passport" },
-    { value: "NATIONAL_ID", label: "National Identity Card" },
+    { value: "NATIONAL_ID", label: "National Identity Card (NIN)" },
     { value: "DRIVERS_LICENSE", label: "Driver's License" },
 ];
 
@@ -40,13 +41,14 @@ export default function KycForm({ onNext, onBack }: Props) {
     const fileRef = useRef<HTMLInputElement>(null);
     const selfieRef = useRef<HTMLInputElement>(null);
 
-    const existingKyc = savedOrg?.kycRequests?.[0];
+    const existingKyc = savedOrg?.kycRequests?.[0] as any;
     const hasExistingDoc = !!(existingKyc?.id || existingKyc?.documents?.length);
 
     const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
         resolver: zodResolver(schema),
         defaultValues: {
             idType: existingKyc?.idType || "PASSPORT",
+            idNumber: existingKyc?.idNumber || kycDraft.idNumber || "",
             fullName: existingKyc?.fullName || kycDraft.fullName || "",
             dateOfBirth: existingKyc?.dateOfBirth ? new Date(existingKyc.dateOfBirth).toISOString().split('T')[0] : (kycDraft.dateOfBirth ? new Date(kycDraft.dateOfBirth).toISOString().split('T')[0] : ""),
             nationality: existingKyc?.nationality || kycDraft.nationality || "",
@@ -62,6 +64,10 @@ export default function KycForm({ onNext, onBack }: Props) {
     const onSubmit = async (data: FormData) => {
         if (!savedOrgId) { toast.error("Complete organization details first."); return; }
         if (!uploadedFile && !hasExistingDoc) { toast.error("Please upload your government-issued ID."); return; }
+        if (!selfieFile && !hasExistingDoc) { 
+            toast.error("Face verification is mandatory. Please upload a clear photo of your face."); 
+            return; 
+        }
 
         setIsLoading(true);
         setKycDraft(data as Partial<KycSubmitPayload>);
@@ -73,7 +79,7 @@ export default function KycForm({ onNext, onBack }: Props) {
                 idType: data.idType as "PASSPORT" | "NATIONAL_ID" | "DRIVERS_LICENSE",
             });
 
-            const kycRequestId = (res as any)?.kyc?.id || (res as any)?.kycId;
+            const kycRequestId = (res as any)?.kyc?.id || (res as any)?.kycId || (res as any)?.data?.kyc?.id;
             if (!kycRequestId) {
                 throw new Error((res as any)?.message || "Failed to retrieve KYC Request ID");
             }
@@ -96,7 +102,17 @@ export default function KycForm({ onNext, onBack }: Props) {
                 await complianceApi.uploadDocument(selfieFormData);
             }
 
-            toast.success((res as any)?.message || "KYC application updated successfully!");
+            // Check if DuckCheck returned a live face verification session URL
+            const liveUrl = (res as any)?.verificationUrl || (res as any)?.data?.verificationUrl;
+            if (liveUrl) {
+                toast.success("Identity submitted! Opening DuckCheck live face verification...");
+                if (typeof window !== "undefined") {
+                    window.open(liveUrl, "_blank");
+                }
+            } else {
+                toast.success((res as any)?.message || "KYC application submitted successfully!");
+            }
+
             markStepComplete("kyc");
             onNext();
         } catch (err: any) {
@@ -154,44 +170,68 @@ export default function KycForm({ onNext, onBack }: Props) {
                 </div>
             </section>
 
-            {/* ID Document */}
+            {/* ID Document & Mandatory Face Verification */}
             <section>
                 <div className="flex items-center gap-2 mb-5">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center"
                         style={{ backgroundColor: "#FFF7E6", border: "1px solid #F0CD00" }}>
                         <IdCard className="w-4 h-4 text-[#C9A227]" />
                     </div>
-                    <h2 className="text-base font-bold" style={{ color: "#012333" }}>Government-Issued ID</h2>
+                    <h2 className="text-base font-bold" style={{ color: "#012333" }}>Government ID & Face Verification</h2>
                 </div>
 
-                <div className="mb-5">
-                    <label className="form-label">ID Type *</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 mt-2">
-                        {ID_TYPES.map(t => {
-                            const isSelected = selectedIdType === t.value;
-                            return (
-                                <button
-                                    key={t.value}
-                                    type="button"
-                                    onClick={() => setValue("idType", t.value as any, { shouldValidate: true, shouldDirty: true, shouldTouch: true })}
-                                    className={`p-3 sm:p-3.5 rounded-xl border text-left sm:text-center text-xs font-semibold transition-all flex items-center justify-start sm:justify-center gap-2 cursor-pointer ${
-                                        isSelected
-                                            ? "border-[#C9A227] bg-[#FFF7E6] text-[#C9A227] shadow-sm font-bold ring-2 ring-[#C9A227]/30"
-                                            : "border-[#E1E3E6] bg-white text-[#6B7078] hover:border-slate-300 hover:bg-slate-50"
-                                    }`}
-                                >
-                                    <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
-                                        isSelected ? "border-[#C9A227] bg-[#C9A227]" : "border-slate-300 bg-white"
-                                    }`}>
-                                        {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                                    </div>
-                                    <span className="text-xs leading-tight">{t.label}</span>
-                                </button>
-                            );
-                        })}
+                <div className="space-y-4 mb-5">
+                    <div>
+                        <label className="form-label">ID Type *</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 mt-2">
+                            {ID_TYPES.map(t => {
+                                const isSelected = selectedIdType === t.value;
+                                return (
+                                    <button
+                                        key={t.value}
+                                        type="button"
+                                        onClick={() => setValue("idType", t.value as any, { shouldValidate: true, shouldDirty: true, shouldTouch: true })}
+                                        className={`p-3 sm:p-3.5 rounded-xl border text-left sm:text-center text-xs font-semibold transition-all flex items-center justify-start sm:justify-center gap-2 cursor-pointer ${
+                                            isSelected
+                                                ? "border-[#C9A227] bg-[#FFF7E6] text-[#C9A227] shadow-sm font-bold ring-2 ring-[#C9A227]/30"
+                                                : "border-[#E1E3E6] bg-white text-[#6B7078] hover:border-slate-300 hover:bg-slate-50"
+                                        }`}
+                                    >
+                                        <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
+                                            isSelected ? "border-[#C9A227] bg-[#C9A227]" : "border-slate-300 bg-white"
+                                        }`}>
+                                            {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                        </div>
+                                        <span className="text-xs leading-tight">{t.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <input type="hidden" {...register("idType")} />
+                        {errors.idType && <FieldError msg={errors.idType.message!} />}
                     </div>
-                    <input type="hidden" {...register("idType")} />
-                    {errors.idType && <FieldError msg={errors.idType.message!} />}
+
+                    <div>
+                        <label className="form-label">
+                            {selectedIdType === "PASSPORT"
+                                ? "Passport Number *"
+                                : selectedIdType === "NATIONAL_ID"
+                                ? "National Identification Number (NIN) *"
+                                : "Driver's License Number *"}
+                        </label>
+                        <input
+                            {...register("idNumber")}
+                            className="form-input"
+                            placeholder={
+                                selectedIdType === "PASSPORT"
+                                    ? "e.g. A12345678"
+                                    : selectedIdType === "NATIONAL_ID"
+                                    ? "e.g. 11-digit NIN"
+                                    : "e.g. DL12345678"
+                            }
+                        />
+                        {errors.idNumber && <FieldError msg={errors.idNumber.message!} />}
+                    </div>
                 </div>
 
                 {/* File uploads */}
@@ -204,12 +244,11 @@ export default function KycForm({ onNext, onBack }: Props) {
                         inputRef={fileRef}
                     />
                     <FileDropZone
-                        label="Selfie Photo"
-                        hint="Clear photo of your face (optional for Sprint 1)"
+                        label="Selfie Photo (Mandatory Face Verification) *"
+                        hint="Clear, well-lit photo of your face for DuckCheck biometric verification"
                         file={selfieFile}
                         onFile={setSelfieFile}
                         inputRef={selfieRef}
-                        optional
                     />
                 </div>
             </section>

@@ -30,6 +30,9 @@ import {
     Percent,
     DollarSign,
     Activity,
+    Calculator,
+    ArrowDownUp,
+    ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -620,13 +623,401 @@ function AuditLogTable() {
     );
 }
 
+// ─── Rate Health & Sanity Panel ──────────────────────────────────────────────
+
+function RateHealthPanel() {
+    const queryClient = useQueryClient();
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const { data: healthData, isLoading: healthLoading } = useQuery({
+        queryKey: ["rate-health"],
+        queryFn: exchangeRatesApi.getRateHealth,
+        refetchInterval: 30000,
+    });
+
+    const { data: providerData } = useQuery({
+        queryKey: ["all-provider-rates"],
+        queryFn: exchangeRatesApi.getAllProviderRates,
+    });
+
+    const healthList = healthData?.health || [];
+    const rates = providerData && "rates" in providerData ? providerData.rates : [];
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            await exchangeRatesApi.triggerRefresh();
+            toast.success("Rate refresh triggered! Ingesting live OneLiquidity & OKX rates...");
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ["rate-health"] });
+                queryClient.invalidateQueries({ queryKey: ["all-provider-rates"] });
+                setIsRefreshing(false);
+            }, 2500);
+        } catch (err: any) {
+            toast.error(err.response?.data?.error || "Failed to trigger rate refresh");
+            setIsRefreshing(false);
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            {/* Header info */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                    <div className="flex items-center gap-2 mb-1">
+                        <Activity className="w-5 h-5" style={{ color: "#c9a227" }} />
+                        <h2 className="text-lg font-bold text-gray-900">OneLiquidity vs OKX Reference Health</h2>
+                    </div>
+                    <p className="text-sm text-gray-500 max-w-2xl leading-relaxed">
+                        OneLiquidity serves as our primary liquidity source. OKX Spot is queried in parallel as an independent reference feed.
+                        If divergence exceeds 2% a WARNING is flagged; if it exceeds 5% a CRITICAL alert is triggered to protect against stale or abnormal rates.
+                    </p>
+                </div>
+                <Button
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="flex items-center gap-2 text-white shrink-0"
+                    style={{ backgroundColor: "#012333" }}
+                >
+                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                    Refresh Feeds Now
+                </Button>
+            </div>
+
+            {/* Health Table */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <h3 className="font-bold text-gray-800 text-sm">Real-time Cross-Source Rate Comparison</h3>
+                    <span className="text-xs text-gray-400">Refreshed every 30s</span>
+                </div>
+
+                {healthLoading ? (
+                    <div className="p-12 text-center">
+                        <RefreshCw size={24} className="animate-spin text-gray-300 mx-auto mb-2" />
+                        <p className="text-sm text-gray-400">Loading cross-source health checks...</p>
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-gray-100 bg-gray-50/50">
+                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Pair</th>
+                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Primary (OneLiquidity)</th>
+                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Reference (OKX Spot)</th>
+                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Divergence</th>
+                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Customer Rate</th>
+                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Health Status</th>
+                                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Last Check</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {SUPPORTED_PAIRS.map(({ base, quote }) => {
+                                    const pairKey = `${base}/${quote}`;
+                                    const healthEntry = healthList.find((h: any) => h.pair === pairKey);
+                                    const providerEntry = rates.find((r: any) => r.pair === pairKey);
+
+                                    const primaryRate = healthEntry?.primaryRate 
+                                        ? Number(healthEntry.primaryRate) 
+                                        : (providerEntry?.providerRate ? Number(providerEntry.providerRate) : null);
+
+                                    const referenceRate = healthEntry?.referenceRate 
+                                        ? Number(healthEntry.referenceRate) 
+                                        : null;
+
+                                    const divergence = healthEntry?.divergencePct != null 
+                                        ? Number(healthEntry.divergencePct) 
+                                        : null;
+
+                                    const status = healthEntry?.status || "HEALTHY";
+
+                                    return (
+                                        <tr key={pairKey} className="hover:bg-gray-50/60 transition-colors">
+                                            <td className="px-5 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-base">{CURRENCY_FLAGS[base] || "🌐"}</span>
+                                                    <span className="font-bold text-gray-900 text-sm">{pairKey}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                {primaryRate != null ? (
+                                                    <span className="font-mono font-semibold text-sm text-gray-800">
+                                                        ₦{primaryRate.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs text-gray-400">Fetching...</span>
+                                                )}
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                {referenceRate != null ? (
+                                                    <span className="font-mono text-sm text-gray-600">
+                                                        ₦{referenceRate.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs text-gray-400">No OKX Spot</span>
+                                                )}
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                {divergence != null ? (
+                                                    <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded-full ${
+                                                        divergence >= 5
+                                                            ? "bg-red-100 text-red-700"
+                                                            : divergence >= 2
+                                                            ? "bg-amber-100 text-amber-700"
+                                                            : "bg-green-100 text-green-700"
+                                                    }`}>
+                                                        {divergence.toFixed(2)}%
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs text-gray-400">—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                {providerEntry?.customerRate != null ? (
+                                                    <span className="font-bold text-gray-900 text-sm">
+                                                        ₦{Number(providerEntry.customerRate).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs text-gray-400">—</span>
+                                                )}
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <Badge
+                                                    variant="outline"
+                                                    className={`text-xs font-semibold px-2.5 py-1 ${
+                                                        status === "CRITICAL"
+                                                            ? "text-red-700 border-red-300 bg-red-50"
+                                                            : status === "WARNING"
+                                                            ? "text-amber-700 border-amber-300 bg-amber-50"
+                                                            : "text-green-700 border-green-300 bg-green-50"
+                                                    }`}
+                                                >
+                                                    {status === "CRITICAL" ? (
+                                                        <ShieldAlert className="w-3 h-3 mr-1 inline" />
+                                                    ) : status === "WARNING" ? (
+                                                        <AlertTriangle className="w-3 h-3 mr-1 inline" />
+                                                    ) : (
+                                                        <CheckCircle2 className="w-3 h-3 mr-1 inline" />
+                                                    )}
+                                                    {status}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-5 py-4 text-xs text-gray-400 whitespace-nowrap">
+                                                {healthEntry?.createdAt ? formatDate(healthEntry.createdAt) : "Live"}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ─── Live FX Margin & Trade Calculator ────────────────────────────────────────
+
+function TradeCalculatorWidget() {
+    const [selectedQuote, setSelectedQuote] = useState("USD");
+    const [ngnAmount, setNgnAmount] = useState("3000000");
+    const [result, setResult] = useState<any>(null);
+    const [isCalculating, setIsCalculating] = useState(false);
+
+    const handleCalculate = async () => {
+        const parsed = Number(ngnAmount.replace(/,/g, ""));
+        if (isNaN(parsed) || parsed <= 0) {
+            toast.error("Please enter a valid positive NGN amount");
+            return;
+        }
+
+        setIsCalculating(true);
+        try {
+            const data = await exchangeRatesApi.calculateBreakdown({
+                baseCurrency: "NGN",
+                quoteCurrency: selectedQuote,
+                amount: parsed,
+            });
+            setResult(data.breakdown);
+        } catch (err: any) {
+            toast.error(err.response?.data?.error || "Calculation failed");
+        } finally {
+            setIsCalculating(false);
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            {/* Header info */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-1">
+                    <Calculator className="w-5 h-5" style={{ color: "#c9a227" }} />
+                    <h2 className="text-lg font-bold text-gray-900">Live FX Trade & Margin Breakdown Calculator</h2>
+                </div>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                    Test the complete rate derivation pipeline: OneLiquidity Market Rate + Configured PapaEgo Spread → Customer Rate → Supplier Amount & Gross FX Margin.
+                    Verify that what the customer pays and what the supplier receives produces the exact internal reconciliation ledger.
+                </p>
+
+                {/* Input form */}
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div>
+                        <Label className="text-xs font-semibold text-gray-600 mb-2 block">Currency Flow</Label>
+                        <Select value={selectedQuote} onValueChange={setSelectedQuote}>
+                            <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select target currency" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="USD">NGN → USD (US Dollar)</SelectItem>
+                                <SelectItem value="CNY">NGN → CNY (Chinese Yuan)</SelectItem>
+                                <SelectItem value="GBP">NGN → GBP (British Pound)</SelectItem>
+                                <SelectItem value="EUR">NGN → EUR (Euro)</SelectItem>
+                                <SelectItem value="AED">NGN → AED (UAE Dirham)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div>
+                        <Label className="text-xs font-semibold text-gray-600 mb-2 block">Customer Send Amount (NGN)</Label>
+                        <Input
+                            value={ngnAmount}
+                            onChange={(e) => setNgnAmount(e.target.value)}
+                            placeholder="e.g. 3,000,000"
+                            className="font-mono text-base"
+                        />
+                    </div>
+
+                    <Button
+                        onClick={handleCalculate}
+                        disabled={isCalculating}
+                        className="w-full text-white font-semibold"
+                        style={{ backgroundColor: "#012333" }}
+                    >
+                        {isCalculating ? (
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                            <ArrowDownUp className="w-4 h-4 mr-2" />
+                        )}
+                        Calculate FX Breakdown
+                    </Button>
+                </div>
+
+                {/* Quick Chips */}
+                <div className="flex items-center gap-2 mt-3">
+                    <span className="text-xs text-gray-400">Quick tests:</span>
+                    {["1000000", "3000000", "5000000", "10000000"].map((amt) => (
+                        <button
+                            key={amt}
+                            type="button"
+                            onClick={() => {
+                                setNgnAmount(amt);
+                            }}
+                            className="text-xs px-2.5 py-1 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors font-mono"
+                        >
+                            ₦{Number(amt).toLocaleString()}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Breakdown Result */}
+            {result && (
+                <div className="space-y-6">
+                    {/* Visual cards comparison: Customer View vs Internal Accounting */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        {/* Customer-Facing Card */}
+                        <div className="bg-white rounded-2xl p-6 shadow-sm border border-emerald-100 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 bg-emerald-500 text-white text-[11px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+                                Customer Sees Only This
+                            </div>
+                            <h3 className="font-bold text-gray-900 text-base mb-4 flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                                Customer Trade Summary
+                            </h3>
+
+                            <div className="space-y-3">
+                                <div className="p-3 rounded-xl bg-gray-50 flex justify-between items-center">
+                                    <span className="text-xs text-gray-500">Customer Sends</span>
+                                    <span className="font-mono font-bold text-base text-gray-900">
+                                        ₦{Number(result.customerNgnAmount).toLocaleString()}
+                                    </span>
+                                </div>
+                                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 flex justify-between items-center">
+                                    <span className="text-xs text-emerald-800 font-semibold">PapaEgo Customer Rate</span>
+                                    <span className="font-mono font-black text-lg text-emerald-800">
+                                        ₦{Number(result.customerRate).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })} / {result.quoteCurrency}
+                                    </span>
+                                </div>
+                                <div className="p-4 rounded-xl text-white flex justify-between items-center" style={{ backgroundColor: "#012333" }}>
+                                    <div>
+                                        <span className="text-xs text-white/60 block">Supplier Receives</span>
+                                        <span className="text-[10px] text-amber-300">Sent directly to bank account</span>
+                                    </div>
+                                    <span className="font-mono font-black text-2xl text-amber-400">
+                                        {CURRENCY_ICONS[result.quoteCurrency] || ""}{Number(result.supplierAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {result.quoteCurrency}
+                                    </span>
+                                </div>
+                            </div>
+                            <p className="text-xs text-gray-400 mt-4 italic">
+                                * The customer is never shown the OneLiquidity base rate or PapaEgo margin.
+                            </p>
+                        </div>
+
+                        {/* Internal Reconciliation Card */}
+                        <div className="bg-white rounded-2xl p-6 shadow-sm border border-amber-100 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 bg-amber-500 text-white text-[11px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+                                Internal Accounting Ledger
+                            </div>
+                            <h3 className="font-bold text-gray-900 text-base mb-4 flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                                PapaEgo Margin & Provider Cost
+                            </h3>
+
+                            <div className="space-y-3">
+                                <div className="p-3 rounded-xl bg-gray-50 flex justify-between items-center">
+                                    <span className="text-xs text-gray-500">OneLiquidity Market Rate</span>
+                                    <span className="font-mono font-bold text-sm text-gray-800">
+                                        ₦{Number(result.providerRate).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })} / {result.quoteCurrency}
+                                    </span>
+                                </div>
+                                <div className="p-3 rounded-xl bg-gray-50 flex justify-between items-center">
+                                    <span className="text-xs text-gray-500">Configured PapaEgo Markup</span>
+                                    <span className="font-mono font-bold text-sm text-amber-700">
+                                        +{CURRENCY_ICONS[result.quoteCurrency] || "₦"}{Number(result.markupApplied).toFixed(2)} ({result.markupType})
+                                    </span>
+                                </div>
+                                <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 flex justify-between items-center">
+                                    <span className="text-xs text-blue-800">Underlying Cost to PapaEgo</span>
+                                    <span className="font-mono font-semibold text-sm text-blue-900">
+                                        ₦{Number(result.underlyingMarketValue).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                                <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white flex justify-between items-center">
+                                    <div>
+                                        <span className="text-xs text-white/80 block uppercase tracking-wider font-semibold">PapaEgo Gross FX Margin</span>
+                                        <span className="text-[10px] text-white/70">₦Received − ₦Provider Cost</span>
+                                    </div>
+                                    <span className="font-mono font-black text-2xl text-white">
+                                        +₦{Number(result.papaEgoFxMargin).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ExchangeRatesPage() {
     const queryClient = useQueryClient();
     const [editingPair, setEditingPair] = useState<{ base: string; quote: string } | null>(null);
     const [ingestOpen, setIngestOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState<"rates" | "logs">("rates");
+    const [activeTab, setActiveTab] = useState<"rates" | "health" | "calculator" | "logs">("rates");
+
 
     const { data: providerData, isLoading, refetch } = useQuery({
         queryKey: ["all-provider-rates"],
@@ -750,15 +1141,17 @@ export default function ExchangeRatesPage() {
 
             <div className="max-w-7xl mx-auto px-8 py-8">
                 {/* Tabs */}
-                <div className="flex items-center gap-2 mb-6">
+                <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
                     {[
                         { key: "rates", label: "Rate Configuration", icon: Settings },
+                        { key: "health", label: "OneLiquidity vs OKX Health", icon: Activity },
+                        { key: "calculator", label: "Test FX Calculation", icon: Calculator },
                         { key: "logs", label: "Audit Logs", icon: History },
                     ].map(({ key, label, icon: Icon }) => (
                         <button
                             key={key}
-                            onClick={() => setActiveTab(key as "rates" | "logs")}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${activeTab === key
+                            onClick={() => setActiveTab(key as "rates" | "health" | "calculator" | "logs")}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all whitespace-nowrap ${activeTab === key
                                 ? "text-white shadow-md"
                                 : "text-gray-500 hover:text-gray-800"
                                 }`}
@@ -838,6 +1231,10 @@ export default function ExchangeRatesPage() {
                         )}
                     </div>
                 )}
+
+                {activeTab === "health" && <RateHealthPanel />}
+
+                {activeTab === "calculator" && <TradeCalculatorWidget />}
 
                 {activeTab === "logs" && <AuditLogTable />}
             </div>
