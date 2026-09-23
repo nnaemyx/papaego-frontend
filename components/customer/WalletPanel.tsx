@@ -38,7 +38,7 @@ function formatDate(iso: string) {
     return new Date(iso).toLocaleString();
 }
 
-const PRESET_AMOUNTS = [50000, 100000, 250000, 500000, 1000000, 2500000];
+const PRESET_AMOUNTS = [20000000, 50000000, 100000000, 250000000, 500000000];
 
 const TYPE_OPTIONS: { label: string; value: WalletTransactionType | "ALL" }[] = [
     { label: "All Types", value: "ALL" },
@@ -54,6 +54,13 @@ export function WalletPanel() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // KYC/KYB Verification gate state
+    const [verification, setVerification] = useState<{
+        isFullyVerified: boolean;
+        kycStatus: string;
+        kybStatus?: string | null;
+    } | null>(null);
+
     // Filter states
     const [selectedType, setSelectedType] = useState<WalletTransactionType | "ALL">("ALL");
     const [search, setSearch] = useState("");
@@ -64,8 +71,8 @@ export function WalletPanel() {
     const [currentPage, setCurrentPage] = useState(1);
     const limit = 10;
 
-    // MoneyPings Instant Bank Rail state
-    const [depositAmount, setDepositAmount] = useState("100000");
+    // MoneyPings Instant Bank Rail state (Minimum ₦20,000,000)
+    const [depositAmount, setDepositAmount] = useState("20000000");
     const [submittingMoneyPings, setSubmittingMoneyPings] = useState(false);
     const [moneyPingsAccount, setMoneyPingsAccount] = useState<{
         accountNumber: string;
@@ -102,6 +109,9 @@ export function WalletPanel() {
 
     useEffect(() => {
         load();
+        customerApi.getKycStatus().then((res) => {
+            setVerification(res);
+        }).catch(() => {});
     }, [load]);
 
     const resetFilters = () => {
@@ -117,9 +127,14 @@ export function WalletPanel() {
     const hasActiveFilters = selectedType !== "ALL" || search || startDate || endDate || minAmount || maxAmount;
 
     const handleMoneyPingsDeposit = async () => {
+        if (verification && verification.isFullyVerified === false) {
+            toast.error("Your identity & business verification (KYC/KYB) must be approved before funding your ledger.");
+            return;
+        }
+
         const parsed = Number(depositAmount);
-        if (!parsed || parsed < 100) {
-            toast.error("Enter a valid deposit amount (min ₦100).");
+        if (!parsed || parsed < 20000000) {
+            toast.error("Minimum transaction amount is ₦20,000,000.");
             return;
         }
 

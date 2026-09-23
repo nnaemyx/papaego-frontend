@@ -11,10 +11,10 @@ interface PapaEgoFundModalProps {
     onSuccess?: () => void;
 }
 
-const PRESET_AMOUNTS = [50000, 100000, 250000, 500000, 1000000, 2500000];
+const PRESET_AMOUNTS = [20000000, 50000000, 100000000, 250000000, 500000000];
 
 export function PapaEgoFundModal({ isOpen, onClose, onSuccess }: PapaEgoFundModalProps) {
-    const [amount, setAmount] = useState<string>("100000");
+    const [amount, setAmount] = useState<string>("20000000");
     const [submitting, setSubmitting] = useState(false);
     const [moneyPingsAccount, setMoneyPingsAccount] = useState<{
         accountNumber: string;
@@ -30,8 +30,8 @@ export function PapaEgoFundModal({ isOpen, onClose, onSuccess }: PapaEgoFundModa
 
     const handleMoneyPingsDeposit = async () => {
         const parsed = parseFloat(amount);
-        if (!parsed || isNaN(parsed) || parsed < 100) {
-            toast.error("Please enter a valid deposit amount (min ₦100).");
+        if (!parsed || isNaN(parsed) || parsed < 20000000) {
+            toast.error("Minimum deposit amount is ₦20,000,000.");
             return;
         }
 
@@ -188,8 +188,8 @@ export function PapaEgoFundModal({ isOpen, onClose, onSuccess }: PapaEgoFundModa
                                 </span>
                                 <input
                                     type="number"
-                                    min="100"
-                                    step="100"
+                                    min="20000000"
+                                    step="1000000"
                                     value={amount}
                                     onChange={(e) => setAmount(e.target.value)}
                                     placeholder="0.00"
@@ -240,7 +240,7 @@ export function PapaEgoFundModal({ isOpen, onClose, onSuccess }: PapaEgoFundModa
                             </button>
                             <button
                                 type="button"
-                                disabled={submitting || !amount || parseFloat(amount) <= 0}
+                                disabled={submitting || !amount || parseFloat(amount) < 20000000}
                                 onClick={handleMoneyPingsDeposit}
                                 className="flex-[2] py-3 rounded-xl bg-[#C9A227] hover:bg-[#b08e20] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50"
                             >

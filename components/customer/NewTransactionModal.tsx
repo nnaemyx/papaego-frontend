@@ -73,6 +73,13 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
     const [successMessage, setSuccessMessage] = useState("Request Submitted!");
     const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
 
+    // KYC / KYB gate
+    const [verification, setVerification] = useState<{
+        isFullyVerified: boolean;
+        kycStatus: string;
+        kybStatus: string;
+    } | null>(null);
+
     const refreshBalance = async () => {
         try {
             const stats = await customerApi.getDashboardStats();
@@ -104,6 +111,16 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
         }).catch(() => {});
         refreshBalance();
         fetchRates();
+        // Fetch KYC/KYB verification status
+        customerApi.getKycStatus?.().then((res: any) => {
+            if (res) {
+                setVerification({
+                    isFullyVerified: res.isFullyVerified ?? false,
+                    kycStatus: res.kycStatus ?? "NOT_SUBMITTED",
+                    kybStatus: res.kybStatus ?? "NOT_SUBMITTED",
+                });
+            }
+        }).catch(() => {});
     }, []);
 
     // Calculate authoritative customer exchange rate and payout
@@ -151,9 +168,29 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
 
     const handleStep1Next = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // KYC / KYB hard gate
+        if (verification && !verification.isFullyVerified) {
+            const kycPending = verification.kycStatus !== "APPROVED";
+            const kybPending = verification.kybStatus !== "APPROVED";
+            if (kycPending) {
+                toast.error("Your identity (KYC) must be verified before initiating a trade. Please complete KYC verification.");
+                return;
+            }
+            if (kybPending) {
+                toast.error("Your business (KYB) must be verified before initiating a trade. Please complete KYB verification.");
+                return;
+            }
+        }
+
         const amt = parseFloat(amount);
         if (!amount || isNaN(amt) || amt <= 0) {
             toast.error("Please enter a valid amount.");
+            return;
+        }
+        // Minimum ₦20,000,000 when sending NGN
+        if (fromCurrency === "NGN" && amt < 20000000) {
+            toast.error("Minimum transaction amount is ₦20,000,000 for NGN trades.");
             return;
         }
         if (fromCurrency === toCurrency) {
@@ -384,6 +421,20 @@ export function NewTransactionModal({ onClose, draftToEdit }: NewTransactionModa
                             {/* ── Step 1: Trade Details & Live FX Quote ── */}
                             {step === 1 && (
                                 <form onSubmit={handleStep1Next} className="space-y-4">
+                                    {/* KYC / KYB Verification Banner */}
+                                    {verification && !verification.isFullyVerified && (
+                                        <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 border border-red-200">
+                                            <ShieldCheck className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                                            <div>
+                                                <p className="text-sm font-bold text-red-800">Verification Required</p>
+                                                <p className="text-xs text-red-700 mt-0.5">
+                                                    {verification.kycStatus !== "APPROVED"
+                                                        ? "Your identity (KYC) has not been verified. Please complete KYC before initiating a trade."
+                                                        : "Your business (KYB) has not been verified. Please complete KYB verification before initiating a trade."}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
                                     {/* BUY label & Ledger Balance */}
                                     <div className="flex items-center justify-between">
                                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">

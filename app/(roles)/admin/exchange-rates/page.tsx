@@ -78,8 +78,7 @@ const CURRENCY_FLAGS: Record<string, string> = {
 
 function formatRate(rate: number | string, currency = "NGN"): string {
     const num = typeof rate === "string" ? parseFloat(rate) : rate;
-    const symbol = CURRENCY_ICONS[currency] || "";
-    return `${symbol}${num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+    return `₦${num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
 }
 
 function formatDate(date: string): string {
@@ -106,17 +105,22 @@ function RateCard({
     const markupValue = markup ? parseFloat(markup.markupValue) : 0;
     const markupType = markup?.markupType ?? "FIXED";
 
+    // All PapaEgo rate pairs represent NGN per unit of foreign currency. Fixed markup is always in Naira (₦).
+    const foreignCurrency = rate.pair.split("/").find((c) => c !== "NGN") || rate.pair.split("/")[1];
     const markupDisplay =
         markupType === "FIXED"
-            ? `+${CURRENCY_ICONS[rate.pair.split("/")[1]] || ""}${markupValue.toFixed(2)}`
+            ? `+₦${markupValue.toFixed(2)}`
             : `+${markupValue.toFixed(2)}%`;
+
+    const custRateNum = typeof rate.customerRate === "string" ? parseFloat(rate.customerRate) : rate.customerRate;
+    const provRateNum = typeof rate.providerRate === "string" ? parseFloat(rate.providerRate) : rate.providerRate;
 
     return (
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                    <span className="text-xl">{CURRENCY_FLAGS[rate.pair.split("/")[0]] || "🌐"}</span>
+                    <span className="text-xl">{CURRENCY_FLAGS[foreignCurrency] || "🌐"}</span>
                     <div>
                         <p className="font-bold text-gray-800">{rate.pair}</p>
                         <p className="text-xs text-gray-400">{rate.providerName}</p>
@@ -139,7 +143,8 @@ function RateCard({
             >
                 <p className="text-white/50 text-xs uppercase tracking-widest mb-1">Customer Rate</p>
                 <p className="text-white font-black text-2xl">
-                    {formatRate(rate.customerRate, rate.pair.split("/")[1])}
+                    ₦{custRateNum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                    <span className="text-xs text-white/50 font-normal ml-1.5">/ {foreignCurrency}</span>
                 </p>
                 <div className="flex items-center gap-2 mt-2">
                     <span
@@ -164,7 +169,8 @@ function RateCard({
                         </p>
                         {showProvider ? (
                             <p className="font-bold text-gray-600 text-sm">
-                                {formatRate(rate.providerRate, rate.pair.split("/")[1])}
+                                ₦{provRateNum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                                <span className="text-xs text-gray-400 font-normal ml-1">/ {foreignCurrency}</span>
                             </p>
                         ) : (
                             <p className="font-bold text-gray-300 text-sm tracking-widest">••••••••</p>
@@ -181,12 +187,12 @@ function RateCard({
 
             {/* Markup breakdown */}
             <div className="flex items-center gap-2 text-xs text-gray-500 mb-4">
-                <span className="font-mono">{formatRate(rate.providerRate, rate.pair.split("/")[1])}</span>
+                <span className="font-mono">₦{provRateNum.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                 <ArrowRight size={10} className="text-gray-300" />
-                <span className="text-amber-600 font-medium">{markupDisplay}</span>
+                <span className="text-amber-600 font-semibold">{markupDisplay}</span>
                 <ArrowRight size={10} className="text-gray-300" />
                 <span className="font-mono font-bold text-gray-700">
-                    {formatRate(rate.customerRate, rate.pair.split("/")[1])}
+                    ₦{custRateNum.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                 </span>
             </div>
 
@@ -305,16 +311,16 @@ function MarkupEditModal({
                                 >
                                     <div className="flex items-center gap-2 mb-1">
                                         {type === "FIXED"
-                                            ? <DollarSign size={14} style={{ color: markupType === type ? "#c9a227" : "#9aa0a6" }} />
+                                            ? <span className="text-sm font-bold text-amber-600">₦</span>
                                             : <Percent size={14} style={{ color: markupType === type ? "#c9a227" : "#9aa0a6" }} />
                                         }
                                         <span className={`text-sm font-bold ${markupType === type ? "text-amber-700" : "text-gray-500"}`}>
-                                            {type === "FIXED" ? "Fixed" : "Percentage"}
+                                            {type === "FIXED" ? "Fixed (₦)" : "Percentage"}
                                         </span>
                                     </div>
                                     <p className="text-xs text-gray-400">
                                         {type === "FIXED"
-                                            ? `Rate + ${CURRENCY_ICONS[pair.quote] || ""}amount`
+                                            ? "Rate + ₦ amount"
                                             : "Rate × (1 + %/100)"}
                                     </p>
                                 </button>
@@ -328,13 +334,13 @@ function MarkupEditModal({
                             Markup Value{" "}
                             <span className="text-gray-400 font-normal">
                                 ({markupType === "FIXED"
-                                    ? `${CURRENCY_ICONS[pair.quote] || ""}amount`
+                                    ? "₦ Naira amount"
                                     : "percentage %"})
                             </span>
                         </Label>
                         <div className="relative mt-1">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                                {markupType === "FIXED" ? (CURRENCY_ICONS[pair.quote] || "+") : "%"}
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">
+                                {markupType === "FIXED" ? "₦" : "%"}
                             </span>
                             <Input
                                 type="number"
@@ -358,7 +364,7 @@ function MarkupEditModal({
                                 <div className="text-center">
                                     <p className="text-xs text-gray-400 mb-1">Provider Rate</p>
                                     <p className="font-bold text-gray-600">
-                                        {formatRate(providerRate, pair.quote)}
+                                        ₦{parseFloat(String(providerRate)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                                     </p>
                                 </div>
                                 <ArrowRight size={16} className="text-gray-300 flex-shrink-0" />
@@ -366,7 +372,7 @@ function MarkupEditModal({
                                     <p className="text-xs text-gray-400 mb-1">Markup</p>
                                     <p className="font-bold text-amber-600">
                                         {markupType === "FIXED"
-                                            ? `+${CURRENCY_ICONS[pair.quote] || ""}${parseFloat(markupValue || "0").toFixed(2)}`
+                                            ? `+₦${parseFloat(markupValue || "0").toFixed(2)}`
                                             : `+${parseFloat(markupValue || "0").toFixed(2)}%`}
                                     </p>
                                 </div>
@@ -374,7 +380,7 @@ function MarkupEditModal({
                                 <div className="text-center">
                                     <p className="text-xs text-gray-400 mb-1">Customer Rate</p>
                                     <p className="font-black text-gray-900 text-base">
-                                        {formatRate(previewCustomerRate, pair.quote)}
+                                        ₦{parseFloat(String(previewCustomerRate)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                                     </p>
                                 </div>
                             </div>
@@ -580,7 +586,7 @@ function AuditLogTable() {
                                                 className="text-xs px-2 py-0.5 rounded-full font-medium"
                                                 style={{ backgroundColor: "#fdf3d0", color: "#a97600" }}
                                             >
-                                                +{formatRate(log.markupApplied, log.quoteCurrency)}
+                                                +{log.markupType === "PERCENTAGE" ? `${parseFloat(log.markupApplied).toFixed(2)}%` : `₦${parseFloat(log.markupApplied).toFixed(2)}`}
                                             </span>
                                             <span className="text-xs text-gray-400 ml-1">{log.markupType}</span>
                                         </div>
@@ -983,7 +989,7 @@ function TradeCalculatorWidget() {
                                 <div className="p-3 rounded-xl bg-gray-50 flex justify-between items-center">
                                     <span className="text-xs text-gray-500">Configured PapaEgo Markup</span>
                                     <span className="font-mono font-bold text-sm text-amber-700">
-                                        +{CURRENCY_ICONS[result.quoteCurrency] || "₦"}{Number(result.markupApplied).toFixed(2)} ({result.markupType})
+                                        +{result.markupType === "PERCENTAGE" ? `${Number(result.markupApplied).toFixed(2)}%` : `₦${Number(result.markupApplied).toFixed(2)}`} ({result.markupType})
                                     </span>
                                 </div>
                                 <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 flex justify-between items-center">
