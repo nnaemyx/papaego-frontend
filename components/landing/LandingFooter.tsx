@@ -1,223 +1,145 @@
 'use client';
 
 import Image from 'next/image';
-import { motion } from 'framer-motion';
-import { useInView } from 'framer-motion';
-import { useRef } from 'react';
-import LinkedInIcon from './icons/linkedin.svg';
-import FacebookIcon from './icons/facebook.svg';
-import InstagramIcon from './icons/instagram.svg';
-import TwitterIcon from './icons/twitter.svg';
+import Link from 'next/link';
 import { LEGAL_LINKS } from '@/lib/constants/legal';
-import { Mail, Phone, MapPin, Building2 } from 'lucide-react';
 
 interface LandingFooterProps {
   onContactUs: () => void;
 }
 
 export function LandingFooter({ onContactUs }: LandingFooterProps) {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-100px' });
-
-  const socialLinks = [
-    { icon: LinkedInIcon, href: '#', label: 'LinkedIn' },
-    { icon: FacebookIcon, href: '#', label: 'Facebook' },
-    { icon: InstagramIcon, href: '#', label: 'Instagram' },
-    { icon: TwitterIcon, href: '#', label: 'Twitter' },
-  ];
-
   return (
-    <footer
-      ref={ref}
-      className="relative px-4 sm:px-6 lg:px-8"
-      style={{ backgroundColor: 'white' }}
-    >
-      {/* Compliance / Company Details Strip */}
-      <motion.div
-        className="max-w-7xl mx-auto py-10 border-b"
-        style={{ borderColor: 'var(--border-custom)' }}
-        initial={{ opacity: 0, y: 20 }}
-        animate={isInView ? { opacity: 1, y: 0 } : {}}
-        transition={{ duration: 0.6 }}
-      >
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="flex items-start gap-3">
-            <Building2 className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--primary-gold)' }} />
-            <div>
-              <p
-                className="text-xs font-bold uppercase tracking-wider mb-1"
-                style={{ color: 'var(--text-gray)', fontFamily: 'var(--font-bricolage-grotesque)' }}
-              >
-                Company Registration
-              </p>
-              <p className="text-sm text-gray-500" style={{ fontFamily: 'var(--font-bricolage-grotesque)' }}>
-                RC Number: 9463271
-              </p>
+    <footer className="w-full bg-slate-surface text-surface-pure mt-12 shadow-[0_-1px_12px_rgba(0,0,0,0.06)] border-t border-slate-800">
+      <div className="max-w-7xl mx-auto px-6 lg:px-12 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12">
+          
+          {/* Brand Info */}
+          <div className="lg:col-span-2 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center text-slate-950 font-headline-sm font-bold shadow-sm">
+                P
+              </div>
+              <span className="font-headline-sm text-surface-pure font-bold tracking-tight text-xl">
+                PapaEgo
+              </span>
             </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <Mail className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--primary-gold)' }} />
-            <div>
-              <p
-                className="text-xs font-bold uppercase tracking-wider mb-1"
-                style={{ color: 'var(--text-gray)', fontFamily: 'var(--font-bricolage-grotesque)' }}
-              >
-                Support Email
-              </p>
-              <a
-                href="mailto:support@papaego.com"
-                className="text-sm text-gray-500 hover:underline"
-                style={{ fontFamily: 'var(--font-bricolage-grotesque)' }}
-              >
-                support@papaego.com
-              </a>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <Phone className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--primary-gold)' }} />
-            <div>
-              <p
-                className="text-xs font-bold uppercase tracking-wider mb-1"
-                style={{ color: 'var(--text-gray)', fontFamily: 'var(--font-bricolage-grotesque)' }}
-              >
-                Phone
-              </p>
-              <p className="text-sm text-gray-500" style={{ fontFamily: 'var(--font-bricolage-grotesque)' }}>
-                Coming soon
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <MapPin className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--primary-gold)' }} />
-            <div>
-              <p
-                className="text-xs font-bold uppercase tracking-wider mb-1"
-                style={{ color: 'var(--text-gray)', fontFamily: 'var(--font-bricolage-grotesque)' }}
-              >
-                Address
-              </p>
-              <p className="text-sm text-gray-500" style={{ fontFamily: 'var(--font-bricolage-grotesque)' }}>
-                Nigeria
-              </p>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Main Footer */}
-      <div className="max-w-7xl mx-auto">
-        <motion.div
-          className="flex flex-col items-center space-y-8 py-12"
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, delay: 0.1 }}
-        >
-          {/* Logo */}
-          <Image
-            src="/images/logo.png"
-            alt="PapaEgo"
-            width={175}
-            height={40}
-            className="h-[32px] lg:h-[40px] w-auto"
-          />
-
-          {/* Tagline — fixed plural */}
-          <p
-            className="landing-body text-center text-sm lg:text-base"
-            style={{ color: 'var(--text-gray)', fontWeight: 700 }}
-          >
-            Powering Africa&apos;s Global Payments
-          </p>
-
-          {/* Navigation Links */}
-          <div className="flex flex-wrap items-center justify-center gap-4 lg:gap-8">
-            <button
-              onClick={() => window.location.href = '/customer-auth/signin'}
-              className="landing-button transition-colors hover:opacity-80"
-              style={{ color: 'var(--primary-gold)', fontFamily: 'var(--font-bricolage-grotesque)', fontWeight: 600 }}
-            >
-              Login
-            </button>
-
-            <div className="w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--text-gray)' }} />
-
-            <button
-              onClick={onContactUs}
-              className="landing-button transition-colors hover:opacity-80"
-              style={{ color: 'var(--primary-gold)', fontFamily: 'var(--font-bricolage-grotesque)', fontWeight: 600 }}
-            >
-              Contact Us
-            </button>
-
-            <div className="w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--text-gray)' }} />
-
-            <a
-              href="mailto:support@papaego.com"
-              className="landing-button transition-colors hover:opacity-80"
-              style={{ color: 'var(--primary-gold)', fontFamily: 'var(--font-bricolage-grotesque)', fontWeight: 600 }}
-            >
-              support@papaego.com
-            </a>
-          </div>
-
-          {/* Social Icons */}
-          <div className="flex items-center gap-5 lg:gap-7">
-            {socialLinks.map((social, index) => (
-              <motion.a
-                key={index}
-                href={social.href}
-                aria-label={social.label}
-                className="transition-transform hover:scale-110"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <social.icon
-                  width={24}
-                  height={24}
-                  className="lg:w-[28px] lg:h-[28px]"
-                  style={{ color: 'var(--primary-gold)' }}
-                />
-              </motion.a>
-            ))}
-          </div>
-
-          {/* Bottom Row */}
-          <div
-            className="w-full flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t"
-            style={{ borderColor: 'var(--border-custom)' }}
-          >
-            <p
-              className="landing-body text-xs sm:text-sm text-center sm:text-left"
-              style={{ color: 'var(--text-gray)' }}
-            >
-              © 2026 PapaEgo. All rights reserved. &nbsp;|&nbsp; RC: 9463271
+            
+            <p className="font-body-md text-slate-300 max-w-sm leading-relaxed">
+              Pan-African institutional cross-border liquidity and treasury infrastructure. Engineered for export-import conglomerates, institutions, and licensed financial entities demanding execution speed with zero slippage.
             </p>
 
-            <div className="flex items-center gap-4 sm:gap-6">
-              <a
-                href={LEGAL_LINKS.TERMS_AND_CONDITIONS}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="landing-body text-xs sm:text-sm transition-colors hover:opacity-80"
-                style={{ color: 'var(--primary-gold)' }}
-              >
-                Terms &amp; Conditions
-              </a>
-              <a
-                href={LEGAL_LINKS.PRIVACY_POLICY}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="landing-body text-xs sm:text-sm transition-colors hover:opacity-80"
-                style={{ color: 'var(--primary-gold)' }}
-              >
-                Privacy Policy
-              </a>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-label-sm font-label-sm bg-slate-800 text-slate-200 border border-slate-700">
+                <span className="w-2 h-2 rounded-full bg-success-emerald mr-2 animate-pulse"></span>
+                Real-Time Multi-Rail Active
+              </span>
             </div>
           </div>
-        </motion.div>
+
+          {/* Solutions Column */}
+          <div className="flex flex-col gap-3">
+            <span className="font-label-md text-label-md uppercase tracking-wider text-primary-fixed font-bold">
+              Solutions
+            </span>
+            <Link href="#currencies" className="font-body-sm text-slate-300 hover:text-surface-pure transition-colors">
+              Treasury Settlement
+            </Link>
+            <Link href="#currencies" className="font-body-sm text-slate-300 hover:text-surface-pure transition-colors">
+              African Corridors
+            </Link>
+            <Link href="#currencies" className="font-body-sm text-slate-300 hover:text-surface-pure transition-colors">
+              Institutional Liquidity
+            </Link>
+            <Link href="#features" className="font-body-sm text-slate-300 hover:text-surface-pure transition-colors">
+              API Settlement Rails
+            </Link>
+          </div>
+
+          {/* Company & Trust Column */}
+          <div className="flex flex-col gap-3">
+            <span className="font-label-md text-label-md uppercase tracking-wider text-primary-fixed font-bold">
+              Company &amp; Trust
+            </span>
+            <Link href="#features" className="font-body-sm text-slate-300 hover:text-surface-pure transition-colors">
+              Why PapaEgo
+            </Link>
+            <Link href="#how-it-works" className="font-body-sm text-slate-300 hover:text-surface-pure transition-colors">
+              Execution Architecture
+            </Link>
+            <Link href="/agent-network" className="font-body-sm text-slate-300 hover:text-surface-pure transition-colors">
+              Become an Agent
+            </Link>
+            <Link href="#faq" className="font-body-sm text-slate-300 hover:text-surface-pure transition-colors">
+              Institutional FAQ
+            </Link>
+          </div>
+
+          {/* Contact & Treasury */}
+          <div className="flex flex-col gap-3">
+            <span className="font-label-md text-label-md uppercase tracking-wider text-primary-fixed font-bold">
+              Contact &amp; Treasury
+            </span>
+            <p className="font-body-sm text-slate-300 font-code-num">support@papaego.com</p>
+            <p className="font-body-sm text-slate-300 font-code-num">treasury@papaego.com</p>
+            <p className="font-body-sm text-slate-300">Victoria Island, Lagos • London EC2</p>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={onContactUs}
+                className="inline-flex items-center gap-1.5 text-xs text-primary-fixed-dim hover:underline font-bold"
+              >
+                <span>Open Direct Contact Desk</span>
+                <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Bottom Disclosures & Legal */}
+        <div className="mt-12 pt-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-t border-slate-800 text-slate-400">
+          <div className="flex flex-col gap-1 max-w-2xl">
+            <p className="font-body-sm text-slate-300">
+              © {new Date().getFullYear()} PapaEgo Technologies. All rights reserved.
+            </p>
+            <p className="font-label-sm text-slate-400">
+              Corporate Affairs Commission Registration RC: 9463271. Fully registered non-bank corporate foreign exchange and institutional trade settlement participant.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-6 font-label-md">
+            <a
+              href={LEGAL_LINKS.PRIVACY_POLICY}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-surface-pure transition-colors"
+            >
+              Privacy Policy
+            </a>
+            <a
+              href={LEGAL_LINKS.TERMS_AND_CONDITIONS}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-surface-pure transition-colors"
+            >
+              Terms of Service
+            </a>
+            <a
+              href="/legal"
+              className="hover:text-surface-pure transition-colors"
+            >
+              AML/CTF Policy
+            </a>
+            <button
+              type="button"
+              onClick={onContactUs}
+              className="hover:text-surface-pure transition-colors"
+            >
+              Security Operations
+            </button>
+          </div>
+        </div>
       </div>
     </footer>
   );

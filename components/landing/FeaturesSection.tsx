@@ -1,93 +1,81 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Globe, ShieldCheck, Zap, HandCoins } from 'lucide-react';
 
 const features = [
   {
-    icon: Globe,
+    icon: 'public',
     title: 'Global Payment Network',
     description:
-      'Send and receive money to 40+ countries worldwide with our robust, interconnected financial infrastructure tailored for cross-border needs.',
+      'Institutional-grade payment channels spanning 40+ countries. Engineered specifically for African enterprises, exporters, and multinational trading partners to route capital globally with zero friction.',
+    cta: 'Explore network rails',
   },
   {
-    icon: ShieldCheck,
+    icon: 'verified_user',
     title: 'Bank-Grade Security',
     description:
-      'Your transactions are protected by industry-leading security protocols and rigorous compliance frameworks — built to institutional standards.',
+      'Enterprise-grade 256-bit data encryption, multi-tier access controls, and strict compliance monitoring under CAC RC: 9463271. All client funds are protected in ring-fenced, segregated Tier-1 banking accounts.',
+    cta: 'Security audit reports',
   },
   {
-    icon: Zap,
+    icon: 'speed',
     title: 'Fast Settlement',
     description:
-      'Experience rapid settlement speeds via trusted banking rails, ensuring your business keeps moving without unnecessary financial delays.',
+      'Rapid clearing via direct RTGS, SWIFT GPI, and local switch integrations delivering sub-15 minute median settlement execution and automated dispatch.',
+    cta: 'View clearing speed',
   },
   {
-    icon: HandCoins,
+    icon: 'percent',
     title: 'Competitive FX Rates',
     description:
-      'Access live exchange rates for USD, EUR, GBP and more — with transparent pricing and zero hidden fees on every transaction.',
+      'Real-time wholesale interbank quotes for USD, EUR, GBP, NGN, CAD, AUD, CHF, and JPY with 0.0% hidden surcharges, guaranteed rate locks, and total spread transparency.',
+    cta: 'Wholesale rate guide',
   },
 ];
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="py-24 px-4 sm:px-6 lg:px-8 bg-white relative overflow-hidden">
-      <div className="max-w-7xl mx-auto relative z-10">
+    <section id="features" className="py-24 bg-surface-container-low relative">
+      <div className="max-w-7xl mx-auto px-6 lg:px-12">
+        {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <motion.p
-            className="text-sm font-bold tracking-widest uppercase mb-3"
-            style={{ color: 'var(--primary-gold)' }}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-muted text-gold-dark font-label-md font-bold uppercase tracking-wider mb-4">
             Why Choose PapaEgo
-          </motion.p>
-          <motion.h2
-            className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-6"
-            style={{ color: 'var(--primary-dark)', fontFamily: 'var(--font-bricolage-grotesque)' }}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
+          </div>
+          <h2 className="font-headline-lg text-on-surface font-bold tracking-tight mb-4">
             Empowering Modern Finance
-          </motion.h2>
-          <motion.p
-            className="text-lg text-gray-600"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            We build tools that simplify international trade, breaking down borders to accelerate
-            your global business growth.
-          </motion.p>
+          </h2>
+          <p className="font-body-lg text-secondary">
+            We build tools that simplify international trade, breaking down borders to accelerate your global business growth.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {features.map((feature, idx) => (
+        {/* Feature Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {features.map((card, idx) => (
             <motion.div
-              key={feature.title}
-              className="p-8 rounded-3xl bg-gray-50 border border-gray-100 hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
+              key={card.title}
+              className="bg-surface-pure rounded-2xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col justify-between"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: idx * 0.1 + 0.3 }}
+              transition={{ duration: 0.5, delay: idx * 0.1 }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-[#C9A22710] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-sm"
-                style={{ backgroundColor: 'var(--primary-dark)' }}
-              >
-                <feature.icon className="w-6 h-6" style={{ color: 'var(--primary-gold)' }} />
+              <div>
+                <div className="w-14 h-14 rounded-xl bg-gold-muted flex items-center justify-center text-primary-container mb-6 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-[32px]">{card.icon}</span>
+                </div>
+                <h3 className="font-headline-sm text-on-surface font-bold mb-3">
+                  {card.title}
+                </h3>
+                <p className="font-body-md text-secondary leading-relaxed">
+                  {card.description}
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-3" style={{ color: 'var(--primary-dark)' }}>
-                {feature.title}
-              </h3>
-              <p className="text-gray-600 leading-relaxed">{feature.description}</p>
+              <div className="mt-8 pt-4 flex items-center text-gold-dark font-label-md font-bold group-hover:translate-x-1 transition-transform">
+                <span>{card.cta}</span>
+                <span className="material-symbols-outlined text-[16px] ml-1">arrow_forward</span>
+              </div>
             </motion.div>
           ))}
         </div>

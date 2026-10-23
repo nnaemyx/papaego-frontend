@@ -408,4 +408,136 @@
     }
   }
 }
+
+
+/* ============================================================================
+   Stitch Sovereign Gold Design System Tokens & Typography
+   ============================================================================ */
+:root {
+  --color-surface-pure: #ffffff;
+  --color-surface-light: #fafafb;
+  --color-surface-container-low: #f0f3ff;
+  --color-surface-container: #e7eeff;
+  --color-surface-container-high: #e1e8fa;
+  --color-surface-container-highest: #dbe3f4;
+  --color-on-surface: #141c28;
+  --color-on-surface-variant: #4f4534;
+  --color-secondary: #565e74;
+  --color-gold-dark: #c99014;
+  --color-gold-muted: #fbf5e6;
+  --color-gold-light: #f8ecd1;
+  --color-primary-container: #d9a11e;
+  --color-primary-fixed: #ffdea5;
+  --color-primary-fixed-dim: #f9bd3c;
+  --color-slate-surface: #1a233a;
+  --color-border-subtle: #e5e7eb;
+  --color-border-dark: #232d42;
+  --color-success-emerald: #10b981;
+  --color-success-surface: #ecfdf5;
+  --color-info-cyan: #0ea5e9;
+}
+
+.bg-surface-pure { background-color: var(--color-surface-pure); }
+.bg-surface-light { background-color: var(--color-surface-light); }
+.bg-surface-container-low { background-color: var(--color-surface-container-low); }
+.bg-surface-container { background-color: var(--color-surface-container); }
+.bg-surface-container-high { background-color: var(--color-surface-container-high); }
+.bg-gold-muted { background-color: var(--color-gold-muted); }
+.bg-gold-dark { background-color: var(--color-gold-dark); }
+.bg-primary-container { background-color: var(--color-primary-container); }
+.bg-slate-surface { background-color: var(--color-slate-surface); }
+.bg-success-surface { background-color: var(--color-success-surface); }
+.bg-border-dark { background-color: var(--color-border-dark); }
+
+.text-surface-pure { color: var(--color-surface-pure); }
+.text-on-surface { color: var(--color-on-surface); }
+.text-gold-dark { color: var(--color-gold-dark); }
+.text-primary-container { color: var(--color-primary-container); }
+.text-primary-fixed-dim { color: var(--color-primary-fixed-dim); }
+.text-primary-fixed { color: var(--color-primary-fixed); }
+.text-success-emerald { color: var(--color-success-emerald); }
+.text-secondary { color: var(--color-secondary); }
+
+.border-border-subtle { border-color: var(--color-border-subtle); }
+.border-border-dark { border-color: var(--color-border-dark); }
+
+.font-display-xl {
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: clamp(2.25rem, 4vw + 1rem, 3.5rem);
+  line-height: 1.14;
+  letter-spacing: -0.03em;
+}
+
+.font-headline-lg {
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: clamp(1.75rem, 3vw + 0.5rem, 2.5rem);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.font-headline-sm {
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  letter-spacing: -0.01em;
+}
+
+.font-body-lg {
+  font-family: var(--font-plus-jakarta-sans), sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+.font-body-md {
+  font-family: var(--font-plus-jakarta-sans), sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.5rem;
+}
+
+.font-body-sm {
+  font-family: var(--font-plus-jakarta-sans), sans-serif;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+.font-label-lg {
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  letter-spacing: 0.02em;
+}
+
+.font-label-md {
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  letter-spacing: 0.04em;
+}
+
+.font-label-sm {
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: 0.625rem;
+  line-height: 0.875rem;
+  letter-spacing: 0.08em;
+}
+
+.font-code-num {
+  font-family: var(--font-space-grotesk), monospace;
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
 

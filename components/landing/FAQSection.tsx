@@ -2,142 +2,164 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
 
 const faqs = [
   {
     question: 'Which countries do you currently support?',
     answer:
-      'PapaEgo is launching in Nigeria first. We are actively expanding to other African countries and will announce new market additions as they become available. Our goal is to cover all major African markets.',
+      'PapaEgo currently enables transfers across 40+ countries globally, starting with direct clearing infrastructure in Nigeria and expanding pan-African clearing networks across China, the United Kingdom, European Union, United States, Canada, Australia, Switzerland, and Asia.',
   },
   {
     question: 'Which currencies can I send and receive?',
     answer:
-      'We support major international currencies including USD (US Dollar), EUR (Euro), and GBP (British Pound), with more currencies being added. Payments originating from Nigeria can be sent globally and received locally in Naira (NGN) or the sender\'s chosen currency.',
+      'We support major global currencies including USD (US Dollar), EUR (Euro), GBP (British Pound), CNY (Chinese Yuan), CAD (Canadian Dollar), AUD (Australian Dollar), CHF (Swiss Franc), JPY (Japanese Yen), and NGN (Nigerian Naira).',
   },
   {
-    question: 'Is PapaEgo regulated?',
+    question: 'Is PapaEgo regulated and compliant?',
     answer:
-      'Yes. PapaEgo is building its infrastructure on a compliant, regulated framework. We are committed to full regulatory compliance and are working to obtain the necessary licences, including from the Central Bank of Nigeria (CBN). Updates on our regulatory status will be shared on this page.',
+      'Yes. PapaEgo is a registered corporate entity in Nigeria (RC Number: 9463271) adhering strictly to AML/CFT statutory compliance frameworks, regulatory oversight, and Tier-1 banking custody standards.',
   },
   {
     question: 'How long does a transfer take?',
     answer:
-      'Settlement times depend on the destination country, currency pair, and banking rails used. We aim for fast, same-day or next-business-day settlement in most corridors. You will always be shown an estimated settlement window before confirming your transaction.',
+      'Transfers through local clearing rails and major regional automated switches achieve a median settlement speed of under 15 minutes. International SWIFT or RTGS wires settle within same-day business windows.',
   },
   {
-    question: 'What are the fees for sending money?',
+    question: 'What are the fees and minimum transaction limits for sending money?',
     answer:
-      'PapaEgo charges transparent, flat fees with no hidden markups on exchange rates. Our full fee schedule is available once you sign up. We believe in honest, upfront pricing.',
+      'PapaEgo operates on true interbank wholesale FX pricing with 0.0% hidden fees or spread markups. To serve institutional and trade import-export volumes efficiently, our minimum transaction threshold is ₦20,000,000 (Twenty Million Naira). All exchange rates and transfer costs are displayed transparently before transaction confirmation.',
   },
   {
     question: 'How do I get started?',
     answer:
-      'Simply click "Create Account", complete our quick KYC onboarding, and you can start sending money internationally within minutes. If you need assistance, reach out to our support team at support@papaego.com.',
+      "Click 'Register Business', submit your business registration and KYC documents for rapid verification by our Lagos compliance desk, and begin trading immediately.",
   },
 ];
 
-function FAQItem({ question, answer, index }: { question: string; answer: string; index: number }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <motion.div
-      className="border rounded-2xl overflow-hidden"
-      style={{ borderColor: 'var(--border-custom)' }}
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.4, delay: index * 0.07 }}
-    >
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-gray-50 transition-colors"
-      >
-        <span
-          className="text-base font-bold pr-4"
-          style={{ color: 'var(--text-gray)', fontFamily: 'var(--font-bricolage-grotesque)' }}
-        >
-          {question}
-        </span>
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.25 }}
-          className="flex-shrink-0"
-        >
-          <ChevronDown className="w-5 h-5" style={{ color: 'var(--primary-gold)' }} />
-        </motion.div>
-      </button>
-
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="overflow-hidden"
-          >
-            <p
-              className="px-6 pb-5 text-gray-600 leading-relaxed"
-              style={{ fontFamily: 'var(--font-bricolage-grotesque)', fontSize: '15px' }}
-            >
-              {answer}
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-}
-
 export function FAQSection() {
-  return (
-    <section id="faq" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
-      <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-16">
-          <motion.p
-            className="text-sm font-bold tracking-widest uppercase mb-3"
-            style={{ color: 'var(--primary-gold)' }}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
-            Got Questions?
-          </motion.p>
-          <motion.h2
-            className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-4"
-            style={{ color: '#212121', fontFamily: 'var(--font-bricolage-grotesque)' }}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            Frequently Asked Questions
-          </motion.h2>
-          <motion.p
-            className="text-gray-500 text-base"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            Everything you need to know about PapaEgo. Can&apos;t find your answer?{' '}
-            <a
-              href="mailto:support@papaego.com"
-              className="font-semibold hover:underline"
-              style={{ color: 'var(--primary-gold)' }}
-            >
-              Email us
-            </a>
-            .
-          </motion.p>
-        </div>
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
 
-        <div className="flex flex-col gap-4">
-          {faqs.map((faq, idx) => (
-            <FAQItem key={idx} question={faq.question} answer={faq.answer} index={idx} />
-          ))}
+  const toggle = (idx: number) => {
+    setOpenIndex(openIndex === idx ? null : idx);
+  };
+
+  return (
+    <section id="faq" className="py-24 bg-surface-pure relative border-t border-border-subtle">
+      <div className="max-w-7xl mx-auto px-6 lg:px-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+          
+          {/* Left Column: Verification & Support Card */}
+          <div className="lg:col-span-5 flex flex-col justify-between">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-muted text-gold-dark font-label-md font-bold uppercase tracking-wider mb-4">
+                Got Questions?
+              </div>
+              <h2 className="font-headline-lg text-on-surface font-bold tracking-tight mb-4">
+                Frequently Asked Questions
+              </h2>
+              <p className="font-body-lg text-secondary mb-8">
+                Everything you need to know about the PapaEgo institutional execution network. Can&apos;t find your answer? Reach our dedicated treasury desk.
+              </p>
+            </div>
+
+            {/* Institutional Trust Box */}
+            <div className="bg-surface-light rounded-2xl p-8 shadow-sm flex flex-col gap-6 border border-border-subtle">
+              <h4 className="font-headline-sm text-on-surface font-bold">
+                Corporate Verification &amp; Desk
+              </h4>
+
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-gold-muted text-primary-container flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">business</span>
+                </div>
+                <div>
+                  <span className="font-label-sm text-secondary uppercase font-bold tracking-wider block">
+                    Company Registration
+                  </span>
+                  <p className="font-code-num font-bold text-on-surface">RC Number: 9463271</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-gold-muted text-primary-container flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">mail</span>
+                </div>
+                <div>
+                  <span className="font-label-sm text-secondary uppercase font-bold tracking-wider block">
+                    Support Email
+                  </span>
+                  <p className="font-code-num font-bold text-on-surface">support@papaego.com</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-gold-muted text-primary-container flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">location_on</span>
+                </div>
+                <div>
+                  <span className="font-label-sm text-secondary uppercase font-bold tracking-wider block">
+                    Address
+                  </span>
+                  <p className="font-body-md font-semibold text-on-surface">Lagos, Nigeria</p>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <a
+                  className="inline-flex items-center gap-2 text-gold-dark font-label-md font-bold hover:underline"
+                  href="mailto:support@papaego.com"
+                >
+                  <span>Reach Treasury Specialists</span>
+                  <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Interactive FAQ Accordions */}
+          <div className="lg:col-span-7 flex flex-col gap-4">
+            {faqs.map((faq, idx) => {
+              const isOpen = openIndex === idx;
+              return (
+                <div
+                  key={idx}
+                  className="bg-surface-light rounded-2xl overflow-hidden shadow-sm border border-border-subtle transition-all duration-200"
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggle(idx)}
+                    className="w-full text-left p-6 font-headline-sm text-on-surface font-semibold flex items-center justify-between gap-4 focus:outline-none"
+                  >
+                    <span>{faq.question}</span>
+                    <span
+                      className={`material-symbols-outlined text-primary-container transition-transform duration-300 ${
+                        isOpen ? 'rotate-180' : ''
+                      }`}
+                    >
+                      expand_more
+                    </span>
+                  </button>
+
+                  <AnimatePresence>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-6 pb-6 text-secondary font-body-md leading-relaxed border-t border-border-subtle/50 pt-3">
+                          {faq.answer}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+          </div>
+
         </div>
       </div>
     </section>
