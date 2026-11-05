@@ -16,8 +16,8 @@ const schema = z.object({
     residentialAddress: z.string().min(5, "Address required"),
     phone: z.string().min(7, "Phone required"),
     email: z.string().email("Valid email required"),
-    idType: z.enum(["PASSPORT", "NATIONAL_ID", "DRIVERS_LICENSE"]),
-    idNumber: z.string().min(3, "ID Document number is required"),
+    idType: z.enum(["NATIONAL_ID", "DRIVERS_LICENSE", "PASSPORT"]),
+    idNumber: z.string().min(8, "Valid ID / NIN number is required"),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -28,9 +28,7 @@ interface Props {
 }
 
 const ID_TYPES = [
-    { value: "PASSPORT", label: "International Passport" },
-    { value: "NATIONAL_ID", label: "National Identity Card (NIN)" },
-    { value: "DRIVERS_LICENSE", label: "Driver's License" },
+    { value: "NATIONAL_ID", label: "National Identification Number (NIN)" },
 ];
 
 export default function KycForm({ onNext, onBack }: Props) {
@@ -47,7 +45,7 @@ export default function KycForm({ onNext, onBack }: Props) {
     const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
         resolver: zodResolver(schema),
         defaultValues: {
-            idType: existingKyc?.idType || "PASSPORT",
+            idType: "NATIONAL_ID",
             idNumber: existingKyc?.idNumber || kycDraft.idNumber || "",
             fullName: existingKyc?.fullName || kycDraft.fullName || "",
             dateOfBirth: existingKyc?.dateOfBirth ? new Date(existingKyc.dateOfBirth).toISOString().split('T')[0] : (kycDraft.dateOfBirth ? new Date(kycDraft.dateOfBirth).toISOString().split('T')[0] : ""),
@@ -59,7 +57,7 @@ export default function KycForm({ onNext, onBack }: Props) {
         } as Partial<FormData>
     });
 
-    const selectedIdType = watch("idType") || "PASSPORT";
+    const selectedIdType = watch("idType") || "NATIONAL_ID";
 
     const onSubmit = async (data: FormData) => {
         if (!savedOrgId) { toast.error("Complete organization details first."); return; }
@@ -70,13 +68,16 @@ export default function KycForm({ onNext, onBack }: Props) {
         }
 
         setIsLoading(true);
-        setKycDraft(data as Partial<KycSubmitPayload>);
+        const submissionData = {
+            ...data,
+            idType: "NATIONAL_ID" as const,
+        };
+        setKycDraft(submissionData as Partial<KycSubmitPayload>);
 
         try {
             const res = await complianceApi.submitKyc({
-                ...data,
+                ...submissionData,
                 organizationId: savedOrgId,
-                idType: data.idType as "PASSPORT" | "NATIONAL_ID" | "DRIVERS_LICENSE",
             });
 
             const kycRequestId = (res as any)?.kyc?.id || (res as any)?.kycId || (res as any)?.data?.kyc?.id;
@@ -89,7 +90,7 @@ export default function KycForm({ onNext, onBack }: Props) {
                 formData.append("file", uploadedFile);
                 formData.append("organizationId", savedOrgId);
                 formData.append("kycRequestId", kycRequestId);
-                formData.append("documentType", data.idType);
+                formData.append("documentType", "NATIONAL_ID");
                 await complianceApi.uploadDocument(formData);
             }
 
@@ -213,22 +214,13 @@ export default function KycForm({ onNext, onBack }: Props) {
 
                     <div>
                         <label className="form-label">
-                            {selectedIdType === "PASSPORT"
-                                ? "Passport Number *"
-                                : selectedIdType === "NATIONAL_ID"
-                                ? "National Identification Number (NIN) *"
-                                : "Driver's License Number *"}
+                            National Identification Number (NIN) *
                         </label>
                         <input
                             {...register("idNumber")}
                             className="form-input"
-                            placeholder={
-                                selectedIdType === "PASSPORT"
-                                    ? "e.g. A12345678"
-                                    : selectedIdType === "NATIONAL_ID"
-                                    ? "e.g. 11-digit NIN"
-                                    : "e.g. DL12345678"
-                            }
+                            placeholder="Enter 11-digit NIN (e.g. 12345678901)"
+                            maxLength={11}
                         />
                         {errors.idNumber && <FieldError msg={errors.idNumber.message!} />}
                     </div>
@@ -237,8 +229,8 @@ export default function KycForm({ onNext, onBack }: Props) {
                 {/* File uploads */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
                     <FileDropZone
-                        label="ID Document *"
-                        hint="Upload front of your ID (JPG, PNG or PDF, max 10MB)"
+                        label="NIN Slip / Card Document *"
+                        hint="Upload front of your NIN slip or National ID card (JPG, PNG or PDF, max 10MB)"
                         file={uploadedFile}
                         onFile={setUploadedFile}
                         inputRef={fileRef}
