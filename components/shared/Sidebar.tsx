@@ -3,7 +3,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Wallet, Users, Settings, LogOut, ShieldAlert, FileText, X, TrendingUp, UserCircle, Building2, BarChart2, User, ClipboardList, Database, DollarSign, ArrowDownToLine } from 'lucide-react';
+import {
+  Home, Wallet, Users, Settings, LogOut, ShieldAlert, FileText, X,
+  TrendingUp, UserCircle, Building2, BarChart2, User, ClipboardList,
+  Database, DollarSign, ArrowDownToLine, Landmark, ExternalLink
+} from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
 import { useState, useEffect } from 'react';
 
@@ -65,6 +69,17 @@ const roleNavigation = {
   ],
 };
 
+/** External portal links — only shown to ADMIN, never to customers */
+const FV_BANK_LINKS = [
+  {
+    name: 'FV Bank Sandbox',
+    href: 'https://sandbox.gma-portal.fvbank.us',
+    icon: Landmark,
+    badge: 'UAT',
+    description: 'Open FV Bank portal to perform test transactions',
+  },
+];
+
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
@@ -75,9 +90,9 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const router = useRouter();
   const { user, logout } = useAuthStore();
 
-  // Get user role from auth store
-  const userRole = user?.role || 'AGENT'; // Default to AGENT if not logged in
+  const userRole = user?.role || 'AGENT';
   const navigation = roleNavigation[userRole] || roleNavigation.AGENT;
+  const isAdmin = userRole === 'ADMIN';
 
   const handleLogout = () => {
     logout();
@@ -106,7 +121,6 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         style={{ backgroundColor: 'var(--brand-sidebar-bg)' }}
       >
         {/* Close button for mobile */}
-        {/* Close button for mobile */}
         {onClose && (
           <button
             onClick={onClose}
@@ -122,7 +136,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-6 space-y-5 overflow-y-auto">
+        <nav className="flex-1 px-6 space-y-5 overflow-y-auto pb-4">
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
@@ -152,6 +166,37 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
               </Link>
             );
           })}
+
+          {/* ── FV Bank Portal Links (Admin only) ───────────────────────── */}
+          {isAdmin && (
+            <div className="pt-3 mt-2 border-t border-white/10">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-white/30 px-4 mb-2">
+                Banking Portal
+              </p>
+              {FV_BANK_LINKS.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <a
+                    key={item.name}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={item.description}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg transition-all hover:bg-[#C9A227]/10 group cursor-pointer"
+                  >
+                    <Icon size={20} className="text-[#C9A227] flex-shrink-0" />
+                    <span className="text-base font-bold text-[#C9A227] flex-1 truncate">
+                      {item.name}
+                    </span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#C9A227]/20 text-[#C9A227] border border-[#C9A227]/30 tracking-wider flex-shrink-0">
+                      {item.badge}
+                    </span>
+                    <ExternalLink size={12} className="text-[#C9A227]/50 group-hover:text-[#C9A227] transition-colors flex-shrink-0" />
+                  </a>
+                );
+              })}
+            </div>
+          )}
         </nav>
 
         {/* Logout */}

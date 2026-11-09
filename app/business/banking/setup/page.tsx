@@ -1,10 +1,5 @@
-import { BankingSetupScreen } from "@/components/business/BankingSetupScreen";
-
-export const metadata = {
-    title: "Setup Managed Account | Papa Ego",
-    description: "Provision your dedicated U.S. bank account through FV Bank."
-};
+import { redirect } from "next/navigation";
 
 export default function BusinessBankingSetupPage() {
-    return <BankingSetupScreen />;
+    redirect("/customer/dashboard");
 }

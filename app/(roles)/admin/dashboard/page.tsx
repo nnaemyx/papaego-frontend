@@ -17,6 +17,9 @@ import {
   Hourglass,
   Coins,
   ShieldCheck,
+  Landmark,
+  ExternalLink,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { transactionsApi } from "@/lib/api/transactions";
@@ -101,6 +104,60 @@ export default function AdminGlobalDashboardPage() {
             <Plus className="w-4 h-4" />
             View Transactions
           </Button>
+        </div>
+      </div>
+
+      {/* ── FV Bank Banking Panel ── */}
+      <div className="bg-[#012333] rounded-2xl border border-[#C9A227]/20 p-5 flex flex-col md:flex-row md:items-center justify-between gap-5 shadow-lg">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-[#C9A227]/10 border border-[#C9A227]/20 flex-shrink-0">
+            <Landmark className="w-7 h-7 text-[#C9A227]" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <h2 className="text-base font-extrabold text-white">FV Bank Sandbox</h2>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#C9A227]/20 text-[#C9A227] border border-[#C9A227]/30 tracking-widest">
+                UAT
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 max-w-sm">
+              Perform test transactions, view provisioned customer accounts, and manage counterparties in the FV Bank Sandbox Portal.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 flex-shrink-0">
+          {/* Primary: Open Sandbox Portal */}
+          <a
+            href="https://sandbox.gma-portal.fvbank.us"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#C9A227] hover:bg-[#b08e20] text-white text-xs font-bold transition-colors shadow-sm"
+          >
+            <Landmark className="w-4 h-4" />
+            Open Banking Portal
+            <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+          </a>
+
+          {/* Secondary: Business Onboarding */}
+          <a
+            href="https://sandbox.gma-onboarding.fvbank.us"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-colors border border-white/10"
+          >
+            Onboarding Portal
+            <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+          </a>
+
+          {/* Tertiary: manage provisioned orgs */}
+          <a
+            href="/admin/organizations"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-colors border border-white/10"
+          >
+            Manage Orgs
+            <ArrowRight className="w-3.5 h-3.5 opacity-70" />
+          </a>
         </div>
       </div>
 

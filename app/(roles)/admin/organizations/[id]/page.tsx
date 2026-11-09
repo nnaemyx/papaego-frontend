@@ -113,6 +113,16 @@ export default function AdminOrganizationDetailPage() {
         onError: (err: any) => toast.error(err.response?.data?.error || "Failed to provision bank account")
     });
 
+    // Push to FV Bank Sandbox Mutation
+    const pushToFvBankMutation = useMutation({
+        mutationFn: () => adminOrganizationsApi.pushToFvBank(id),
+        onSuccess: (res) => {
+            toast.success(`Pushed to FV Bank Sandbox! App ID: ${res.fvBankApplicationId} (${res.fvBankStatus})`);
+            queryClient.invalidateQueries({ queryKey: ["admin-organization-detail", id] });
+        },
+        onError: (err: any) => toast.error(err.response?.data?.error || "Failed to push to FV Bank Sandbox")
+    });
+
     if (isLoading) {
         return (
             <div className="p-12 text-center text-slate-500 font-sans">
@@ -213,6 +223,19 @@ export default function AdminOrganizationDetailPage() {
                             Provision U.S. Bank Account
                         </Button>
                     )}
+
+                    {/* Push to FV Bank Sandbox — always available for admin to sync */}
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => pushToFvBankMutation.mutate()}
+                        disabled={pushToFvBankMutation.isPending}
+                        title="Submit this business as a Business Plus application to FV Bank Sandbox so they appear in the FV Bank portal"
+                        className="text-blue-700 border-blue-200 hover:bg-blue-50 text-xs font-semibold gap-1.5"
+                    >
+                        <ExternalLink className="w-4 h-4" />
+                        {pushToFvBankMutation.isPending ? "Pushing..." : "Push to FV Bank Sandbox"}
+                    </Button>
 
                     <Button
                         size="sm"

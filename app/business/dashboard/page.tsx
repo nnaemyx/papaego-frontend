@@ -11,7 +11,6 @@ import {
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/auth-store";
 import { organizationsApi, type Organization } from "@/lib/api/organizations";
-import { getBankingProfile, type BankingProfile } from "@/lib/api/banking";
 import { customerApi, type CustomerTrade, type CustomerTradeRequest, type FxRate } from "@/lib/api/customer";
 import { NewTransactionModal } from "@/components/customer/NewTransactionModal";
 import { PapaEgoFundModal } from "@/components/customer/PapaEgoFundModal";
@@ -26,7 +25,6 @@ export default function MergedBusinessCustomerDashboard() {
     const { user, isAuthenticated } = useAuthStore();
 
     const [org, setOrg] = useState<Organization | null>(null);
-    const [bankingProfile, setBankingProfile] = useState<BankingProfile | null>(null);
     const [trades, setTrades] = useState<CustomerTrade[]>([]);
     const [tradeRequests, setTradeRequests] = useState<CustomerTradeRequest[]>([]);
     const [ledgerBalance, setLedgerBalance] = useState<{ available: number; reserved: number; totalDeposited: number }>({
@@ -45,11 +43,6 @@ export default function MergedBusinessCustomerDashboard() {
             const orgRes = await organizationsApi.getMyOrganization().catch(() => null);
             if (orgRes?.organization) {
                 setOrg(orgRes.organization);
-            }
-
-            const bankRes = await getBankingProfile().catch(() => null);
-            if (bankRes?.profile) {
-                setBankingProfile(bankRes.profile);
             }
 
             const [tradesRes, requestsRes, statsRes] = await Promise.all([

@@ -1,10 +1,5 @@
-import { BankingDetailsPage } from "@/components/business/BankingDetailsPage";
-
-export const metadata = {
-    title: "Managed Bank Account | Papa Ego",
-    description: "View and manage your dedicated U.S. bank account through FV Bank."
-};
+import { redirect } from "next/navigation";
 
 export default function CustomerBankingPage() {
-    return <BankingDetailsPage />;
+    redirect("/customer/dashboard");
 }

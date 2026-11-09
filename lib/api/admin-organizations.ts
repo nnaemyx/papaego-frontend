@@ -178,6 +178,11 @@ export const adminOrganizationsApi = {
         return res.data;
     },
 
+    pushToFvBank: async (id: string): Promise<{ message: string; fvBankApplicationId: string; fvBankStatus: string }> => {
+        const res = await api.post(`/admin/organizations/${id}/push-to-fvbank`);
+        return res.data;
+    },
+
     deleteOrganization: async (id: string): Promise<{ success: boolean; message: string }> => {
         const res = await api.delete(`/admin/organizations/${id}`);
         return res.data;
